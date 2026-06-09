@@ -1,0 +1,17 @@
+TEST(Failing, deliberateCheckFailure)
+tests/smoke/smoke_tests.cpp:50: error: Failure in TEST(Failing, deliberateCheckFailure)
+	Message: one is not two
+	CHECK(1 == 2) failed
+
+ - 0 ms
+TEST(Failing, deliberateFailure)
+tests/smoke/smoke_tests.cpp:45: error: Failure in TEST(Failing, deliberateFailure)
+	deliberate failure
+
+ - 0 ms
+IGNORE_TEST(Smoke, notRunYet) - 0 ms
+TEST(Smoke, checkText) - 0 ms
+TEST(Smoke, setupRan) - 0 ms
+
+Errors (2 failures, 5 tests, 4 ran, 5 checks, 1 ignored, 0 filtered out, 0 ms)
+

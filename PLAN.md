@@ -54,17 +54,17 @@ Makefile               Builds lib, tests, conformance, bench
       exit codes, and CLI flags. This is the contract document.
 
 ### Phase 1 — Core runner walking skeleton
-- [ ] 1.1 C core: test registry (static registration), test descriptor structs,
+- [x] 1.1 C core: test registry (static registration), test descriptor structs,
       run loop, result counting, plain-text output matching upstream's default
       format exactly (incl. `OK (N tests, N ran, ...)` summary and failure format).
-- [ ] 1.2 C++ shim: `TestHarness.h`, `Utest.h`, `UtestMacros.h` subset —
+- [x] 1.2 C++ shim: `TestHarness.h`, `Utest.h`, `UtestMacros.h` subset —
       `TEST_GROUP`, `TEST`, `IGNORE_TEST`, `TEST_GROUP_BASE`, setup/teardown
       hooks, static auto-registration. A sample test file compiles with
       `g++ -I include` and runs with correct output.
 - [ ] 1.3 `CommandLineTestRunner.h` shim + C core arg parsing: `-v`, `-c`, `-g`,
       `-n`, `-sg`, `-sn`, `-t`, `-r N`, `-lg`, `-ln`, `-s [seed]`, `-b`, `-ki`, `-f`,
       exit code semantics. (Full output-format flags come in Phase 3.)
-- [ ] 1.4 Our own smoke tests in `tests/` + wire into `scripts/check.sh`.
+- [x] 1.4 Our own smoke tests in `tests/` + wire into `scripts/check.sh`.
 
 ### Phase 2 — Assertions & SimpleString shim
 - [ ] 2.1 C core assertion engine: failure capture (longjmp out of test body,
@@ -156,3 +156,4 @@ Makefile               Builds lib, tests, conformance, bench
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
+- 2026-06-09 #2: 1.1+1.2+1.4 done — C core (registry/runner/output/platform, setjmp-stack protected sections) + header shim (Utest.h/UtestMacros.h/TestHarness.h/CommandLineTestRunner.h) + golden-output smoke tests (normal/verbose/pass), all byte-exact. Gotcha: -std=c11 needs _POSIX_C_SOURCE for clock_gettime. 1.3 (CLI parser) next.

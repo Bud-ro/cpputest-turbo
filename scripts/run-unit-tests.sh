@@ -1,13 +1,48 @@
 #!/bin/sh
-# Builds and runs everything under tests/. Placeholder until Phase 1.4 wires
-# in real suites: succeeds with a notice when no tests exist yet.
+# Builds and runs our own test suites against the freshly built libs.
+# Golden-output tests pin byte-for-byte parity with upstream formats; only
+# timings are normalized (test-file line numbers are part of the contract).
 set -eu
 cd "$(dirname "$0")/.."
 
-if [ -z "$(find tests -name '*.c' -o -name '*.cpp' 2>/dev/null | head -1)" ]; then
-    echo "(no unit tests yet — Phase 1.4)"
-    exit 0
-fi
+CXX="${CXX:-g++}"
+CXXFLAGS="-std=c++11 -Wall -Wextra -Werror -O2 -g -Iinclude"
+BUILD=build/tests
+mkdir -p "$BUILD"
 
-echo "ERROR: tests exist but run-unit-tests.sh has no runner wired up" >&2
-exit 1
+normalize() {
+    sed -e 's/ - [0-9]* ms$/ - 0 ms/' -e 's/, [0-9]* ms)/, 0 ms)/'
+}
+
+fail=0
+
+compare() { # name actual_file golden_file
+    if ! diff -u "$3" "$2"; then
+        echo "FAILED golden comparison: $1" >&2
+        fail=1
+    else
+        echo "ok: $1"
+    fi
+}
+
+# ---- smoke suite -----------------------------------------------------------
+$CXX $CXXFLAGS tests/smoke/smoke_tests.cpp build/libCppUTest.a -o "$BUILD/smoke_tests"
+$CXX $CXXFLAGS tests/smoke/pass_tests.cpp build/libCppUTest.a -o "$BUILD/pass_tests"
+
+rc=0; "$BUILD/smoke_tests" >"$BUILD/normal.out.raw" 2>&1 || rc=$?
+if [ "$rc" -ne 2 ]; then echo "FAILED: smoke_tests exit code $rc, expected 2 (failure count)" >&2; fail=1; fi
+normalize <"$BUILD/normal.out.raw" >"$BUILD/normal.out"
+compare "smoke normal output" "$BUILD/normal.out" tests/smoke/golden/normal.txt
+
+rc=0; "$BUILD/smoke_tests" -v >"$BUILD/verbose.out.raw" 2>&1 || rc=$?
+if [ "$rc" -ne 2 ]; then echo "FAILED: smoke_tests -v exit code $rc, expected 2" >&2; fail=1; fi
+normalize <"$BUILD/verbose.out.raw" >"$BUILD/verbose.out"
+compare "smoke verbose output" "$BUILD/verbose.out" tests/smoke/golden/verbose.txt
+
+rc=0; "$BUILD/pass_tests" >"$BUILD/pass.out.raw" 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "FAILED: pass_tests exit code $rc, expected 0" >&2; fail=1; fi
+normalize <"$BUILD/pass.out.raw" >"$BUILD/pass.out"
+compare "pass output" "$BUILD/pass.out" tests/smoke/golden/pass.txt
+
+[ "$fail" -eq 0 ] && echo "unit tests: all green"
+exit "$fail"
