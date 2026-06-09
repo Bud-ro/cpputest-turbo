@@ -1,0 +1,16 @@
+third_party/cpputest/.git
+*.o
+*.a
+build/
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.idea
+.mcp.json
+.profile
+.ripgreprc
+.vscode
+.zprofile
+.zshrc
+.claude/
