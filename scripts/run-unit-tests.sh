@@ -68,5 +68,14 @@ if ! sh tests/outputs/run.sh "$BUILD"; then
     fail=1
 fi
 
+# ---- plugins -----------------------------------------------------------------
+$CXX $CXXFLAGS tests/plugins/plugin_tests.cpp build/libCppUTest.a -o "$BUILD/plugin_tests"
+rc=0; "$BUILD/plugin_tests" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests exit $rc" >&2; fail=1; else echo "ok: plugins pre/post/UT_PTR_SET"; fi
+rc=0; "$BUILD/plugin_tests" -pcustom >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests -pcustom exit $rc" >&2; fail=1; else echo "ok: plugin parseArguments"; fi
+rc=0; "$BUILD/plugin_tests" -pnonsense >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 1 ]; then echo "FAILED: plugin_tests -pnonsense exit $rc, expected 1" >&2; fail=1; else echo "ok: unparsed plugin arg errors"; fi
+
 [ "$fail" -eq 0 ] && echo "unit tests: all green"
 exit "$fail"

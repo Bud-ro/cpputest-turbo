@@ -212,7 +212,7 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
         else if (starts_with(arg, "TEST(")) add_test_from_verbose_output(a, argc, argv, &i, "TEST(");
         else if (starts_with(arg, "IGNORE_TEST(")) add_test_from_verbose_output(a, argc, argv, &i, "IGNORE_TEST(");
         else if (starts_with(arg, "-o")) correct = set_output_type(a, argc, argv, &i);
-        else if (starts_with(arg, "-p")) correct = 0; /* plugin args: no plugins parse anything yet (Phase 3.5) */
+        else if (starts_with(arg, "-p")) correct = cu_plugin_parse_hook ? cu_plugin_parse_hook(argc, argv, i) : 0;
         else if (starts_with(arg, "-k")) { free(a->package_name); a->package_name = strdup(parameter_field(argc, argv, &i, "-k")); }
         else correct = 0;
 

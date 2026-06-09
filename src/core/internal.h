@@ -90,6 +90,7 @@ int cu_filters_match(const cu_filter *filters, const char *s);
 /* runner.c */
 cu_result *cu_result_current(void);
 cu_output *cu_output_current(void);
+extern cu_plugin_parse_fn cu_plugin_parse_hook;
 
 /* registry list reordering (UtestShellPointerArray) */
 void cu_registry_reverse(void);

@@ -92,7 +92,7 @@ Makefile               Builds lib, tests, conformance, bench
 - [x] 3.3 TeamCity output (`-oteamcity`).
 - [x] 3.4 (landed with 1.3) Test filters: name/group, strict (`-sg/-sn`), exclude (`-xg/-xn`),
       repeat, shuffle w/ seed parity, `-ll`/list options if present upstream.
-- [ ] 3.5 `TestPlugin.h` shim + C core plugin hooks (preTestAction/postTestAction);
+- [x] 3.5 `TestPlugin.h` shim + C core plugin hooks (preTestAction/postTestAction);
       `SetPointerPlugin` parity.
 
 ### Phase 4 — Memory leak detection
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #6: 3.5 done — Phase 3 complete. TestPlugin chain lives in the C++ shim (verbatim upstream semantics incl. NullTestPlugin terminator, reverse post-action order, disable); C core exposes pre/post/parse hooks; TestRegistry/TestResult/TestFailure shims added; SetPointerPlugin + UT_PTR_SET with the 32-entry table; CommandLineTestRunner installs SetPointerPlugin like upstream. -pXXX args now reach plugin parseArguments.
 - 2026-06-09 #5: 3.1-3.4 done — JUnit XML (junit.c: per-group files, check-count deltas, first-failure-only, system-out accumulation never reset, filtered-group cpputest_.xml quirk), TeamCity stream (escaping incl. unescaped-test-file quirk in testFailed), -vv traces upstream-exact, output dispatch + composite junit+console under -v. JUnit drops print(number) like upstream no-ops. 3.5 plugins next.
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
 - 2026-06-09 #4: Phase 2 done — C core assertion engine (assert.c) with byte-exact formats for all 25+ macro failure modes (verified by 325 lines of golden output); SimpleString shim + StringFrom/HexStringFrom overload sets; UtestShell gets upstream's full assert method surface. Found: upstream FAIL counts a check (goldens updated); CHECK_COMPARE counts NO check on success; the double-eval WARNING can't be unit-tested under -Werror=sequence-point (conformance will cover). sb_raise uses 8KB static buffer (messages truncate beyond — fine vs upstream's 4KB leak buffer norms).

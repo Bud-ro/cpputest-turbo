@@ -107,6 +107,22 @@ char *cu_str_from_masked_bits(unsigned long value, unsigned long mask,
 char *cu_str_hex_from_signed_char(signed char value);
 void cu_str_free(char *s);
 
+/* Plugin hook points. The C++ shim's TestRegistry installs trampolines here
+ * that walk its TestPlugin chain. parse is consulted for unrecognized
+ * "-pXXX" arguments (upstream forwards those to plugin->parseAllArguments;
+ * the index is passed by value, so plugins cannot consume extra args). */
+typedef void (*cu_plugin_action_fn)(cu_test *t);
+typedef int (*cu_plugin_parse_fn)(int argc, const char *const *argv, int index);
+void cu_set_plugin_hooks(cu_plugin_action_fn pre, cu_plugin_action_fn post,
+                         cu_plugin_parse_fn parse);
+
+/* Report a failure without aborting the test (upstream
+ * TestResult::addFailure as used from plugin postTestAction). */
+void cu_add_failure(const char *file, size_t line, const char *message);
+size_t cu_failure_count(void);
+/* TestResult::print — routed through the active output (JUnit captures) */
+void cu_print_text(const char *text);
+
 /* Full runner: parses args, runs registered tests, returns exit code. */
 int cu_run_all(int argc, const char *const *argv);
 

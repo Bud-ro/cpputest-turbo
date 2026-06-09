@@ -20,6 +20,39 @@ static cu_result *current_result;
 static cu_output *current_output;
 static int crash_on_fail;
 
+static cu_plugin_action_fn plugin_pre;
+static cu_plugin_action_fn plugin_post;
+cu_plugin_parse_fn cu_plugin_parse_hook; /* read by args.c */
+
+void cu_set_plugin_hooks(cu_plugin_action_fn pre, cu_plugin_action_fn post,
+                         cu_plugin_parse_fn parse)
+{
+    plugin_pre = pre;
+    plugin_post = post;
+    cu_plugin_parse_hook = parse;
+}
+
+void cu_add_failure(const char *file, size_t line, const char *message)
+{
+    if (current_result) {
+        if (current_test)
+            current_test->has_failed = 1;
+        cu_out_failure(current_output, current_test, file, line, message);
+        current_result->failure_count++;
+    }
+}
+
+size_t cu_failure_count(void)
+{
+    return current_result ? current_result->failure_count : 0;
+}
+
+void cu_print_text(const char *text)
+{
+    if (current_output)
+        cu_out_print_str(current_output, text);
+}
+
 cu_test *cu_current_test(void)
 {
     return current_test;
@@ -129,10 +162,13 @@ static void cu_run_one_test(cu_test *t, cu_result *res)
     t->has_failed = 0;
     res->run_count++;
     vv("\n-- before runAllPreTestAction: ");
-    /* plugin chain runs here once plugins exist (3.5) */
+    if (plugin_pre)
+        plugin_pre(t);
     vv("\n-- after runAllPreTestAction: ");
     cu_run_fixture(t);
     vv("\n-- before runAllPostTestAction: ");
+    if (plugin_post)
+        plugin_post(t);
     vv("\n-- after runAllPostTestAction: ");
 }
 
