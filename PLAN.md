@@ -43,11 +43,11 @@ Makefile               Builds lib, tests, conformance, bench
 ## Phases
 
 ### Phase 0 — Scaffolding
-- [ ] 0.1 Makefile skeleton: builds `libCppUTest.a` from `src/core`, `make check`
+- [x] 0.1 Makefile skeleton: builds `libCppUTest.a` from `src/core`, `make check`
       runs `tests/`, `make conformance` placeholder. gcc, `-std=c11 -Wall -Wextra -Werror`.
-- [ ] 0.2 `scripts/check.sh`: one command that builds everything + runs all suites;
+- [x] 0.2 `scripts/check.sh`: one command that builds everything + runs all suites;
       loop iterations must end green on this.
-- [ ] 0.3 Read upstream public headers + key sources (Utest, UtestMacros,
+- [x] 0.3 Read upstream public headers + key sources (Utest, UtestMacros,
       TestRegistry, TestOutput, CommandLineTestRunner, TestHarness_c) and write
       `docs/INTERFACE.md`: the exact macro/class/function surface we must
       reproduce, and upstream's default output format (normal/verbose/color),
@@ -155,3 +155,4 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
