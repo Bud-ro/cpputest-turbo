@@ -1,0 +1,20 @@
+TEST(Pass, one)
+-- before runAllPreTestAction: 
+-- after runAllPreTestAction: 
+---- before createTest: 
+---- after createTest: 
+------ before runTest: 
+-------- before setup: 
+-------- after  setup: 
+----------  before body: 
+----------  after body: 
+--------  before teardown: 
+--------  after teardown: 
+------ after runTest: 
+---- before destroyTest: 
+---- after destroyTest: 
+-- before runAllPostTestAction: 
+-- after runAllPostTestAction:  - 0 ms
+
+OK (1 tests, 1 ran, 1 checks, 0 ignored, 0 filtered out, 0 ms)
+

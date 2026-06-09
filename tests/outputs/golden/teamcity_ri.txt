@@ -1,0 +1,16 @@
+##teamcity[testSuiteStarted name='GroupB']
+##teamcity[testStarted name='ig']
+##teamcity[testFailed name='ig' message='tests/cli/cli_tests.cpp:32' details='only fails when run with -ri']
+##teamcity[testFinished name='ig' duration='0']
+##teamcity[testStarted name='b1']
+##teamcity[testFinished name='b1' duration='0']
+##teamcity[testSuiteFinished name='GroupB']
+##teamcity[testSuiteStarted name='GroupA']
+##teamcity[testStarted name='a2']
+##teamcity[testFinished name='a2' duration='0']
+##teamcity[testStarted name='a1']
+##teamcity[testFinished name='a1' duration='0']
+##teamcity[testSuiteFinished name='GroupA']
+
+Errors (1 failures, 4 tests, 4 ran, 4 checks, 0 ignored, 0 filtered out, 0 ms)
+

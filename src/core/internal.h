@@ -20,13 +20,29 @@ typedef struct cu_result {
     size_t time_started;
     size_t current_test_time_started;
     size_t current_test_ms;
+    size_t current_group_time_started;
+    size_t current_group_ms;
 } cu_result;
+
+typedef enum {
+    CU_OUTPUT_TYPE_CONSOLE, /* upstream OUTPUT_ECLIPSE: -onormal / -oeclipse */
+    CU_OUTPUT_TYPE_JUNIT,
+    CU_OUTPUT_TYPE_TEAMCITY
+} cu_output_type;
+
+typedef struct cu_junit_state cu_junit_state;
 
 typedef struct cu_output {
     cu_output_level level;
     int color;
     size_t dot_count;
     const char *progress_indicator; /* "." or "!" for the test in flight */
+    cu_output_type type;
+    int also_console;          /* -ojunit with -v/-vv: composite with console */
+    const char *package_name;  /* -k */
+    cu_junit_state *junit;
+    const cu_test *tc_current; /* TeamCity currtest_ */
+    const char *tc_group;      /* TeamCity currGroup_ (NULL before a group) */
 } cu_output;
 
 typedef struct cu_filter {
@@ -35,12 +51,6 @@ typedef struct cu_filter {
     int invert;
     struct cu_filter *next;
 } cu_filter;
-
-typedef enum {
-    CU_OUTPUT_TYPE_CONSOLE, /* upstream OUTPUT_ECLIPSE: -onormal / -oeclipse */
-    CU_OUTPUT_TYPE_JUNIT,
-    CU_OUTPUT_TYPE_TEAMCITY
-} cu_output_type;
 
 typedef struct cu_args {
     int need_help;
@@ -85,14 +95,32 @@ cu_output *cu_output_current(void);
 void cu_registry_reverse(void);
 void cu_registry_shuffle(size_t seed);
 
-/* output.c — console output, formats are byte-identical to upstream
- * TestOutput.cpp (see docs/INTERFACE.md section 3) */
+/* output.c — output dispatch (console / JUnit / TeamCity), formats are
+ * byte-identical to upstream TestOutput.cpp and friends */
+void cu_out_group_started(cu_output *out, const cu_test *t);
+void cu_out_group_ended(cu_output *out, const cu_result *res);
 void cu_out_test_started(cu_output *out, const cu_test *t);
 void cu_out_test_ended(cu_output *out, const cu_result *res);
 void cu_out_failure(cu_output *out, const cu_test *t,
                     const char *fail_file, size_t fail_line,
                     const char *message);
 void cu_out_summary(cu_output *out, const cu_result *res);
+/* TestOutput::print(const char*) / print(number): JUnit accumulates strings
+ * into <system-out> and DROPS numbers (upstream no-op overrides) */
+void cu_out_print_str(cu_output *out, const char *s);
+void cu_out_print_num(cu_output *out, unsigned long n);
+void cu_out_very_verbose(cu_output *out, const char *s);
+
+/* junit.c — JUnitTestOutput port */
+cu_junit_state *cu_junit_create(void);
+void cu_junit_destroy(cu_junit_state *j);
+void cu_junit_test_started(cu_output *out, const cu_test *t);
+void cu_junit_test_ended(cu_output *out, const cu_result *res);
+void cu_junit_failure(cu_output *out, const cu_test *t,
+                      const char *fail_file, size_t fail_line,
+                      const char *message);
+void cu_junit_group_ended(cu_output *out, const cu_result *res);
+void cu_junit_print(cu_output *out, const char *s);
 
 /* platform.c */
 size_t cu_time_in_millis(void);

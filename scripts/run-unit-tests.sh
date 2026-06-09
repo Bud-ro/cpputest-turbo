@@ -63,5 +63,10 @@ if ! sh tests/cli/run.sh "$BUILD/cli_tests"; then
     fail=1
 fi
 
+# ---- output formats (JUnit / TeamCity / -vv) --------------------------------
+if ! sh tests/outputs/run.sh "$BUILD"; then
+    fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "unit tests: all green"
 exit "$fail"

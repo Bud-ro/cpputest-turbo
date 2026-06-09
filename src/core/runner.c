@@ -86,15 +86,37 @@ static void do_setup(cu_test *t, void *fixture)    { t->ops->setup(t, fixture); 
 static void do_body(cu_test *t, void *fixture)     { t->ops->body(t, fixture); }
 static void do_teardown(cu_test *t, void *fixture) { t->ops->teardown(t, fixture); }
 
+static void vv(const char *s)
+{
+    cu_out_very_verbose(current_output, s);
+}
+
 /* Upstream Utest::run() in no-exceptions mode: protected setup; body only if
- * setup completed; teardown always (Utest.cpp). */
+ * setup completed; teardown always (Utest.cpp). Trace strings (-vv) are
+ * upstream-exact, including the double spaces. */
 static void cu_run_fixture(cu_test *t)
 {
+    vv("\n---- before createTest: ");
     void *fixture = t->ops->create(t);
-    if (cu_protected_call(do_setup, t, fixture))
+    vv("\n---- after createTest: ");
+
+    vv("\n------ before runTest: ");
+    vv("\n-------- before setup: ");
+    int setup_ok = cu_protected_call(do_setup, t, fixture);
+    vv("\n-------- after  setup: ");
+    if (setup_ok) {
+        vv("\n----------  before body: ");
         cu_protected_call(do_body, t, fixture);
+        vv("\n----------  after body: ");
+    }
+    vv("\n--------  before teardown: ");
     cu_protected_call(do_teardown, t, fixture);
+    vv("\n--------  after teardown: ");
+    vv("\n------ after runTest: ");
+
+    vv("\n---- before destroyTest: ");
     t->ops->destroy(t, fixture);
+    vv("\n---- after destroyTest: ");
 }
 
 /* UtestShell::runOneTest / IgnoredUtestShell::runOneTest */
@@ -106,7 +128,12 @@ static void cu_run_one_test(cu_test *t, cu_result *res)
     }
     t->has_failed = 0;
     res->run_count++;
+    vv("\n-- before runAllPreTestAction: ");
+    /* plugin chain runs here once plugins exist (3.5) */
+    vv("\n-- after runAllPreTestAction: ");
     cu_run_fixture(t);
+    vv("\n-- before runAllPostTestAction: ");
+    vv("\n-- after runAllPostTestAction: ");
 }
 
 static int group_changes(const cu_test *t)
@@ -126,10 +153,17 @@ static int test_should_run(const cu_args *a, const cu_test *t, cu_result *res)
 /* TestRegistry::runAllTests */
 static void cu_run_all_tests(const cu_args *a, cu_result *res, cu_output *out)
 {
+    int group_start = 1;
+
     res->time_started = cu_time_in_millis();
     for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next) {
         if (a->run_ignored)
             t->run_ignored = 1;
+        if (group_start) {
+            cu_out_group_started(out, t);
+            res->current_group_time_started = cu_time_in_millis();
+            group_start = 0;
+        }
         res->test_count++;
         if (test_should_run(a, t, res)) {
             cu_out_test_started(out, t);
@@ -140,7 +174,11 @@ static void cu_run_all_tests(const cu_args *a, cu_result *res, cu_output *out)
             res->current_test_ms = cu_time_in_millis() - res->current_test_time_started;
             cu_out_test_ended(out, res);
         }
-        (void)group_changes(t); /* group hooks arrive with JUnit output (Phase 3) */
+        if (group_changes(t)) {
+            group_start = 1;
+            res->current_group_ms = cu_time_in_millis() - res->current_group_time_started;
+            cu_out_group_ended(out, res);
+        }
     }
     res->total_ms = cu_time_in_millis() - res->time_started;
     cu_out_summary(out, res);
@@ -208,9 +246,15 @@ int cu_run_all(int argc, const char *const *argv)
               : args.verbose ? CU_OUTPUT_VERBOSE : CU_OUTPUT_NORMAL;
     out.color = args.color;
     out.progress_indicator = ".";
+    out.type = args.output_type;
+    out.package_name = args.package_name;
+    /* upstream composes JUnit with a console output under -v/-vv */
+    out.also_console = args.output_type == CU_OUTPUT_TYPE_JUNIT &&
+                       (args.verbose || args.very_verbose);
+    if (out.type == CU_OUTPUT_TYPE_JUNIT)
+        out.junit = cu_junit_create();
     crash_on_fail = args.crash_on_fail;
-    /* args.output_type junit/teamcity: file outputs land in Phase 3; console
-     * fallback until then. args.run_separate_process (-p): Phase 8. */
+    /* args.run_separate_process (-p): Phase 8. */
 
     if (args.list_groups || args.list_names) {
         /* upstream checks -lg before -ln when both are given */
@@ -227,9 +271,11 @@ int cu_run_all(int argc, const char *const *argv)
     if (args.reversing)
         cu_registry_reverse();
 
-    if (args.shuffling)
-        printf("Test order shuffling enabled with seed: %lu\n",
-               (unsigned long)args.shuffle_seed);
+    if (args.shuffling) {
+        cu_out_print_str(&out, "Test order shuffling enabled with seed: ");
+        cu_out_print_num(&out, (unsigned long)args.shuffle_seed);
+        cu_out_print_str(&out, "\n");
+    }
 
     size_t failed_test_count = 0;
     size_t failed_execution_count = 0;
@@ -238,9 +284,13 @@ int cu_run_all(int argc, const char *const *argv)
             cu_registry_shuffle(args.shuffle_seed);
 
         /* TestOutput::printTestRun */
-        if (args.repeat > 1)
-            printf("Test run %lu of %lu\n",
-                   (unsigned long)loop, (unsigned long)args.repeat);
+        if (args.repeat > 1) {
+            cu_out_print_str(&out, "Test run ");
+            cu_out_print_num(&out, (unsigned long)loop);
+            cu_out_print_str(&out, " of ");
+            cu_out_print_num(&out, (unsigned long)args.repeat);
+            cu_out_print_str(&out, "\n");
+        }
 
         cu_result res;
         memset(&res, 0, sizeof res);
@@ -255,6 +305,7 @@ int cu_run_all(int argc, const char *const *argv)
             failed_execution_count++;
     }
 
+    cu_junit_destroy(out.junit);
     cu_args_free(&args);
     return (int)(failed_test_count != 0 ? failed_test_count : failed_execution_count);
 }

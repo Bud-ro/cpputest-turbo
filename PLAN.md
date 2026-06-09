@@ -87,10 +87,10 @@ Makefile               Builds lib, tests, conformance, bench
       and `StringFrom` overload, like upstream.
 
 ### Phase 3 — Output formats & runner polish
-- [ ] 3.1 Verbose (`-v`) and color (`-c`) output, exact upstream formats.
-- [ ] 3.2 JUnit XML output (`-ojunit`), file naming + escaping parity.
-- [ ] 3.3 TeamCity output (`-oteamcity`).
-- [ ] 3.4 Test filters: name/group, strict (`-sg/-sn`), exclude (`-xg/-xn`),
+- [x] 3.1 Verbose (`-v`) and color (`-c`) output, exact upstream formats.
+- [x] 3.2 JUnit XML output (`-ojunit`), file naming + escaping parity.
+- [x] 3.3 TeamCity output (`-oteamcity`).
+- [x] 3.4 (landed with 1.3) Test filters: name/group, strict (`-sg/-sn`), exclude (`-xg/-xn`),
       repeat, shuffle w/ seed parity, `-ll`/list options if present upstream.
 - [ ] 3.5 `TestPlugin.h` shim + C core plugin hooks (preTestAction/postTestAction);
       `SetPointerPlugin` parity.
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #5: 3.1-3.4 done — JUnit XML (junit.c: per-group files, check-count deltas, first-failure-only, system-out accumulation never reset, filtered-group cpputest_.xml quirk), TeamCity stream (escaping incl. unescaped-test-file quirk in testFailed), -vv traces upstream-exact, output dispatch + composite junit+console under -v. JUnit drops print(number) like upstream no-ops. 3.5 plugins next.
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
 - 2026-06-09 #4: Phase 2 done — C core assertion engine (assert.c) with byte-exact formats for all 25+ macro failure modes (verified by 325 lines of golden output); SimpleString shim + StringFrom/HexStringFrom overload sets; UtestShell gets upstream's full assert method surface. Found: upstream FAIL counts a check (goldens updated); CHECK_COMPARE counts NO check on success; the double-eval WARNING can't be unit-tested under -Werror=sequence-point (conformance will cover). sb_raise uses 8KB static buffer (messages truncate beyond — fine vs upstream's 4KB leak buffer norms).
 - 2026-06-09 #3: 1.3 done — full CommandLineArguments port (dispatch order preserved verbatim; quirks: malformed TEST(...) args never error, -s0 glued is a parse error, -pXXX hits the plugin branch and errors with no plugins, -lg wins over -ln). Shuffle = srand/rand Fisher-Yates like upstream. 36 CLI behavior tests green. Phase 1 complete; Phase 2 (assertions+SimpleString) next.

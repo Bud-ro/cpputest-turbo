@@ -683,5 +683,11 @@ void cu_assert_compare(int comparison, const char *check_string,
 
 void cu_print(const char *text, const char *file, size_t line)
 {
-    printf("\n%s:%lu %s", file, (unsigned long)line, text);
+    char *s = cu_str_printf("\n%s:%lu %s", file, (unsigned long)line, text);
+    cu_output *out = cu_output_current();
+    if (out)
+        cu_out_print_str(out, s); /* JUnit captures this into <system-out> */
+    else
+        fputs(s, stdout);
+    free(s);
 }
