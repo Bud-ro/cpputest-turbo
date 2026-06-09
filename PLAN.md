@@ -61,9 +61,11 @@ Makefile               Builds lib, tests, conformance, bench
       `TEST_GROUP`, `TEST`, `IGNORE_TEST`, `TEST_GROUP_BASE`, setup/teardown
       hooks, static auto-registration. A sample test file compiles with
       `g++ -I include` and runs with correct output.
-- [ ] 1.3 `CommandLineTestRunner.h` shim + C core arg parsing: `-v`, `-c`, `-g`,
-      `-n`, `-sg`, `-sn`, `-t`, `-r N`, `-lg`, `-ln`, `-s [seed]`, `-b`, `-ki`, `-f`,
-      exit code semantics. (Full output-format flags come in Phase 3.)
+- [x] 1.3 `CommandLineTestRunner.h` shim + C core arg parsing: full upstream
+      parser (all filters incl. exclude/strict variants, repeat, shuffle,
+      reverse, listings, -ri, -f, -e/-ci, -o types, -k, TEST(...) form, usage +
+      help text verbatim), exit code semantics. JUnit/TeamCity output selection
+      parsed but falls back to console until Phase 3; -p parsed, runs in Phase 8.
 - [x] 1.4 Our own smoke tests in `tests/` + wire into `scripts/check.sh`.
 
 ### Phase 2 — Assertions & SimpleString shim
@@ -156,4 +158,5 @@ Makefile               Builds lib, tests, conformance, bench
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
+- 2026-06-09 #3: 1.3 done — full CommandLineArguments port (dispatch order preserved verbatim; quirks: malformed TEST(...) args never error, -s0 glued is a parse error, -pXXX hits the plugin branch and errors with no plugins, -lg wins over -ln). Shuffle = srand/rand Fisher-Yates like upstream. 36 CLI behavior tests green. Phase 1 complete; Phase 2 (assertions+SimpleString) next.
 - 2026-06-09 #2: 1.1+1.2+1.4 done — C core (registry/runner/output/platform, setjmp-stack protected sections) + header shim (Utest.h/UtestMacros.h/TestHarness.h/CommandLineTestRunner.h) + golden-output smoke tests (normal/verbose/pass), all byte-exact. Gotcha: -std=c11 needs _POSIX_C_SOURCE for clock_gettime. 1.3 (CLI parser) next.

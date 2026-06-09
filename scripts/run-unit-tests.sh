@@ -44,5 +44,11 @@ if [ "$rc" -ne 0 ]; then echo "FAILED: pass_tests exit code $rc, expected 0" >&2
 normalize <"$BUILD/pass.out.raw" >"$BUILD/pass.out"
 compare "pass output" "$BUILD/pass.out" tests/smoke/golden/pass.txt
 
+# ---- CLI suite -------------------------------------------------------------
+$CXX $CXXFLAGS tests/cli/cli_tests.cpp build/libCppUTest.a -o "$BUILD/cli_tests"
+if ! sh tests/cli/run.sh "$BUILD/cli_tests"; then
+    fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "unit tests: all green"
 exit "$fail"
