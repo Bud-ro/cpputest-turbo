@@ -13,5 +13,5 @@ IGNORE_TEST(Smoke, notRunYet) - 0 ms
 TEST(Smoke, checkText) - 0 ms
 TEST(Smoke, setupRan) - 0 ms
 
-Errors (2 failures, 5 tests, 4 ran, 5 checks, 1 ignored, 0 filtered out, 0 ms)
+Errors (2 failures, 5 tests, 4 ran, 6 checks, 1 ignored, 0 filtered out, 0 ms)
 

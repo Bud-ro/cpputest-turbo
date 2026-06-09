@@ -69,21 +69,21 @@ Makefile               Builds lib, tests, conformance, bench
 - [x] 1.4 Our own smoke tests in `tests/` + wire into `scripts/check.sh`.
 
 ### Phase 2 — Assertions & SimpleString shim
-- [ ] 2.1 C core assertion engine: failure capture (longjmp out of test body,
+- [x] 2.1 C core assertion engine: failure capture (longjmp out of test body,
       mirroring upstream's no-exceptions mode), file/line, message formatting
       into fixed/arena buffers (no per-assert heap churn).
-- [ ] 2.2 All check macros with upstream-identical failure text: `CHECK`,
+- [x] 2.2 All check macros with upstream-identical failure text: `CHECK`,
       `CHECK_TRUE/FALSE`, `CHECK_EQUAL`, `CHECK_COMPARE`, `STRCMP_*` (incl.
       nocase/contains), `LONGS_EQUAL`, `UNSIGNED_LONGS_EQUAL`,
       `LONGLONGS_EQUAL`, `BYTES_EQUAL`, `SIGNED_BYTES_EQUAL`, `POINTERS_EQUAL`,
       `FUNCTIONPOINTERS_EQUAL`, `DOUBLES_EQUAL`, `MEMCMP_EQUAL`,
       `BITS_EQUAL`, `ENUMS_EQUAL_INT`, `FAIL`/`FAIL_TEST`, `CHECK_TEXT` variants,
       `CHECK_THROWS` (C++ shim only).
-- [ ] 2.3 `SimpleString.h` shim: minimal C++ `SimpleString` class (wrapping core
+- [x] 2.3 `SimpleString.h` shim: minimal C++ `SimpleString` class (wrapping core
       C string-builder) sufficient for the public API: `StringFrom*` overloads,
       `StringFromFormat`, concatenation, comparison — what user code and
       upstream public-API tests actually touch.
-- [ ] 2.4 `CHECK_EQUAL` template plumbing: works for any type with `operator==`
+- [x] 2.4 `CHECK_EQUAL` template plumbing: works for any type with `operator==`
       and `StringFrom` overload, like upstream.
 
 ### Phase 3 — Output formats & runner polish
@@ -158,5 +158,6 @@ Makefile               Builds lib, tests, conformance, bench
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.
+- 2026-06-09 #4: Phase 2 done — C core assertion engine (assert.c) with byte-exact formats for all 25+ macro failure modes (verified by 325 lines of golden output); SimpleString shim + StringFrom/HexStringFrom overload sets; UtestShell gets upstream's full assert method surface. Found: upstream FAIL counts a check (goldens updated); CHECK_COMPARE counts NO check on success; the double-eval WARNING can't be unit-tested under -Werror=sequence-point (conformance will cover). sb_raise uses 8KB static buffer (messages truncate beyond — fine vs upstream's 4KB leak buffer norms).
 - 2026-06-09 #3: 1.3 done — full CommandLineArguments port (dispatch order preserved verbatim; quirks: malformed TEST(...) args never error, -s0 glued is a parse error, -pXXX hits the plugin branch and errors with no plugins, -lg wins over -ln). Shuffle = srand/rand Fisher-Yates like upstream. 36 CLI behavior tests green. Phase 1 complete; Phase 2 (assertions+SimpleString) next.
 - 2026-06-09 #2: 1.1+1.2+1.4 done — C core (registry/runner/output/platform, setjmp-stack protected sections) + header shim (Utest.h/UtestMacros.h/TestHarness.h/CommandLineTestRunner.h) + golden-output smoke tests (normal/verbose/pass), all byte-exact. Gotcha: -std=c11 needs _POSIX_C_SOURCE for clock_gettime. 1.3 (CLI parser) next.

@@ -77,26 +77,6 @@ void cu_fail_with_message(const char *file, size_t line, const char *message)
     cu_longjmp_out();
 }
 
-/* CheckFailure (TestFailure.cpp): createUserText(text) + check "(" cond ") failed".
- * createUserText: empty text -> nothing; else "Message: " text "\n\t". */
-void cu_fail_check(const char *file, size_t line, const char *check_string,
-                   const char *condition_string, const char *text)
-{
-    static char buf[4096];
-    if (text && text[0])
-        snprintf(buf, sizeof buf, "Message: %s\n\t%s(%s) failed",
-                 text, check_string, condition_string);
-    else
-        snprintf(buf, sizeof buf, "%s(%s) failed", check_string, condition_string);
-    cu_fail_with_message(file, line, buf);
-}
-
-/* FailFailure: the text verbatim, no "Message: " wrapper. */
-void cu_fail_text(const char *file, size_t line, const char *text)
-{
-    cu_fail_with_message(file, line, text ? text : "");
-}
-
 void cu_exit_current_test(void)
 {
     cu_longjmp_out();

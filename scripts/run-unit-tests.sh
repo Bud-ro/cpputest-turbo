@@ -44,6 +44,19 @@ if [ "$rc" -ne 0 ]; then echo "FAILED: pass_tests exit code $rc, expected 0" >&2
 normalize <"$BUILD/pass.out.raw" >"$BUILD/pass.out"
 compare "pass output" "$BUILD/pass.out" tests/smoke/golden/pass.txt
 
+# ---- assertion suite (golden failure messages for every macro) -------------
+$CXX $CXXFLAGS tests/asserts/assert_tests.cpp build/libCppUTest.a -o "$BUILD/assert_tests"
+
+rc=0; "$BUILD/assert_tests" >"$BUILD/asserts_normal.out.raw" 2>&1 || rc=$?
+if [ "$rc" -ne 25 ]; then echo "FAILED: assert_tests exit code $rc, expected 25" >&2; fail=1; fi
+normalize <"$BUILD/asserts_normal.out.raw" >"$BUILD/asserts_normal.out"
+compare "assert normal output" "$BUILD/asserts_normal.out" tests/asserts/golden/normal.txt
+
+rc=0; "$BUILD/assert_tests" -v >"$BUILD/asserts_verbose.out.raw" 2>&1 || rc=$?
+if [ "$rc" -ne 25 ]; then echo "FAILED: assert_tests -v exit code $rc, expected 25" >&2; fail=1; fi
+normalize <"$BUILD/asserts_verbose.out.raw" >"$BUILD/asserts_verbose.out"
+compare "assert verbose output" "$BUILD/asserts_verbose.out" tests/asserts/golden/verbose.txt
+
 # ---- CLI suite -------------------------------------------------------------
 $CXX $CXXFLAGS tests/cli/cli_tests.cpp build/libCppUTest.a -o "$BUILD/cli_tests"
 if ! sh tests/cli/run.sh "$BUILD/cli_tests"; then

@@ -27,6 +27,14 @@
 #define CPPUTEST_USE_LONG_LONG 1
 #endif
 
+#ifndef CPPUTEST_HAVE_EXCEPTIONS
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+#define CPPUTEST_HAVE_EXCEPTIONS 1
+#else
+#define CPPUTEST_HAVE_EXCEPTIONS 0
+#endif
+#endif
+
 #if CPPUTEST_USE_LONG_LONG
 typedef long long cpputest_longlong;
 typedef unsigned long long cpputest_ulonglong;

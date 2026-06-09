@@ -93,7 +93,7 @@ expect_eq "-s17 notice" "$(printf '%s\n' "$out" | head -1)" "Test order shufflin
 rc=0; out=$("$BIN" -ri 2>&1) || rc=$?
 expect_rc "-ri ignored test now fails" "$rc" 1
 expect_eq "-ri summary" "$(printf '%s\n' "$out" | grep -aE '^Errors' | norm_ms)" \
-    "Errors (1 failures, 4 tests, 4 ran, 3 checks, 0 ignored, 0 filtered out, 0 ms)"
+    "Errors (1 failures, 4 tests, 4 ran, 4 checks, 0 ignored, 0 filtered out, 0 ms)"
 out=$("$BIN" -ri -v 2>&1) || true
 expect_eq "-ri verbose shows TEST not IGNORE_TEST" \
     "$(printf '%s\n' "$out" | grep -c 'IGNORE_TEST')" "0"

@@ -1,0 +1,149 @@
+
+tests/asserts/assert_tests.cpp:189 a user message..
+tests/asserts/assert_tests.cpp:143: error: Failure in TEST(Fails, checkThrowsWrongType)
+	expected to throw ExpectedError
+but threw a different type
+
+.
+tests/asserts/assert_tests.cpp:138: error: Failure in TEST(Fails, checkThrowsNothing)
+	expected to throw ExpectedError
+but threw nothing
+
+.
+tests/asserts/assert_tests.cpp:126: error: Failure in TEST(Fails, enumsEqualInt)
+	expected <1>
+	but was  <2>
+	difference starts at position 0 at: <          2         >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:121: error: Failure in TEST(Fails, bitsEqual)
+	expected <00000001>
+	but was  <00000010>
+
+.
+tests/asserts/assert_tests.cpp:115: error: Failure in TEST(Fails, memcmpEqual)
+	expected <41 42 43>
+	but was  <41 42 44>
+	difference starts at position 2 at: <   41 42 44         >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:110: error: Failure in TEST(Fails, doublesEqualNan)
+	expected <Nan - Not a number>
+	but was  <2> threshold used was <0.5>
+	Cannot make comparisons with Nan
+
+.
+tests/asserts/assert_tests.cpp:105: error: Failure in TEST(Fails, doublesEqual)
+	expected <1>
+	but was  <2> threshold used was <0.5>
+
+.
+tests/asserts/assert_tests.cpp:100: error: Failure in TEST(Fails, functionPointersEqual)
+	expected <0x1>
+	but was  <0x2>
+
+.
+tests/asserts/assert_tests.cpp:95: error: Failure in TEST(Fails, pointersEqual)
+	expected <0x12>
+	but was  <0x34>
+
+.
+tests/asserts/assert_tests.cpp:90: error: Failure in TEST(Fails, signedBytesEqual)
+	expected <-1 (0xff)>
+	but was  < 2 (0x2)>
+
+.
+tests/asserts/assert_tests.cpp:85: error: Failure in TEST(Fails, bytesEqual)
+	LONGS_EQUAL((0x01) & 0xff, (0x02) & 0xff) failed
+	expected <1 (0x1)>
+	but was  <2 (0x2)>
+
+.
+tests/asserts/assert_tests.cpp:80: error: Failure in TEST(Fails, unsignedLonglongsEqual)
+	expected <1 (0x1)>
+	but was  <2 (0x2)>
+
+.
+tests/asserts/assert_tests.cpp:75: error: Failure in TEST(Fails, longlongsEqual)
+	expected <4294967296 (0x100000000)>
+	but was  <4294967297 (0x100000001)>
+
+.
+tests/asserts/assert_tests.cpp:70: error: Failure in TEST(Fails, unsignedLongsEqual)
+	expected <7 (0x7)>
+	but was  <8 (0x8)>
+
+.
+tests/asserts/assert_tests.cpp:65: error: Failure in TEST(Fails, longsEqualText)
+	Message: size mismatch
+	expected <  1 (0x1)>
+	but was  <100 (0x64)>
+
+.
+tests/asserts/assert_tests.cpp:60: error: Failure in TEST(Fails, longsEqual)
+	LONGS_EQUAL(1, 100) failed
+	expected <  1 (0x1)>
+	but was  <100 (0x64)>
+
+.
+tests/asserts/assert_tests.cpp:55: error: Failure in TEST(Fails, strcmpNocaseContains)
+	actual <hello>
+	did not contain  <XYZ>
+
+.
+tests/asserts/assert_tests.cpp:50: error: Failure in TEST(Fails, strcmpContains)
+	actual <hello world>
+	did not contain  <xyz>
+
+.
+tests/asserts/assert_tests.cpp:45: error: Failure in TEST(Fails, strcmpNocaseEqual)
+	expected <HELLO>
+	but was  <world>
+	difference starts at position 0 at: <          world     >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:40: error: Failure in TEST(Fails, strncmpEqual)
+	expected <hello>
+	but was  <hellp>
+	difference starts at position 4 at: <      hellp         >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:35: error: Failure in TEST(Fails, strcmpEqual)
+	expected <hello>
+	but was  <world>
+	difference starts at position 0 at: <          world     >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:30: error: Failure in TEST(Fails, checkCompare)
+	CHECK_COMPARE(1 > 2) failed
+
+.
+tests/asserts/assert_tests.cpp:25: error: Failure in TEST(Fails, checkEqualStringsPrintable)
+	expected <hello\nworld>
+	but was  <hello\tworld>
+	difference starts at position 5 at: <    hello\tworld    >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:20: error: Failure in TEST(Fails, checkEqualText)
+	Message: custom message
+	expected <1>
+	but was  <2>
+	difference starts at position 0 at: <          2         >
+	                                               ^
+
+.
+tests/asserts/assert_tests.cpp:15: error: Failure in TEST(Fails, checkEqual)
+	expected <12345>
+	but was  <12367>
+	difference starts at position 3 at: <       12367        >
+	                                               ^
+
+.
+Errors (25 failures, 27 tests, 27 ran, 50 checks, 0 ignored, 0 filtered out, 0 ms)
+
