@@ -1021,11 +1021,15 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
         return;
     }
 
+    /* outputParameterWasPassed marks by NAME ONLY on surviving candidates —
+     * upstream marks even same-named params of a DIFFERENT type (the type
+     * check above only decides candidacy), so one actual output param can
+     * satisfy several same-named expected ones (MockExpectedCall.cpp:360) */
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (!e->candidate)
             continue;
         for (cum_out_param *o = e->out_params; o; o = o->next)
-            if (0 == strcmp(o->name, name) && out_types_match(o, type_name))
+            if (0 == strcmp(o->name, name))
                 o->matched = 1;
     }
 
@@ -1445,14 +1449,17 @@ static void actual_finalize(cum_actual *a)
         return;
     }
 
-    /* still in progress: an ignore-others (or zero-param trailing) match may
-     * finalize now */
+    /* Still in progress: an ignore-others (or zero-param trailing) match may
+     * finalize now. NO output copy here — upstream's checkExpectations path
+     * (removeFirstMatchingExpectation -> finalizeActualCallMatch) never
+     * copies; the copy already ran in complete_call_when_match_found when
+     * the last parameter arrived (re-copying also double-counts the
+     * getConstPointerValue check). */
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (is_matching(e)) {
             e->candidate = 0;
             a->matching = e;
             a->state = CUM_CALL_SUCCEED;
-            copy_output_parameters(a, e);
             expectation_call_was_made(e, a->call_order);
             clear_candidates(s);
             return;
