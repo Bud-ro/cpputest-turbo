@@ -93,6 +93,24 @@ Process isolation:
   are deterministic. Composes with `-p` for per-test crash containment inside
   each worker.
 
+## Lean mode (fast compiles)
+
+`TestHarness.h` must pre-include `<new>`/`<memory>`/`<string>` before
+defining the leak-detection `new` macro — that is ~30k preprocessed lines
+per test file, the dominant compile cost (same as upstream). If you don't
+use the leak detector or SimpleString's `std::string` interop, compile your
+test files with:
+
+```sh
+-DCPPUTEST_MEM_LEAK_DETECTION_DISABLED -DCPPUTEST_USE_STD_CPP_LIB=0
+```
+
+which shrinks a test TU from ~30,700 to ~1,100 preprocessed lines — about
+**4× faster compilation** (106 ms → 27 ms per TU at -O0 on the benchmark
+machine). Building the library with `CPPUTEST_C_ONLY=1` additionally drops
+the global `operator new` replacement, so `new`/`delete` in tests run at
+plain libc speed.
+
 ## Performance
 
 See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`; numbers
