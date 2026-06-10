@@ -109,6 +109,79 @@ static int mock_doubles_equal(double d1, double d2, double threshold)
     return diff <= threshold;
 }
 
+/* --------------------- comparators / copiers ---------------------------- */
+
+typedef struct cum_comparator {
+    char *type_name;
+    void *ctx;
+    cum_comparator_equal_fn equal;
+    cum_comparator_string_fn to_string;
+    cum_copier_fn copy; /* copier entries reuse this struct */
+    struct cum_comparator *next;
+} cum_comparator;
+
+static cum_comparator *comparators;
+static cum_comparator *copiers;
+
+static cum_comparator *find_in(cum_comparator *list, const char *type_name)
+{
+    for (cum_comparator *c = list; c; c = c->next)
+        if (0 == strcmp(c->type_name, type_name))
+            return c;
+    return NULL;
+}
+
+void cum_install_comparator(const char *type_name, void *ctx,
+                            cum_comparator_equal_fn equal,
+                            cum_comparator_string_fn to_string)
+{
+    cum_comparator *c = calloc(1, sizeof *c);
+    c->type_name = strdup(type_name);
+    c->ctx = ctx;
+    c->equal = equal;
+    c->to_string = to_string;
+    c->next = comparators;
+    comparators = c;
+}
+
+void cum_install_copier(const char *type_name, void *ctx, cum_copier_fn copy)
+{
+    cum_comparator *c = calloc(1, sizeof *c);
+    c->type_name = strdup(type_name);
+    c->ctx = ctx;
+    c->copy = copy;
+    c->next = copiers;
+    copiers = c;
+}
+
+static void free_comparator_list(cum_comparator **list)
+{
+    cum_comparator *c = *list;
+    while (c) {
+        cum_comparator *next = c->next;
+        free(c->type_name);
+        free(c);
+        c = next;
+    }
+    *list = NULL;
+}
+
+void cum_remove_all_comparators_and_copiers(void)
+{
+    free_comparator_list(&comparators);
+    free_comparator_list(&copiers);
+}
+
+int cum_has_comparator(const char *type_name)
+{
+    return find_in(comparators, type_name) != NULL;
+}
+
+int cum_has_copier(const char *type_name)
+{
+    return find_in(copiers, type_name) != NULL;
+}
+
 /* MockNamedValue::equals — the integer cross-type matrix collapses to
  * sign-aware mathematical equality, which is exactly what upstream's
  * pairwise rules implement. `e` is the expected side (its tolerance is
@@ -141,9 +214,12 @@ static int value_equals(const cum_value *e, const cum_value *a)
         return e->v.mem.size == a->v.mem.size &&
                0 == memcmp(e->v.mem.buf, a->v.mem.buf, e->v.mem.size);
     case CUM_T_OBJECT:
-    case CUM_T_CONST_OBJECT:
-        /* needs an installed comparator (later slice); never equal without */
-        return 0;
+    case CUM_T_CONST_OBJECT: {
+        if (0 != strcmp(cum_value_type_name(e), cum_value_type_name(a)))
+            return 0;
+        cum_comparator *c = find_in(comparators, cum_value_type_name(e));
+        return c && c->equal ? c->equal(c->ctx, e->v.obj.ptr, a->v.obj.ptr) : 0;
+    }
     default: return 0;
     }
 }
@@ -180,9 +256,13 @@ static char *value_to_string(const cum_value *v)
         return result;
     }
     case CUM_T_OBJECT:
-    case CUM_T_CONST_OBJECT:
+    case CUM_T_CONST_OBJECT: {
+        cum_comparator *c = find_in(comparators, cum_value_type_name(v));
+        if (c && c->to_string)
+            return c->to_string(c->ctx, v->v.obj.ptr);
         return cu_str_printf("No comparator found for type: \"%s\"",
                              cum_value_type_name(v));
+    }
     default: return cu_str_printf("?");
     }
 }
@@ -194,12 +274,14 @@ static char *value_to_string(const cum_value *v)
 typedef struct cum_param {
     char *name;
     cum_value value;
-    int matched; /* matched by the in-progress actual call */
+    char *owned_type; /* copy of the custom type name for object values */
+    int matched;      /* matched by the in-progress actual call */
     struct cum_param *next;
 } cum_param;
 
 typedef struct cum_out_param {
     char *name;
+    char *type_name;   /* NULL = plain "const void*" output parameter */
     const void *value; /* NULL = withUnmodifiedOutputParameter */
     size_t size;
     int matched;
@@ -231,6 +313,7 @@ typedef enum {
 
 typedef struct cum_out_dst {
     char *name;
+    char *type_name; /* NULL = plain */
     void *dst;
     struct cum_out_dst *next;
 } cum_out_dst;
@@ -492,21 +575,27 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
     mock_fail(&b);
 }
 
-/* MockUnexpectedOutputParameterFailure (name case; the type case arrives
- * with OfType/copier support) */
+/* MockUnexpectedOutputParameterFailure. bad_type non-NULL = the type case
+ * (parameter name exists on an expectation but with a different type). */
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
-                                             const char *param_name)
+                                             const char *param_name,
+                                             const char *bad_type)
 {
     msb b;
     msb_init(&b);
-    msb_addf(&b,
-             "Mock Failure: Unexpected output parameter name to function \"%s\": %s",
-             fn, param_name);
+    if (bad_type)
+        msb_addf(&b,
+                 "Mock Failure: Unexpected parameter type \"%s\" to output parameter \"%s\" to function \"%s\"",
+                 bad_type, param_name, fn);
+    else
+        msb_addf(&b,
+                 "Mock Failure: Unexpected output parameter name to function \"%s\": %s",
+                 fn, param_name);
     msb_add(&b, "\n");
     msb_history_related(&b, s, fn);
     msb_addf(&b, "\n\tACTUAL unexpected output parameter passed to function: %s\n",
              fn);
-    msb_addf(&b, "\t\tconst void* %s", param_name);
+    msb_addf(&b, "\t\t%s %s", bad_type ? bad_type : "const void*", param_name);
     mock_fail(&b);
 }
 
@@ -634,13 +723,15 @@ static void complete_call_when_match_found(cum_actual *a);
 static void reset_param_match_state(cum_expectation *e);
 static int is_finalized_matching(const cum_expectation *e);
 
-void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
-                                           const void *value, size_t size)
+static void expectation_add_out_param(cum_expectation *e, const char *type_name,
+                                      const char *name, const void *value,
+                                      size_t size)
 {
     if (!e)
         return;
     cum_out_param *o = calloc(1, sizeof *o);
     o->name = strdup(name);
+    o->type_name = type_name ? strdup(type_name) : NULL;
     o->value = value;
     o->size = size;
     cum_out_param **link = &e->out_params;
@@ -649,17 +740,41 @@ void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
     *link = o;
 }
 
+void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
+                                           const void *value, size_t size)
+{
+    expectation_add_out_param(e, NULL, name, value, size);
+}
+
+void cum_expectation_with_output_parameter_of_type(cum_expectation *e,
+                                                   const char *type_name,
+                                                   const char *name,
+                                                   const void *value)
+{
+    expectation_add_out_param(e, type_name, name, value, 0);
+}
+
 void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
                                                       const char *name)
 {
-    cum_expectation_with_output_parameter(e, name, NULL, 0);
+    expectation_add_out_param(e, NULL, name, NULL, 0);
 }
 
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
-                                             const char *param_name);
+                                             const char *param_name,
+                                             const char *bad_type);
 
-/* MockCheckedActualCall::withOutputParameter / checkOutputParameter */
-void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst)
+static int out_types_match(const cum_out_param *o, const char *type_name)
+{
+    if (!o->type_name && !type_name)
+        return 1;
+    return o->type_name && type_name && 0 == strcmp(o->type_name, type_name);
+}
+
+/* MockCheckedActualCall::withOutputParameter / checkOutputParameter.
+ * type_name NULL = plain "const void*" output parameter. */
+static void actual_with_output_parameter(cum_actual *a, const char *type_name,
+                                         const char *name, void *dst)
 {
     if (!a || a->state == CUM_CALL_FAILED)
         return;
@@ -668,6 +783,7 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst
     /* record the destination */
     cum_out_dst *d = calloc(1, sizeof *d);
     d->name = strdup(name);
+    d->type_name = type_name ? strdup(type_name) : NULL;
     d->dst = dst;
     d->next = a->out_dsts;
     a->out_dsts = d;
@@ -684,15 +800,20 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst
             reset_param_match_state(e);
         }
 
-    /* keep candidates that have this output parameter (or ignore others) */
+    /* keep candidates with this output parameter, matching name AND type */
     int any = 0;
+    int name_seen_wrong_type = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (!e->candidate)
             continue;
         int has = 0;
         for (cum_out_param *o = e->out_params; o; o = o->next)
-            if (0 == strcmp(o->name, name))
-                has = 1;
+            if (0 == strcmp(o->name, name)) {
+                if (out_types_match(o, type_name))
+                    has = 1;
+                else
+                    name_seen_wrong_type = 1;
+            }
         if (has || e->ignore_other_parameters)
             any = 1;
         else {
@@ -702,7 +823,10 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst
     }
     if (!any) {
         a->state = CUM_CALL_FAILED;
-        fail_unexpected_output_parameter(s, a->name, name);
+        fail_unexpected_output_parameter(s, a->name, name,
+                                         name_seen_wrong_type
+                                             ? (type_name ? type_name : "const void*")
+                                             : NULL);
         return;
     }
 
@@ -710,11 +834,43 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst
         if (!e->candidate)
             continue;
         for (cum_out_param *o = e->out_params; o; o = o->next)
-            if (0 == strcmp(o->name, name))
+            if (0 == strcmp(o->name, name) && out_types_match(o, type_name))
                 o->matched = 1;
     }
 
     complete_call_when_match_found(a);
+}
+
+void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst)
+{
+    actual_with_output_parameter(a, NULL, name, dst);
+}
+
+void cum_actual_with_output_parameter_of_type(cum_actual *a,
+                                              const char *type_name,
+                                              const char *name, void *dst)
+{
+    actual_with_output_parameter(a, type_name, name, dst);
+}
+
+void cum_fail_no_way_to_compare(const char *type_name)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b,
+             "MockFailure: No way to compare type <%s>. Please install a MockNamedValueComparator.",
+             type_name);
+    mock_fail(&b);
+}
+
+void cum_fail_no_way_to_copy(const char *type_name)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b,
+             "MockFailure: No way to copy type <%s>. Please install a MockNamedValueCopier.",
+             type_name);
+    mock_fail(&b);
 }
 
 void cum_expectation_and_return(cum_expectation *e, cum_value value)
@@ -787,6 +943,10 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
         return;
     cum_param *p = calloc(1, sizeof *p);
     p->name = strdup(name);
+    if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
+        p->owned_type = strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+        value.v.obj.type_name = p->owned_type;
+    }
     p->value = value;
     cum_param **link = &e->params;
     while (*link)
@@ -869,10 +1029,20 @@ static void clear_candidates(cum_scope *s)
  * immediately; ignore-others matches wait for call finalization. */
 static void copy_output_parameters(cum_actual *a, cum_expectation *e)
 {
-    for (cum_out_dst *d = a->out_dsts; d; d = d->next)
-        for (cum_out_param *o = e->out_params; o; o = o->next)
-            if (0 == strcmp(o->name, d->name) && o->value)
+    for (cum_out_dst *d = a->out_dsts; d; d = d->next) {
+        for (cum_out_param *o = e->out_params; o; o = o->next) {
+            if (0 != strcmp(o->name, d->name) || !out_types_match(o, d->type_name)
+                || !o->value)
+                continue;
+            if (o->type_name) {
+                cum_comparator *c = find_in(copiers, o->type_name);
+                if (c && c->copy)
+                    c->copy(c->ctx, d->dst, o->value);
+            } else {
                 memcpy(d->dst, o->value, o->size);
+            }
+        }
+    }
 }
 
 static void complete_call_when_match_found(cum_actual *a)
@@ -939,6 +1109,7 @@ static void scope_finalize_last_actual(cum_scope *s)
         while (d) {
             cum_out_dst *next = d->next;
             free(d->name);
+            free(d->type_name);
             free(d);
             d = next;
         }
@@ -1110,6 +1281,7 @@ static void scope_clear(cum_scope *s)
         while (p) {
             cum_param *pnext = p->next;
             free(p->name);
+            free(p->owned_type);
             free(p);
             p = pnext;
         }
@@ -1117,6 +1289,7 @@ static void scope_clear(cum_scope *s)
         while (o) {
             cum_out_param *onext = o->next;
             free(o->name);
+            free(o->type_name);
             free(o);
             o = onext;
         }

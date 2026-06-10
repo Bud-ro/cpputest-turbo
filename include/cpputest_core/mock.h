@@ -91,6 +91,33 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
 /* actual-call input parameter (checkInputParameter flow; may fail+longjmp) */
 void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value);
 
+/* custom-type comparators/copiers (MockNamedValueComparator/Copier). The
+ * C++ shim registers adapters; ctx is the C++ object. to_string returns a
+ * malloc'd string (freed with cu_str_free). */
+typedef int (*cum_comparator_equal_fn)(void *ctx, const void *o1, const void *o2);
+typedef char *(*cum_comparator_string_fn)(void *ctx, const void *o);
+typedef void (*cum_copier_fn)(void *ctx, void *dst, const void *src);
+void cum_install_comparator(const char *type_name, void *ctx,
+                            cum_comparator_equal_fn equal,
+                            cum_comparator_string_fn to_string);
+void cum_install_copier(const char *type_name, void *ctx, cum_copier_fn copy);
+void cum_remove_all_comparators_and_copiers(void);
+int cum_has_comparator(const char *type_name);
+int cum_has_copier(const char *type_name);
+/* MockNoWayToCompare/CopyCustomTypeFailure (fail + longjmp in a test) */
+void cum_fail_no_way_to_compare(const char *type_name);
+void cum_fail_no_way_to_copy(const char *type_name);
+
+/* OfType parameters use cum_value with CUM_T_OBJECT/CUM_T_CONST_OBJECT;
+ * expectation-side type names are copied. Output OfType: */
+void cum_expectation_with_output_parameter_of_type(cum_expectation *e,
+                                                   const char *type_name,
+                                                   const char *name,
+                                                   const void *value);
+void cum_actual_with_output_parameter_of_type(cum_actual *a,
+                                              const char *type_name,
+                                              const char *name, void *dst);
+
 /* output parameters: the expected side supplies the bytes (or "unmodified");
  * the actual side registers destinations, filled when the call matches */
 void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,

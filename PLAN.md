@@ -123,7 +123,7 @@ Makefile               Builds lib, tests, conformance, bench
       `actualCall`, `withParameter` overload set, `andReturnValue` set,
       `returnValue()` accessors, scopes (`mock("scope")`), `checkExpectations`,
       `clear`, `ignoreOtherCalls`, `disable/enable`, `crashOnFailure`.
-- [ ] 6.3 Comparators & copiers: `installComparator/Copier`,
+- [x] 6.3 Comparators & copiers: `installComparator/Copier`,
       `withParameterOfType`, `withOutputParameter[OfType]`.
 - [ ] 6.4 `MockSupport_c.h` C interface for mocks.
 - [ ] 6.5 MockSupportPlugin parity (auto checkExpectations/clear per test).
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #14: mock slice 5 / 6.3 done — comparator/copier registry in C core (C++ virtuals adapted via extern-C trampolines), withParameterOfType (object equality via comparator, custom valueToString in messages), withOutputParameterOfType[Returning] (copier-based), output-param TYPE matching incl. the "Unexpected parameter type" failure case, MockNoWayToCompare/Copy failures (note upstream "MockFailure:" without space), expectation-side type-name copies. REMAINING Phase 6: MockSupport_c (6.4), then mark 6.1/6.2/6.5 done (plugin exists; tracing/onObject deferred to conformance-driven work).
 - 2026-06-09 #13: mock slice 4 — output parameters (withOutputParameterReturning/withUnmodifiedOutputParameter/withOutputParameter, copy-on-match incl. the ignore-others first-matching copy path, MockUnexpectedOutputParameterFailure name-case golden-pinned, <output> rendering in callToString + missing-params) + MockSupportPlugin (post-test checkExpectations+clear). LESSON: bash heredoc mangles bang chars in python scripts — three replaces silently no-opd; use the Edit tool for code with exclamation marks. REMAINING in Phase 6: comparators/copiers (installComparator/withParameterOfType + OfType output params), MockSupport_c, tracing; 6.1/6.2 mostly done otherwise.
 - 2026-06-09 #12: mock slice 3 — andReturnValue overloads (12 types), returnXValue/OrDefault on actual call + MockSupport-level XReturnValue accessors (reading finalizes the call like upstream checkExpectations-in-returnValue), MockNamedValue facade w/ STRCMP-checked getters, per-scope data store (setData overloads, setDataObject w/ copied type name, getData/hasData). NEXT SLICE: output parameters (withOutputParameterReturning + copy-on-match), MockSupportPlugin, MockSupport_c C interface; then comparators/copiers; tracing if conformance needs it.
 - 2026-06-09 #11: mock slice 2 — input parameters: cum_value tagged union (13 types), upstream's integer cross-type matrix collapsed to sign-aware equality (provably equivalent), expected-side double tolerance (default 0.005), full withParameter overload set on both facades, candidate-filtering state machine (discard-on-reopen, finalized-matching removal, parameterWasPassed on all candidates), 3 param failure messages golden-pinned (name/value/missing-params w/ MISSING parameters line). Slice 3 (#12) added return values + data store. Slice 4 (#13) added output params + MockSupportPlugin.

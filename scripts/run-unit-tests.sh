@@ -108,7 +108,7 @@ if [ "$rc" -ne 0 ]; then echo "FAILED: fixture_tests exit $rc" >&2; fail=1; else
 $CXX $CXXFLAGS tests/mock/mock_tests.cpp build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_tests"
 rc=0; "$BUILD/mock_tests" 2>&1 | sed 's/, [0-9]* ms)/, 0 ms)/' > "$BUILD/mock.out" || rc=$?
 rc=0; "$BUILD/mock_tests" >/dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 9 ]; then echo "FAILED: mock_tests exit $rc, expected 9" >&2; fail=1; fi
+if [ "$rc" -ne 12 ]; then echo "FAILED: mock_tests exit $rc, expected 12" >&2; fail=1; fi
 compare "mock failure messages" "$BUILD/mock.out" tests/mock/golden/all.txt
 
 # ---- OrderedTest ---------------------------------------------------------------

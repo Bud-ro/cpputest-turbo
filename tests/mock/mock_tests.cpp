@@ -364,4 +364,96 @@ TEST(MockOutput, mixedWithInputParameters)
     mock().checkExpectations();
 }
 
+/* --- comparators & copiers (run first) ------------------------------------ */
+
+struct Point
+{
+    int x;
+    int y;
+};
+
+class PointComparator : public MockNamedValueComparator
+{
+public:
+    bool isEqual(const void *o1, const void *o2) CPPUTEST_OVERRIDE
+    {
+        const Point *p1 = (const Point *)o1;
+        const Point *p2 = (const Point *)o2;
+        return p1->x == p2->x && p1->y == p2->y;
+    }
+    SimpleString valueToString(const void *o) CPPUTEST_OVERRIDE
+    {
+        const Point *p = (const Point *)o;
+        return StringFromFormat("(%d, %d)", p->x, p->y);
+    }
+};
+
+class PointCopier : public MockNamedValueCopier
+{
+public:
+    void copy(void *out, const void *in) CPPUTEST_OVERRIDE
+    {
+        *(Point *)out = *(const Point *)in;
+    }
+};
+
+TEST_GROUP(MockComparators)
+{
+    PointComparator comparator;
+    PointCopier copier;
+
+    TEST_TEARDOWN()
+    {
+        mock().clear();
+        mock().removeAllComparatorsAndCopiers();
+    }
+};
+
+TEST(MockComparators, customValueInFailureMessage)
+{
+    mock().installComparator("Point", comparator);
+    Point expected = { 1, 2 };
+    Point actual = { 3, 4 };
+    mock().expectOneCall("draw").withParameterOfType("Point", "p", &expected);
+    mock().actualCall("draw").withParameterOfType("Point", "p", &actual);
+}
+
+TEST(MockComparators, noWayToCompare)
+{
+    Point p = { 1, 2 };
+    mock().expectOneCall("draw").withParameterOfType("Point", "p", &p);
+    mock().actualCall("draw").withParameterOfType("Point", "p", &p);
+}
+
+TEST(MockComparators, comparatorMatches)
+{
+    mock().installComparator("Point", comparator);
+    Point expected = { 1, 2 };
+    Point actual = { 1, 2 };
+    mock().expectOneCall("draw").withParameterOfType("Point", "p", &expected);
+    mock().actualCall("draw").withParameterOfType("Point", "p", &actual);
+    mock().checkExpectations();
+}
+
+TEST(MockComparators, copierFillsOutput)
+{
+    mock().installCopier("Point", copier);
+    Point provided = { 9, 8 };
+    Point received = { 0, 0 };
+    mock().expectOneCall("get").withOutputParameterOfTypeReturning("Point", "p",
+                                                                   &provided);
+    mock().actualCall("get").withOutputParameterOfType("Point", "p", &received);
+    LONGS_EQUAL(9, received.x);
+    LONGS_EQUAL(8, received.y);
+    mock().checkExpectations();
+}
+
+TEST(MockComparators, noWayToCopy)
+{
+    Point received;
+    mock().expectOneCall("get").withOutputParameterOfTypeReturning("Point", "p",
+                                                                   &received);
+    mock().actualCall("get").withOutputParameterOfType("Point", "p", &received);
+}
+
 CPPUTEST_DEFAULT_MAIN

@@ -46,6 +46,44 @@ inline cum_value CppUMockConstObject(const SimpleString &type, const void *ptr)
     return x;
 }
 
+class MockNamedValueComparator
+{
+public:
+    MockNamedValueComparator() {}
+    virtual ~MockNamedValueComparator() {}
+    virtual bool isEqual(const void *object1, const void *object2) = 0;
+    virtual SimpleString valueToString(const void *object) = 0;
+};
+
+class MockNamedValueCopier
+{
+public:
+    MockNamedValueCopier() {}
+    virtual ~MockNamedValueCopier() {}
+    virtual void copy(void *out, const void *in) = 0;
+};
+
+/* C-core adapters for the virtuals above */
+extern "C" {
+
+inline int CppUMockComparatorEqual(void *ctx, const void *o1, const void *o2)
+{
+    return static_cast<MockNamedValueComparator *>(ctx)->isEqual(o1, o2) ? 1 : 0;
+}
+
+inline char *CppUMockComparatorToString(void *ctx, const void *o)
+{
+    SimpleString s = static_cast<MockNamedValueComparator *>(ctx)->valueToString(o);
+    return cu_str_printf("%s", s.asCharString());
+}
+
+inline void CppUMockCopierCopy(void *ctx, void *dst, const void *src)
+{
+    static_cast<MockNamedValueCopier *>(ctx)->copy(dst, src);
+}
+
+} /* extern "C" */
+
 /* MockNamedValue facade: a typed value with STRCMP-checked getters,
  * as returned by getData()/returnValue() */
 class MockNamedValue
@@ -141,10 +179,26 @@ public:
         return *this;
     }
 
+    virtual MockExpectedCall &withParameterOfType(const SimpleString &type,
+                                                  const SimpleString &name,
+                                                  const void *value)
+    {
+        return addParam(name, CppUMockConstObject(type, value));
+    }
+
     virtual MockExpectedCall &withOutputParameterReturning(const SimpleString &name,
                                                            const void *value, size_t size)
     {
         cum_expectation_with_output_parameter(handle_, name.asCharString(), value, size);
+        return *this;
+    }
+
+    virtual MockExpectedCall &withOutputParameterOfTypeReturning(const SimpleString &type,
+                                                                 const SimpleString &name,
+                                                                 const void *value)
+    {
+        cum_expectation_with_output_parameter_of_type(handle_, type.asCharString(),
+                                                      name.asCharString(), value);
         return *this;
     }
 
@@ -219,9 +273,33 @@ public:
     virtual MockActualCall &withFunctionPointerParameter(const SimpleString &name, void (*value)()) { return addParam(name, CppUMockFunctionPointer(value)); }
     virtual MockActualCall &withMemoryBufferParameter(const SimpleString &name, const unsigned char *value, size_t size) { return addParam(name, CppUMockMemBuffer(value, size)); }
 
+    virtual MockActualCall &withParameterOfType(const SimpleString &type,
+                                                const SimpleString &name,
+                                                const void *value)
+    {
+        if (!cum_has_comparator(type.asCharString())) {
+            cum_fail_no_way_to_compare(type.asCharString());
+            return *this;
+        }
+        return addParam(name, CppUMockConstObject(type, value));
+    }
+
     virtual MockActualCall &withOutputParameter(const SimpleString &name, void *output)
     {
         cum_actual_with_output_parameter(handle_, name.asCharString(), output);
+        return *this;
+    }
+
+    virtual MockActualCall &withOutputParameterOfType(const SimpleString &type,
+                                                      const SimpleString &name,
+                                                      void *output)
+    {
+        if (!cum_has_copier(type.asCharString())) {
+            cum_fail_no_way_to_copy(type.asCharString());
+            return *this;
+        }
+        cum_actual_with_output_parameter_of_type(handle_, type.asCharString(),
+                                                 name.asCharString(), output);
         return *this;
     }
 
@@ -382,6 +460,24 @@ public:
         cum_value v;
         int has = cum_scope_get_data(scope_, name.asCharString(), &v);
         return has ? MockNamedValue(v) : MockNamedValue();
+    }
+
+    virtual void installComparator(const SimpleString &typeName,
+                                   MockNamedValueComparator &comparator)
+    {
+        cum_install_comparator(typeName.asCharString(), &comparator,
+                               CppUMockComparatorEqual, CppUMockComparatorToString);
+    }
+
+    virtual void installCopier(const SimpleString &typeName,
+                               MockNamedValueCopier &copier)
+    {
+        cum_install_copier(typeName.asCharString(), &copier, CppUMockCopierCopy);
+    }
+
+    virtual void removeAllComparatorsAndCopiers()
+    {
+        cum_remove_all_comparators_and_copiers();
     }
 
     virtual void checkExpectations() { cum_check_expectations_all(); }

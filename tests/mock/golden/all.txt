@@ -1,4 +1,22 @@
+
+tests/mock/mock_tests.cpp:451: error: Failure in TEST(MockComparators, noWayToCopy)
+	MockFailure: No way to copy type <Point>. Please install a MockNamedValueCopier.
+
 ...
+tests/mock/mock_tests.cpp:421: error: Failure in TEST(MockComparators, noWayToCompare)
+	MockFailure: No way to compare type <Point>. Please install a MockNamedValueComparator.
+
+.
+tests/mock/mock_tests.cpp:412: error: Failure in TEST(MockComparators, customValueInFailureMessage)
+	Mock Failure: Unexpected parameter value to parameter "p" to function "draw": <(3, 4)>
+	EXPECTED calls that WERE NOT fulfilled related to function: draw
+		draw -> Point p: <(1, 2)> (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled related to function: draw
+		<none>
+	ACTUAL unexpected parameter passed to function: draw
+		Point p: <(3, 4)>
+
+....
 tests/mock/mock_tests.cpp:328: error: Failure in TEST(MockOutput, unexpectedOutputParameterName)
 	Mock Failure: Unexpected output parameter name to function "f": wrong
 	EXPECTED calls that WERE NOT fulfilled related to function: f
@@ -81,5 +99,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (9 failures, 29 tests, 29 ran, 92 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (12 failures, 34 tests, 34 ran, 99 checks, 0 ignored, 0 filtered out, 0 ms)
 
