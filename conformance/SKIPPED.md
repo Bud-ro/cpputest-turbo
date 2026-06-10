@@ -23,9 +23,9 @@ Categories:
 | MemoryLeakDetectorTest.cpp | INTERNALS | MemoryLeakDetector class API; report formats covered by tests/leaks goldens |
 | MemoryLeakWarningTest.cpp | PLANNED | needs DummyMemoryLeakDetector fixture + detector injection |
 | MemoryOperatorOverloadTest.cpp | INTERNALS | operator-new overload mechanics + allocator internals |
-| PluginTest.cpp | PLANNED | needs CppUTest/TestOutput.h shim (StringBufferTestOutput) |
+| PluginTest.cpp | **PASSING** | |
 | PreprocessorTest.cpp | **PASSING** | (compile-only constructs) |
-| SetPluginTest.cpp | PLANNED | needs CppUTest/TestOutput.h shim |
+| SetPluginTest.cpp | **PASSING** | |
 | SimpleMutexTest.cpp | INTERNALS | SimpleMutex platform class |
 | SimpleStringCacheTest.cpp | INTERNALS | string-cache allocator internals |
 | SimpleStringTest.cpp | PLANNED | needs fuller SimpleString shim (split/replace/find/AtoI statics); formats already golden-tested |

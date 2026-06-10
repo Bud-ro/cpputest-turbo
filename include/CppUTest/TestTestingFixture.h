@@ -84,10 +84,10 @@ public:
     TestTestingFixture()
         : verbose_(false), ownsExecFunction_(false)
     {
-        savedTests_ = cu_registry_tests();
-        cu_registry_set_tests(NULLPTR);
+        registry_ = new TestRegistry;
+        TestRegistry::getCurrentRegistry()->setCurrentRegistry(registry_);
         genTest_ = new ExecFunctionTestShell();
-        cu_registry_add(&genTest_->node_);
+        registry_->addTest(genTest_);
         clearStats();
         currentFixture() = this;
         lineExecutedFlag() = false;
@@ -96,8 +96,9 @@ public:
     virtual ~TestTestingFixture()
     {
         clearExecFunction();
-        cu_registry_set_tests(savedTests_);
+        TestRegistry::getCurrentRegistry()->setCurrentRegistry(NULLPTR);
         delete genTest_;
+        delete registry_;
         currentFixture() = NULLPTR;
     }
 
@@ -107,12 +108,9 @@ public:
         clearStats();
     }
 
-    void addTest(UtestShell *test) { cu_registry_add(&test->node_); }
+    void addTest(UtestShell *test) { registry_->addTest(test); }
 
-    void installPlugin(TestPlugin *plugin)
-    {
-        TestRegistry::getCurrentRegistry()->installPlugin(plugin);
-    }
+    void installPlugin(TestPlugin *plugin) { registry_->installPlugin(plugin); }
 
     void setTestFunction(void (*testFunction)())
     {
@@ -140,8 +138,10 @@ public:
 
     void runAllTests()
     {
+        /* the fixture's own registry is current, so its (usually empty)
+         * plugin chain runs — not the outer runner's plugins */
         cu_set_output_sink(captureSink, this);
-        cu_run_registered_tests(&stats_, verbose_ ? 1 : 0);
+        cu_run_registered_tests_ex(&stats_, verbose_ ? 1 : 0, 1);
         cu_set_output_sink(NULLPTR, NULLPTR);
     }
 
@@ -152,7 +152,7 @@ public:
     size_t getTestCount() { return stats_.test_count; }
 
     const SimpleString &getOutput() { return output_; }
-    TestRegistry *getRegistry() { return TestRegistry::getCurrentRegistry(); }
+    TestRegistry *getRegistry() { return registry_; }
 
     bool hasTestFailed() { return genTest_->node_.has_failed != 0; }
 
@@ -217,7 +217,7 @@ private:
         stats_.failure_count = stats_.ignored_count = stats_.filtered_out_count = 0;
     }
 
-    cu_test *savedTests_;
+    TestRegistry *registry_;
     ExecFunctionTestShell *genTest_;
     bool verbose_;
     bool ownsExecFunction_;

@@ -5,6 +5,7 @@
  * this class carries the plugin chain and the public registry API. */
 
 #include "CppUTest/TestPlugin.h"
+#include "CppUTest/TestOutput.h"
 #include "CppUTest/Utest.h"
 #include <cpputest_core/core.h>
 
@@ -21,13 +22,56 @@ inline int CppUTestPluginParseHook(int ac, const char *const *av, int index);
 class TestRegistry
 {
 public:
+    /* instances are constructible like upstream; the default registry wraps
+     * the process-wide C core list */
+    TestRegistry() : firstPlugin_(NullTestPlugin::instance()), head_(NULLPTR) {}
+    virtual ~TestRegistry() {}
+
     static TestRegistry *getCurrentRegistry()
     {
-        static TestRegistry registry;
-        return &registry;
+        return currentSlot() ? currentSlot() : defaultRegistry();
     }
 
-    void addTest(UtestShell *test) { cu_registry_add(&test->node_); }
+    /* swap which registry's tests the core list holds; NULL restores the
+     * default registry */
+    virtual void setCurrentRegistry(TestRegistry *registry)
+    {
+        getCurrentRegistry()->head_ = cu_registry_tests();
+        currentSlot() = registry;
+        cu_registry_set_tests(getCurrentRegistry()->head_);
+    }
+
+    virtual void runAllTests(TestResult &result)
+    {
+        TestRegistry *saved = currentSlot();
+        setCurrentRegistry(this);
+        cu_set_output_sink(resultCaptureSink, &result);
+        cu_run_stats stats;
+        cu_run_registered_tests_ex(&stats, 0, 1);
+        cu_set_output_sink(NULLPTR, NULLPTR);
+        result.setStats(stats);
+        setCurrentRegistry(saved);
+    }
+
+    virtual int countPlugins()
+    {
+        int count = 0;
+        for (TestPlugin *p = firstPlugin_; p != NullTestPlugin::instance();
+             p = p->getNext())
+            count++;
+        return count;
+    }
+
+    void addTest(UtestShell *test)
+    {
+        if (this == getCurrentRegistry()) {
+            cu_registry_add(&test->node_);
+        } else {
+            test->node_.next = head_;
+            head_ = &test->node_;
+        }
+    }
+
     void unDoLastAddTest() { cu_registry_undo_last_add(); }
 
     UtestShell *getFirstTest()
@@ -71,9 +115,28 @@ public:
     }
 
 private:
-    TestRegistry() : firstPlugin_(NullTestPlugin::instance()) {}
+    static TestRegistry *&currentSlot()
+    {
+        static TestRegistry *current = NULLPTR;
+        return current;
+    }
+
+    static TestRegistry *defaultRegistry()
+    {
+        static TestRegistry registry;
+        return &registry;
+    }
+
+    static void resultCaptureSink(const char *text, void *arg)
+    {
+        TestResult *result = static_cast<TestResult *>(arg);
+        TestOutput *output = result->getOutputForCapture();
+        if (output)
+            output->print(text);
+    }
 
     TestPlugin *firstPlugin_;
+    cu_test *head_;
 };
 
 extern "C" inline void CppUTestPluginPreHook(cu_test *t)

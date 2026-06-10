@@ -70,6 +70,10 @@ void cu_registry_reverse(void)
     free(array);
 }
 
+/* upstream's swappable platform hooks; tests can UT_PTR_SET them */
+void (*PlatformSpecificSrand)(unsigned int) = srand;
+int (*PlatformSpecificRand)(void) = rand;
+
 /* Fisher-Yates with srand/rand, matching upstream's PlatformSpecificSrand/
  * Rand so that a given seed yields the same order on the same libc. */
 void cu_registry_shuffle(size_t seed)
@@ -78,9 +82,9 @@ void cu_registry_shuffle(size_t seed)
     size_t count = registry_to_array(&array);
     if (count == 0)
         return;
-    srand((unsigned)seed);
+    PlatformSpecificSrand((unsigned)seed);
     for (size_t i = count - 1; i >= 1; --i) {
-        size_t j = (size_t)rand() % (i + 1);
+        size_t j = (size_t)PlatformSpecificRand() % (i + 1);
         cu_test *tmp = array[i];
         array[i] = array[j];
         array[j] = tmp;

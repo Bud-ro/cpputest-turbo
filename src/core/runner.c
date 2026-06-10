@@ -272,6 +272,12 @@ static void list_locations(void)
  * upstream fixture uses a fresh registry with its own empty plugin chain. */
 void cu_run_registered_tests(cu_run_stats *stats_out, int verbose)
 {
+    cu_run_registered_tests_ex(stats_out, verbose, 0);
+}
+
+void cu_run_registered_tests_ex(cu_run_stats *stats_out, int verbose,
+                                int run_plugins)
+{
     cu_args args;
     cu_output out;
     cu_result res;
@@ -281,8 +287,10 @@ void cu_run_registered_tests(cu_run_stats *stats_out, int verbose)
     cu_output *saved_output = current_output;
     cu_plugin_action_fn saved_pre = plugin_pre;
     cu_plugin_action_fn saved_post = plugin_post;
-    plugin_pre = NULL;
-    plugin_post = NULL;
+    if (run_plugins == 0) {
+        plugin_pre = NULL;
+        plugin_post = NULL;
+    }
 
     memset(&args, 0, sizeof args);
     args.repeat = 1;

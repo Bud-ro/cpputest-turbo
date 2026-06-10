@@ -7,6 +7,7 @@
  * counting and output happens in libCppUTest's C core. */
 
 #include "CppUTest/CppUTestConfig.h"
+#include "CppUTest/SimpleString.h"
 #include <cpputest_core/core.h>
 
 class Utest
@@ -79,10 +80,29 @@ public:
     virtual Utest *createTest() { return new Utest(); }
     virtual void destroyTest(Utest *test) { delete test; }
 
-    const char *getName() const { return node_.name; }
-    const char *getGroup() const { return node_.group; }
-    const char *getFile() const { return node_.file; }
+    const SimpleString getName() const { return SimpleString(node_.name); }
+    const SimpleString getGroup() const { return SimpleString(node_.group); }
+    const SimpleString getFile() const { return SimpleString(node_.file); }
     size_t getLineNumber() const { return node_.line; }
+
+    SimpleString getFormattedName() const
+    {
+        SimpleString formattedName(getMacroName());
+        formattedName += "(";
+        formattedName += node_.group;
+        formattedName += ", ";
+        formattedName += node_.name;
+        formattedName += ")";
+        return formattedName;
+    }
+
+    virtual SimpleString getMacroName() const
+    {
+        return (node_.is_ignored && !node_.run_ignored) ? "IGNORE_TEST" : "TEST";
+    }
+
+    bool willRun() const { return !(node_.is_ignored && !node_.run_ignored); }
+    bool hasFailed() const { return node_.has_failed != 0; }
 
     void setGroupName(const char *groupName) { node_.group = groupName; }
     void setTestName(const char *testName) { node_.name = testName; }

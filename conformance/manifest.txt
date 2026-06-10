@@ -7,3 +7,5 @@ tests/CppUTest/CompatabilityTests.cpp
 tests/CppUTestExt/MockCheatSheetTest.cpp
 tests/CppUTest/TestUTestMacro.cpp
 tests/CppUTest/TestUTestStringMacro.cpp
+tests/CppUTest/SetPluginTest.cpp
+tests/CppUTest/PluginTest.cpp
