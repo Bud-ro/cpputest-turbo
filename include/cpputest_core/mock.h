@@ -14,6 +14,49 @@ typedef struct cum_scope cum_scope;
 typedef struct cum_expectation cum_expectation;
 typedef struct cum_actual cum_actual;
 
+/* tagged value (MockNamedValue). Strings and memory buffers are NOT copied
+ * (upstream stores the pointers; lifetime is the caller's problem). */
+typedef enum {
+    CUM_T_BOOL,
+    CUM_T_INT,
+    CUM_T_UINT,
+    CUM_T_LONG,
+    CUM_T_ULONG,
+    CUM_T_LONGLONG,
+    CUM_T_ULONGLONG,
+    CUM_T_DOUBLE,
+    CUM_T_STRING,
+    CUM_T_POINTER,
+    CUM_T_CONST_POINTER,
+    CUM_T_FUNCTIONPOINTER,
+    CUM_T_MEMBUFFER
+} cum_type;
+
+typedef struct cum_value {
+    cum_type type;
+    union {
+        int b;
+        int i;
+        unsigned int ui;
+        long l;
+        unsigned long ul;
+        long long ll;
+        unsigned long long ull;
+        struct {
+            double value;
+            double tolerance;
+        } dbl;
+        const char *str;
+        void *ptr;
+        const void *cptr;
+        void (*fptr)(void);
+        struct {
+            const unsigned char *buf;
+            size_t size;
+        } mem;
+    } v;
+} cum_value;
+
 /* scope registry; "" is the global scope. Creates on first use. */
 cum_scope *cum_scope_get(const char *name);
 
@@ -33,6 +76,11 @@ void cum_crash_on_failure(int crash);
 /* expectation knobs */
 void cum_expectation_with_call_order(cum_expectation *e, unsigned start, unsigned end);
 void cum_expectation_ignore_other_parameters(cum_expectation *e);
+void cum_expectation_with_parameter(cum_expectation *e, const char *name,
+                                    cum_value value);
+
+/* actual-call input parameter (checkInputParameter flow; may fail+longjmp) */
+void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value);
 
 /* facade bookkeeping: shim objects attached to records, freed via callback */
 void cum_expectation_set_user(cum_expectation *e, void *user);

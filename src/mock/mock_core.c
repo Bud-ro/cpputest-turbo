@@ -54,20 +54,146 @@ static void msb_add(msb *b, const char *s)
     msb_addf(b, "%s", s);
 }
 
+/* ------------------------------ values ---------------------------------- */
+
+/* MockNamedValue type names, indexed by cum_type */
+static const char *type_names[] = {
+    "bool", "int", "unsigned int", "long int", "unsigned long int",
+    "long long int", "unsigned long long int", "double", "const char*",
+    "void*", "const void*", "void (*)()", "const unsigned char*"
+};
+
+static int type_is_integer(cum_type t)
+{
+    return t == CUM_T_INT || t == CUM_T_UINT || t == CUM_T_LONG ||
+           t == CUM_T_ULONG || t == CUM_T_LONGLONG || t == CUM_T_ULONGLONG;
+}
+
+static int type_is_signed(cum_type t)
+{
+    return t == CUM_T_INT || t == CUM_T_LONG || t == CUM_T_LONGLONG;
+}
+
+static long long as_signed(const cum_value *v)
+{
+    switch (v->type) {
+    case CUM_T_INT: return v->v.i;
+    case CUM_T_LONG: return v->v.l;
+    default: return v->v.ll;
+    }
+}
+
+static unsigned long long as_unsigned(const cum_value *v)
+{
+    switch (v->type) {
+    case CUM_T_UINT: return v->v.ui;
+    case CUM_T_ULONG: return v->v.ul;
+    default: return v->v.ull;
+    }
+}
+
+static int mock_doubles_equal(double d1, double d2, double threshold)
+{
+    if (d1 != d1 || d2 != d2 || threshold != threshold) /* NaN */
+        return 0;
+    double diff = d1 - d2;
+    if (diff < 0)
+        diff = -diff;
+    return diff <= threshold;
+}
+
+/* MockNamedValue::equals — the integer cross-type matrix collapses to
+ * sign-aware mathematical equality, which is exactly what upstream's
+ * pairwise rules implement. `e` is the expected side (its tolerance is
+ * used for doubles). */
+static int value_equals(const cum_value *e, const cum_value *a)
+{
+    if (type_is_integer(e->type) && type_is_integer(a->type)) {
+        int es = type_is_signed(e->type), as = type_is_signed(a->type);
+        if (es && as)
+            return as_signed(e) == as_signed(a);
+        if (!es && !as)
+            return as_unsigned(e) == as_unsigned(a);
+        const cum_value *sv = es ? e : a;
+        const cum_value *uv = es ? a : e;
+        return as_signed(sv) >= 0 &&
+               (unsigned long long)as_signed(sv) == as_unsigned(uv);
+    }
+    if (e->type != a->type)
+        return 0;
+    switch (e->type) {
+    case CUM_T_BOOL: return e->v.b == a->v.b;
+    case CUM_T_DOUBLE:
+        return mock_doubles_equal(e->v.dbl.value, a->v.dbl.value, e->v.dbl.tolerance);
+    case CUM_T_STRING:
+        return 0 == strcmp(e->v.str ? e->v.str : "", a->v.str ? a->v.str : "");
+    case CUM_T_POINTER: return e->v.ptr == a->v.ptr;
+    case CUM_T_CONST_POINTER: return e->v.cptr == a->v.cptr;
+    case CUM_T_FUNCTIONPOINTER: return e->v.fptr == a->v.fptr;
+    case CUM_T_MEMBUFFER:
+        return e->v.mem.size == a->v.mem.size &&
+               0 == memcmp(e->v.mem.buf, a->v.mem.buf, e->v.mem.size);
+    default: return 0;
+    }
+}
+
+/* MockNamedValue::toString — malloc'd */
+static char *value_to_string(const cum_value *v)
+{
+    switch (v->type) {
+    case CUM_T_BOOL: return cu_str_printf("%s", v->v.b ? "true" : "false");
+    case CUM_T_INT: return cu_str_printf("%d (0x%x)", v->v.i, (unsigned)v->v.i);
+    case CUM_T_UINT: return cu_str_printf("%u (0x%x)", v->v.ui, v->v.ui);
+    case CUM_T_LONG: return cu_str_printf("%ld (0x%lx)", v->v.l, (unsigned long)v->v.l);
+    case CUM_T_ULONG: return cu_str_printf("%lu (0x%lx)", v->v.ul, v->v.ul);
+    case CUM_T_LONGLONG:
+        return cu_str_printf("%lld (0x%llx)", v->v.ll, (unsigned long long)v->v.ll);
+    case CUM_T_ULONGLONG: return cu_str_printf("%llu (0x%llx)", v->v.ull, v->v.ull);
+    case CUM_T_DOUBLE: return cu_str_from_double(v->v.dbl.value, 6);
+    case CUM_T_STRING: return cu_str_printf("%s", v->v.str ? v->v.str : "");
+    case CUM_T_POINTER:
+        return cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.ptr);
+    case CUM_T_CONST_POINTER:
+        return cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.cptr);
+    case CUM_T_FUNCTIONPOINTER:
+        return cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.fptr);
+    case CUM_T_MEMBUFFER: {
+        if (!v->v.mem.buf)
+            return cu_str_printf("(null)");
+        size_t shown = v->v.mem.size > 128 ? 128 : v->v.mem.size;
+        char *hex = cu_str_from_binary(v->v.mem.buf, shown);
+        char *result = cu_str_printf("Size = %u | HexContents = %s%s",
+                                     (unsigned)v->v.mem.size, hex,
+                                     v->v.mem.size > shown ? " ..." : "");
+        cu_str_free(hex);
+        return result;
+    }
+    default: return cu_str_printf("?");
+    }
+}
+
 /* ------------------------------ data model ------------------------------ */
 
 #define CUM_NO_CALL_ORDER 0
 
+typedef struct cum_param {
+    char *name;
+    cum_value value;
+    int matched; /* matched by the in-progress actual call */
+    struct cum_param *next;
+} cum_param;
+
 struct cum_expectation {
     char *name;
+    cum_param *params; /* input parameters, declaration order */
     unsigned expected_calls;
     unsigned actual_calls;
     unsigned order_start; /* CUM_NO_CALL_ORDER = unordered */
     unsigned order_end;
     int out_of_order;
     int ignore_other_parameters;
-    int matched_by_in_progress; /* claimed by the in-progress actual call */
-    void *user;                 /* C++ facade */
+    int candidate; /* potentially matching the in-progress actual call */
+    void *user;    /* C++ facade */
     struct cum_expectation *next;
 };
 
@@ -147,7 +273,7 @@ static void mock_fail(msb *message)
     free(msg);
 }
 
-/* callToString (subset: no parameters yet) */
+/* MockCheckedExpectedCall::callToString */
 static void msb_call_to_string(msb *b, const cum_expectation *e)
 {
     msb_add(b, e->name);
@@ -159,10 +285,37 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
             msb_addf(b, "expected calls order: <%u..%u> -> ",
                      e->order_start, e->order_end);
     }
-    msb_add(b, e->ignore_other_parameters ? "all parameters ignored" : "no parameters");
+    if (!e->params) {
+        msb_add(b, e->ignore_other_parameters ? "all parameters ignored"
+                                              : "no parameters");
+    } else {
+        for (cum_param *p = e->params; p; p = p->next) {
+            char *value = value_to_string(&p->value);
+            msb_addf(b, "%s %s: <%s>", type_names[p->value.type], p->name, value);
+            cu_str_free(value);
+            if (p->next)
+                msb_add(b, ", ");
+        }
+        if (e->ignore_other_parameters)
+            msb_add(b, ", other parameters are ignored");
+    }
     msb_addf(b, " (expected %u call%s, called %u time%s)",
              e->expected_calls, e->expected_calls == 1 ? "" : "s",
              e->actual_calls, e->actual_calls == 1 ? "" : "s");
+}
+
+/* MockCheckedExpectedCall::missingParametersToString */
+static void msb_missing_params(msb *b, const cum_expectation *e)
+{
+    int first = 1;
+    for (cum_param *p = e->params; p; p = p->next) {
+        if (p->matched)
+            continue;
+        if (!first)
+            msb_add(b, ", ");
+        first = 0;
+        msb_addf(b, "%s %s", type_names[p->value.type], p->name);
+    }
 }
 
 static int is_fulfilled(const cum_expectation *e)
@@ -185,7 +338,15 @@ static int pred_fulfilled(const cum_expectation *e, const char *arg)
     return is_fulfilled(e);
 }
 
-/* named-filter predicates arrive with parameter failures (next slice) */
+static int pred_unfulfilled_named(const cum_expectation *e, const char *name)
+{
+    return !is_fulfilled(e) && 0 == strcmp(e->name, name);
+}
+
+static int pred_fulfilled_named(const cum_expectation *e, const char *name)
+{
+    return is_fulfilled(e) && 0 == strcmp(e->name, name);
+}
 
 static int pred_unfulfilled_out_of_order(const cum_expectation *e, const char *arg)
 {
@@ -230,6 +391,76 @@ static void msb_history(msb *b, cum_scope *only_scope, exp_pred unful,
     msb_calls_list(b, "\t\t", only_scope, unful, arg);
     msb_add(b, "\n\tEXPECTED calls that WERE fulfilled:\n");
     msb_calls_list(b, "\t\t", only_scope, ful, arg);
+}
+
+/* addExpectationsAndCallHistoryRelatedTo */
+static void msb_history_related(msb *b, cum_scope *s, const char *name)
+{
+    msb_addf(b, "\tEXPECTED calls that WERE NOT fulfilled related to function: %s\n",
+             name);
+    msb_calls_list(b, "\t\t", s, pred_unfulfilled_named, name);
+    msb_addf(b, "\n\tEXPECTED calls that WERE fulfilled related to function: %s\n",
+             name);
+    msb_calls_list(b, "\t\t", s, pred_fulfilled_named, name);
+}
+
+static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
+                                            const char *param_name,
+                                            const cum_value *value)
+{
+    /* name case: no expectation for this function has the parameter name */
+    int name_known = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (0 != strcmp(e->name, fn))
+            continue;
+        for (cum_param *p = e->params; p; p = p->next)
+            if (0 == strcmp(p->name, param_name))
+                name_known = 1;
+    }
+
+    char *value_str = value_to_string(value);
+    msb b;
+    msb_init(&b);
+    if (!name_known)
+        msb_addf(&b, "Mock Failure: Unexpected parameter name to function \"%s\": %s",
+                 fn, param_name);
+    else
+        msb_addf(&b,
+                 "Mock Failure: Unexpected parameter value to parameter \"%s\" to function \"%s\": <%s>",
+                 param_name, fn, value_str);
+    msb_add(&b, "\n");
+    msb_history_related(&b, s, fn);
+    msb_addf(&b, "\n\tACTUAL unexpected parameter passed to function: %s\n", fn);
+    msb_addf(&b, "\t\t%s %s: <%s>", type_names[value->type], param_name, value_str);
+    cu_str_free(value_str);
+    mock_fail(&b);
+}
+
+static void fail_expected_parameter_didnt_happen(cum_scope *s, const char *fn)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b, "Mock Failure: Expected parameter for function \"%s\" did not happen.\n",
+             fn);
+    msb_addf(&b, "\tEXPECTED calls with MISSING parameters related to function: %s\n",
+             fn);
+    /* candidates of the in-progress call, two lines each */
+    int count = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        if (count++)
+            msb_add(&b, "\n");
+        msb_add(&b, "\t\t");
+        msb_call_to_string(&b, e);
+        msb_add(&b, "\n\t\t\tMISSING parameters: ");
+        msb_missing_params(&b, e);
+    }
+    if (!count)
+        msb_add(&b, "\t\t<none>");
+    msb_add(&b, "\n");
+    msb_history_related(&b, s, fn);
+    mock_fail(&b);
 }
 
 static void fail_unexpected_call(cum_scope *s, const char *name)
@@ -324,6 +555,51 @@ void cum_expectation_ignore_other_parameters(cum_expectation *e)
         e->ignore_other_parameters = 1;
 }
 
+void cum_expectation_with_parameter(cum_expectation *e, const char *name,
+                                    cum_value value)
+{
+    if (!e)
+        return;
+    cum_param *p = calloc(1, sizeof *p);
+    p->name = strdup(name);
+    p->value = value;
+    cum_param **link = &e->params;
+    while (*link)
+        link = &(*link)->next;
+    *link = p;
+}
+
+static void reset_param_match_state(cum_expectation *e)
+{
+    for (cum_param *p = e->params; p; p = p->next)
+        p->matched = 0;
+}
+
+static int all_params_matched(const cum_expectation *e)
+{
+    for (cum_param *p = e->params; p; p = p->next)
+        if (!p->matched)
+            return 0;
+    return 1;
+}
+
+/* isMatchingActualCallAndFinalized: ignore-others expectations only finalize
+ * explicitly (at call end) */
+static int is_finalized_matching(const cum_expectation *e)
+{
+    return e->candidate && all_params_matched(e) && !e->ignore_other_parameters;
+}
+
+/* hasInputParameter: named param equal, or absent + ignoreOtherParameters */
+static int expectation_accepts_param(const cum_expectation *e, const char *name,
+                                     const cum_value *value)
+{
+    for (cum_param *p = e->params; p; p = p->next)
+        if (0 == strcmp(p->name, name))
+            return value_equals(&p->value, value);
+    return e->ignore_other_parameters;
+}
+
 void cum_expectation_set_user(cum_expectation *e, void *user)
 {
     if (e)
@@ -349,18 +625,62 @@ static void expectation_call_was_made(cum_expectation *e, unsigned call_order)
         e->out_of_order = 1;
 }
 
-/* finalize the in-progress actual call (checkExpectations on the call) */
+static void clear_candidates(cum_scope *s)
+{
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (e->candidate) {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+    }
+}
+
+/* completeCallWhenMatchIsFound: a finalized (non-ignoring) full match wins
+ * immediately; ignore-others matches wait for call finalization. */
+static void complete_call_when_match_found(cum_actual *a)
+{
+    for (cum_expectation *e = a->scope->expectations; e; e = e->next) {
+        if (is_finalized_matching(e)) {
+            e->candidate = 0; /* removed from candidacy (claimed) */
+            a->matching = e;
+            a->state = CUM_CALL_SUCCEED;
+            return;
+        }
+    }
+}
+
+/* MockCheckedActualCall::checkExpectations — finalize the in-progress call */
 static void actual_finalize(cum_actual *a)
 {
     if (!a || a->expectations_checked)
         return;
     a->expectations_checked = 1;
-    if (a->state == CUM_CALL_SUCCEED && a->matching) {
-        expectation_call_was_made(a->matching, a->call_order);
-        a->matching->matched_by_in_progress = 0;
+    cum_scope *s = a->scope;
+
+    if (a->state != CUM_CALL_IN_PROGRESS) {
+        if (a->state == CUM_CALL_SUCCEED && a->matching)
+            expectation_call_was_made(a->matching, a->call_order);
+        clear_candidates(s);
+        return;
     }
-    /* CALL_FAILED / parameterless IN_PROGRESS handled at creation time in
-     * this slice (parameters arrive later) */
+
+    /* still in progress: an ignore-others (or zero-param trailing) match may
+     * finalize now */
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (e->candidate && all_params_matched(e)) {
+            e->candidate = 0;
+            a->matching = e;
+            a->state = CUM_CALL_SUCCEED;
+            expectation_call_was_made(e, a->call_order);
+            clear_candidates(s);
+            return;
+        }
+    }
+
+    /* no match: candidates have missing parameters */
+    a->state = CUM_CALL_FAILED;
+    fail_expected_parameter_didnt_happen(s, a->name); /* longjmps in a test */
+    clear_candidates(s);
 }
 
 static void scope_finalize_last_actual(cum_scope *s)
@@ -404,29 +724,74 @@ cum_actual *cum_actual_call(cum_scope *s, const char *name)
     s->last_actual = a;
 
     /* potentially matching = unfulfilled expectations with this name */
-    cum_expectation *first_match = NULL;
-    int any_related = 0;
+    clear_candidates(s);
+    int any = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
-        if (0 != strcmp(e->name, full_name))
-            continue;
-        if (!is_fulfilled(e)) {
-            any_related = 1;
-            if (!first_match)
-                first_match = e;
+        if (0 == strcmp(e->name, full_name) && !is_fulfilled(e)) {
+            e->candidate = 1;
+            reset_param_match_state(e);
+            any = 1;
         }
     }
-    (void)any_related;
-    if (!first_match) {
+    if (!any) {
         a->state = CUM_CALL_FAILED;
         fail_unexpected_call(s, full_name); /* longjmps when in a test */
         return a;
     }
 
-    /* parameterless slice: a no-parameter expectation matches immediately */
-    a->matching = first_match;
-    first_match->matched_by_in_progress = 1;
-    a->state = CUM_CALL_SUCCEED;
+    complete_call_when_match_found(a);
     return a;
+}
+
+/* MockCheckedActualCall::checkInputParameter */
+void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value)
+{
+    if (!a || a->state == CUM_CALL_FAILED)
+        return;
+    cum_scope *s = a->scope;
+
+    /* re-open: discardCurrentlyMatchingExpectations — the previously claimed
+     * expectation does NOT rejoin candidacy; finalized-matching candidates
+     * are dropped (their state reset) */
+    a->state = CUM_CALL_IN_PROGRESS;
+    if (a->matching) {
+        reset_param_match_state(a->matching);
+        a->matching = NULL;
+    }
+    for (cum_expectation *e = s->expectations; e; e = e->next)
+        if (is_finalized_matching(e)) {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+
+    /* keep only candidates accepting this parameter */
+    int any = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        if (expectation_accepts_param(e, name, &value))
+            any = 1;
+        else {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+    }
+    if (!any) {
+        a->state = CUM_CALL_FAILED;
+        fail_unexpected_input_parameter(s, a->name, name, &value);
+        return;
+    }
+
+    /* parameterWasPassed on all remaining candidates */
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        for (cum_param *p = e->params; p; p = p->next)
+            if (0 == strcmp(p->name, name))
+                p->matched = 1;
+    }
+
+    complete_call_when_match_found(a);
 }
 
 static int scope_has_unfulfilled(const cum_scope *s)
@@ -486,6 +851,13 @@ static void scope_clear(cum_scope *s)
         cum_expectation *next = e->next;
         if (e->user && facade_free)
             facade_free(e->user);
+        cum_param *p = e->params;
+        while (p) {
+            cum_param *pnext = p->next;
+            free(p->name);
+            free(p);
+            p = pnext;
+        }
         free(e->name);
         free(e);
         e = next;

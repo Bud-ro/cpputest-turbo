@@ -111,4 +111,102 @@ TEST(MockPass, oneCall)
     mock().actualCall("foo");
 }
 
+/* --- parameters (these groups run FIRST: reverse declaration order) ------ */
+
+TEST_GROUP(MockParamFail)
+{
+    TEST_TEARDOWN()
+    {
+        mock().clear();
+    }
+};
+
+TEST(MockParamFail, missingParameter)
+{
+    mock().expectOneCall("f").withParameter("a", 1);
+    mock().actualCall("f");
+    mock().checkExpectations();
+}
+
+TEST(MockParamFail, unexpectedParameterValue)
+{
+    mock().expectOneCall("f").withParameter("a", 1);
+    mock().actualCall("f").withParameter("a", 2);
+}
+
+TEST(MockParamFail, unexpectedParameterName)
+{
+    mock().expectOneCall("f").withParameter("a", 1);
+    mock().actualCall("f").withParameter("b", 1);
+}
+
+TEST_GROUP(MockParamPass)
+{
+    TEST_TEARDOWN()
+    {
+        mock().checkExpectations();
+        mock().clear();
+    }
+};
+
+TEST(MockParamPass, disambiguatesByValue)
+{
+    mock().expectOneCall("f").withParameter("a", 1);
+    mock().expectOneCall("f").withParameter("a", 2);
+    mock().actualCall("f").withParameter("a", 2);
+    mock().actualCall("f").withParameter("a", 1);
+}
+
+TEST(MockParamPass, ignoreOtherParameters)
+{
+    mock().expectOneCall("f").withParameter("a", 1).ignoreOtherParameters();
+    mock().actualCall("f").withParameter("a", 1).withParameter("b", 99)
+        .withParameter("c", "extra");
+}
+
+TEST(MockParamPass, crossTypeIntegerMatch)
+{
+    mock().expectOneCall("f").withParameter("x", (unsigned long)5);
+    mock().actualCall("f").withParameter("x", 5);
+}
+
+TEST(MockParamPass, doubleTolerance)
+{
+    mock().expectOneCall("f").withParameter("d", 1.0, 0.5);
+    mock().actualCall("f").withParameter("d", 1.4);
+}
+
+TEST(MockParamPass, allTypes)
+{
+    const unsigned char buf[3] = { 1, 2, 3 };
+    mock().expectOneCall("f")
+        .withParameter("b", true)
+        .withParameter("i", -3)
+        .withParameter("u", 7u)
+        .withParameter("l", -10L)
+        .withParameter("ul", 11UL)
+        .withParameter("ll", 1LL << 40)
+        .withParameter("ull", 2ULL << 40)
+        .withParameter("d", 2.5)
+        .withParameter("s", "hello")
+        .withParameter("p", (void *)0x12)
+        .withParameter("cp", (const void *)0x34)
+        .withParameter("fp", (void (*)())0x56)
+        .withParameter("m", buf, sizeof buf);
+    mock().actualCall("f")
+        .withParameter("b", true)
+        .withParameter("i", -3)
+        .withParameter("u", 7u)
+        .withParameter("l", -10L)
+        .withParameter("ul", 11UL)
+        .withParameter("ll", 1LL << 40)
+        .withParameter("ull", 2ULL << 40)
+        .withParameter("d", 2.5004)
+        .withParameter("s", "hello")
+        .withParameter("p", (void *)0x12)
+        .withParameter("cp", (const void *)0x34)
+        .withParameter("fp", (void (*)())0x56)
+        .withParameter("m", buf, sizeof buf);
+}
+
 CPPUTEST_DEFAULT_MAIN

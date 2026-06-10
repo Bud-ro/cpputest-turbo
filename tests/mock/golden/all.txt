@@ -1,4 +1,35 @@
-.......
+.....
+tests/mock/mock_tests.cpp:137: error: Failure in TEST(MockParamFail, unexpectedParameterName)
+	Mock Failure: Unexpected parameter name to function "f": b
+	EXPECTED calls that WERE NOT fulfilled related to function: f
+		f -> int a: <1 (0x1)> (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled related to function: f
+		<none>
+	ACTUAL unexpected parameter passed to function: f
+		int b: <1 (0x1)>
+
+.
+tests/mock/mock_tests.cpp:131: error: Failure in TEST(MockParamFail, unexpectedParameterValue)
+	Mock Failure: Unexpected parameter value to parameter "a" to function "f": <2 (0x2)>
+	EXPECTED calls that WERE NOT fulfilled related to function: f
+		f -> int a: <1 (0x1)> (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled related to function: f
+		<none>
+	ACTUAL unexpected parameter passed to function: f
+		int a: <2 (0x2)>
+
+.
+tests/mock/mock_tests.cpp:124: error: Failure in TEST(MockParamFail, missingParameter)
+	Mock Failure: Expected parameter for function "f" did not happen.
+	EXPECTED calls with MISSING parameters related to function: f
+		f -> int a: <1 (0x1)> (expected 1 call, called 0 times)
+			MISSING parameters: int a
+	EXPECTED calls that WERE NOT fulfilled related to function: f
+		f -> int a: <1 (0x1)> (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled related to function: f
+		<none>
+
+........
 tests/mock/mock_tests.cpp:47: error: Failure in TEST(MockFail, unexpectedCall)
 	Mock Failure: Unexpected call to function: foo
 	EXPECTED calls that WERE NOT fulfilled:
@@ -40,5 +71,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (5 failures, 12 tests, 12 ran, 15 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (8 failures, 20 tests, 20 ran, 24 checks, 0 ignored, 0 filtered out, 0 ms)
 
