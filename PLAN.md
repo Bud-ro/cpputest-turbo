@@ -144,15 +144,15 @@ Makefile               Builds lib, tests, conformance, bench
 ### Phase 9 — Portability, benchmarks, docs
 - [x] 9.1 macOS portability: scripts/check-macos.sh cross-compiles core+mock+shim+tests for aarch64-macos and x86_64-macos via zig cc (compile-only, green).
 - [x] 9.2 bench/: run_bench.sh (builds upstream lib for comparison) + RESULTS.md — runtime ~25-30% faster (11-12ms vs 15ms on 2.5M asserts + 250k new/delete); C++ compile parity (libstdc++-dominated both sides; SimpleString bodies moved out-of-line to get there); pure-C TUs skip C++ headers entirely.
-- [ ] 9.3 README: drop-in migration guide, flag reference, divergences list.
-- [ ] 9.4 Final sweep: `scripts/check.sh` green, valgrind clean on our suite,
-      `-Wall -Wextra -Werror` clean, tag v0.1.0.
+- [x] 9.3 README: drop-in migration guide, flag reference, divergences list.
+- [x] 9.4 Final sweep: check.sh green; ASan/UBSan sweep green (scripts/check-sanitizers.sh; valgrind unavailable — sanitizers used instead; longjmp-over-temporaries on failure paths documented); -Wall -Wextra -Werror clean throughout; tagged v0.1.0.
 
 ## Blockers
 (none)
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #21: 9.3+9.4 done — ALL PHASES COMPLETE. README written; ASan/UBSan sweep green (sole finding: longjmp-over-C++-temporaries on deliberate-failure paths, inherent to the no-exceptions design, documented); tagged v0.1.0.
 - 2026-06-09 #20: 9.1+9.2 done — macOS cross-compile green both arches (zig cc); benchmarks: runtime 25-30% faster than upstream, C++ compile parity after moving SimpleString out-of-line (header cost is libstdc++ pre-includes both sides, required by the new-macro contract), C-only TUs are the big compile win. Remaining: 9.3 README, 9.4 final sweep (valgrind, tag).
 - 2026-06-09 #19: Phase 8 done — fork.c: -p per-test fork (upstream-exact failure messages/waitpid loop) + -jN parallel extension (groups round-robin over forked workers, temp-file output replay in worker order = deterministic, merged summary, worker-death accounting; -j composes with -p for full containment). 7.2/7.3 closed at documented line. Phase 9 (portability/bench/docs) remains.
 - 2026-06-09 #18: conformance burn-down 2 — SetPluginTest (3) + PluginTest (10) PASS UNMODIFIED. Added: TestRegistry instances w/ setCurrentRegistry (core-list swap), countPlugins, runAllTests(TestResult&) w/ output capture; TestResult(TestOutput&) ctor + per-run stats; UtestShell getName/getGroup/getFile return SimpleString (+ getFormattedName/getMacroName/willRun/hasFailed); PlatformSpecificSrand/Rand as swappable core symbols (shuffle uses them); PlatformSpecificFunctions.h. CRITICAL FIX: TestTestingFixture now owns a real TestRegistry instance (upstream semantics) — before, fixture getRegistry() returned the global registry and PluginTest installed/deleted heap plugins into the outer chain → use-after-free in post-test hooks. Bundle now 210 tests green.
