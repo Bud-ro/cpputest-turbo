@@ -8,7 +8,7 @@
  * are deliberately absent until they work). */
 
 #include "CppUTest/TestHarness.h"
-#include <cpputest_core/mock.h>
+#include "cpputest_core/mock.h"
 
 /* value constructors shared by expected/actual facades */
 inline cum_value CppUMockBool(bool v)
@@ -171,19 +171,30 @@ inline void CppUMockCopierCopy(void *ctx, void *dst, const void *src)
 class MockNamedValue
 {
   public:
-    MockNamedValue() : has_(false)
+    /* upstream's "empty" MockNamedValue is a named int 0 (MockNamedValue.cpp
+     * ctor: type_("int"), intValue_ 0) — int-family getters on it succeed
+     * and return 0; only the name distinguishes "" / "no return value" /
+     * "returnValue" states */
+    MockNamedValue()
     {
         value_.type = CUM_T_INT;
         value_.v.i = 0;
     }
-    MockNamedValue(cum_value value, bool has = true) : value_(value), has_(has)
+    MockNamedValue(const SimpleString &name) : name_(name)
+    {
+        value_.type = CUM_T_INT;
+        value_.v.i = 0;
+    }
+    MockNamedValue(const SimpleString &name, cum_value value)
+        : name_(name), value_(value)
     {
     }
+    explicit MockNamedValue(cum_value value) : value_(value) {}
 
+    SimpleString getName() const { return name_; }
     SimpleString getType() const
     {
-        return has_ ? SimpleString(cum_value_type_name(&value_))
-                    : SimpleString("");
+        return SimpleString(cum_value_type_name(&value_));
     }
 
     bool getBoolValue() const
@@ -198,58 +209,58 @@ class MockNamedValue
     }
     /* upstream's typed getters apply integer WIDENING coercion before the
      * type assert (MockNamedValue.cpp:204-285); coerced reads don't count
-     * a check. Coercion only applies to a real value (has_). */
+     * a check. The empty value IS type int 0, so coercion covers it too. */
     unsigned int getUnsignedIntValue() const
     {
-        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+        if (value_.type == CUM_T_INT && value_.v.i >= 0)
             return (unsigned int)value_.v.i;
         check("unsigned int");
         return value_.v.ui;
     }
     long int getLongIntValue() const
     {
-        if (has_ && value_.type == CUM_T_INT)
+        if (value_.type == CUM_T_INT)
             return value_.v.i;
-        if (has_ && value_.type == CUM_T_UINT)
+        if (value_.type == CUM_T_UINT)
             return (long int)value_.v.ui;
         check("long int");
         return value_.v.l;
     }
     unsigned long int getUnsignedLongIntValue() const
     {
-        if (has_ && value_.type == CUM_T_UINT)
+        if (value_.type == CUM_T_UINT)
             return value_.v.ui;
-        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+        if (value_.type == CUM_T_INT && value_.v.i >= 0)
             return (unsigned long int)value_.v.i;
-        if (has_ && value_.type == CUM_T_LONG && value_.v.l >= 0)
+        if (value_.type == CUM_T_LONG && value_.v.l >= 0)
             return (unsigned long int)value_.v.l;
         check("unsigned long int");
         return value_.v.ul;
     }
     cpputest_longlong getLongLongIntValue() const
     {
-        if (has_ && value_.type == CUM_T_INT)
+        if (value_.type == CUM_T_INT)
             return value_.v.i;
-        if (has_ && value_.type == CUM_T_UINT)
+        if (value_.type == CUM_T_UINT)
             return (cpputest_longlong)value_.v.ui;
-        if (has_ && value_.type == CUM_T_LONG)
+        if (value_.type == CUM_T_LONG)
             return value_.v.l;
-        if (has_ && value_.type == CUM_T_ULONG)
+        if (value_.type == CUM_T_ULONG)
             return (cpputest_longlong)value_.v.ul;
         check("long long int");
         return value_.v.ll;
     }
     cpputest_ulonglong getUnsignedLongLongIntValue() const
     {
-        if (has_ && value_.type == CUM_T_UINT)
+        if (value_.type == CUM_T_UINT)
             return value_.v.ui;
-        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+        if (value_.type == CUM_T_INT && value_.v.i >= 0)
             return (cpputest_ulonglong)value_.v.i;
-        if (has_ && value_.type == CUM_T_LONG && value_.v.l >= 0)
+        if (value_.type == CUM_T_LONG && value_.v.l >= 0)
             return (cpputest_ulonglong)value_.v.l;
-        if (has_ && value_.type == CUM_T_ULONG)
+        if (value_.type == CUM_T_ULONG)
             return value_.v.ul;
-        if (has_ && value_.type == CUM_T_LONGLONG && value_.v.ll >= 0)
+        if (value_.type == CUM_T_LONGLONG && value_.v.ll >= 0)
             return (cpputest_ulonglong)value_.v.ll;
         check("unsigned long long int");
         return value_.v.ull;
@@ -282,17 +293,14 @@ class MockNamedValue
     void *getObjectPointer() const { return (void *)value_.v.obj.ptr; }
     const void *getConstObjectPointer() const { return value_.v.obj.ptr; }
 
-    bool hasValue() const { return has_; }
-    cum_value rawValue() const { return value_; }
-
   private:
     void check(const char *expectedType) const
     {
-        STRCMP_EQUAL(expectedType, has_ ? cum_value_type_name(&value_) : "");
+        STRCMP_EQUAL(expectedType, cum_value_type_name(&value_));
     }
 
+    SimpleString name_;
     cum_value value_;
-    bool has_;
 };
 
 class MockExpectedCall
@@ -419,11 +427,20 @@ class MockExpectedCall
         return addParam(
             name, CppUMockDouble(value, MOCK_SUPPORT_DEFAULT_DOUBLE_TOLERANCE));
     }
-    virtual MockExpectedCall &
-    withDoubleParameterAndTolerance(const SimpleString &name, double value,
-                                    double tolerance)
+    /* upstream spells the tolerance form as an overload of
+     * withDoubleParameter (MockExpectedCall.h:74); the AndTolerance alias
+     * predates that discovery and stays for source compatibility */
+    virtual MockExpectedCall &withDoubleParameter(const SimpleString &name,
+                                                  double value,
+                                                  double tolerance)
     {
         return addParam(name, CppUMockDouble(value, tolerance));
+    }
+    MockExpectedCall &withDoubleParameterAndTolerance(const SimpleString &name,
+                                                      double value,
+                                                      double tolerance)
+    {
+        return withDoubleParameter(name, value, tolerance);
     }
     virtual MockExpectedCall &withStringParameter(const SimpleString &name,
                                                   const char *value)
@@ -751,32 +768,47 @@ class MockActualCall
         return *this;
     }
 
-    virtual bool hasReturnValue()
-    {
-        cum_value v;
-        return cum_actual_return_value(handle_, &v) != 0;
-    }
+    /* Return-value semantics mirror upstream exactly (MockActualCall.cpp).
+     * hasReturnValue() is name-based: true for a queued value ("returnValue")
+     * AND for an unmatched call ("no return value") — so OrDefault on an
+     * unmatched call returns the int-0 empty value, not the default. An
+     * ignored call (disabled mock / ignoreOtherCalls) short-circuits every
+     * typed getter to zero without the counting type assert, like
+     * MockIgnoredActualCall. */
+    virtual bool hasReturnValue() { return !returnValue().getName().isEmpty(); }
 
     virtual MockNamedValue returnValue()
     {
         cum_value v;
-        int has = cum_actual_return_value(handle_, &v);
-        return has ? MockNamedValue(v) : MockNamedValue();
+        switch (cum_actual_return_value(handle_, &v)) {
+        case CUM_RET_VALUE:
+            return MockNamedValue("returnValue", v);
+        case CUM_RET_UNMATCHED:
+            return MockNamedValue("no return value");
+        default:
+            return MockNamedValue("");
+        }
     }
 
-    virtual bool returnBoolValue() { return returnValue().getBoolValue(); }
+    virtual bool returnBoolValue()
+    {
+        return ignored() ? false : returnValue().getBoolValue();
+    }
     virtual bool returnBoolValueOrDefault(bool d)
     {
         return hasReturnValue() ? returnBoolValue() : d;
     }
-    virtual int returnIntValue() { return returnValue().getIntValue(); }
+    virtual int returnIntValue()
+    {
+        return ignored() ? 0 : returnValue().getIntValue();
+    }
     virtual int returnIntValueOrDefault(int d)
     {
         return hasReturnValue() ? returnIntValue() : d;
     }
     virtual unsigned int returnUnsignedIntValue()
     {
-        return returnValue().getUnsignedIntValue();
+        return ignored() ? 0 : returnValue().getUnsignedIntValue();
     }
     virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d)
     {
@@ -784,7 +816,7 @@ class MockActualCall
     }
     virtual long int returnLongIntValue()
     {
-        return returnValue().getLongIntValue();
+        return ignored() ? 0 : returnValue().getLongIntValue();
     }
     virtual long int returnLongIntValueOrDefault(long int d)
     {
@@ -792,7 +824,7 @@ class MockActualCall
     }
     virtual unsigned long int returnUnsignedLongIntValue()
     {
-        return returnValue().getUnsignedLongIntValue();
+        return ignored() ? 0 : returnValue().getUnsignedLongIntValue();
     }
     virtual unsigned long int
     returnUnsignedLongIntValueOrDefault(unsigned long int d)
@@ -801,7 +833,7 @@ class MockActualCall
     }
     virtual cpputest_longlong returnLongLongIntValue()
     {
-        return returnValue().getLongLongIntValue();
+        return ignored() ? 0 : returnValue().getLongLongIntValue();
     }
     virtual cpputest_longlong
     returnLongLongIntValueOrDefault(cpputest_longlong d)
@@ -810,7 +842,7 @@ class MockActualCall
     }
     virtual cpputest_ulonglong returnUnsignedLongLongIntValue()
     {
-        return returnValue().getUnsignedLongLongIntValue();
+        return ignored() ? 0 : returnValue().getUnsignedLongLongIntValue();
     }
     virtual cpputest_ulonglong
     returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d)
@@ -819,7 +851,7 @@ class MockActualCall
     }
     virtual double returnDoubleValue()
     {
-        return returnValue().getDoubleValue();
+        return ignored() ? 0.0 : returnValue().getDoubleValue();
     }
     virtual double returnDoubleValueOrDefault(double d)
     {
@@ -827,7 +859,7 @@ class MockActualCall
     }
     virtual const char *returnStringValue()
     {
-        return returnValue().getStringValue();
+        return ignored() ? "" : returnValue().getStringValue();
     }
     virtual const char *returnStringValueOrDefault(const char *d)
     {
@@ -835,7 +867,7 @@ class MockActualCall
     }
     virtual void *returnPointerValue()
     {
-        return returnValue().getPointerValue();
+        return ignored() ? 0 : returnValue().getPointerValue();
     }
     virtual void *returnPointerValueOrDefault(void *d)
     {
@@ -843,7 +875,7 @@ class MockActualCall
     }
     virtual const void *returnConstPointerValue()
     {
-        return returnValue().getConstPointerValue();
+        return ignored() ? 0 : returnValue().getConstPointerValue();
     }
     virtual const void *returnConstPointerValueOrDefault(const void *d)
     {
@@ -851,7 +883,7 @@ class MockActualCall
     }
     virtual void (*returnFunctionPointerValue())()
     {
-        return returnValue().getFunctionPointerValue();
+        return ignored() ? 0 : returnValue().getFunctionPointerValue();
     }
     virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))()
     {
@@ -859,6 +891,12 @@ class MockActualCall
     }
 
   private:
+    bool ignored()
+    {
+        cum_value v;
+        return cum_actual_return_value(handle_, &v) == CUM_RET_IGNORED;
+    }
+
     MockActualCall &addParam(const SimpleString &name, cum_value value)
     {
         cum_actual_with_parameter(handle_, name.asCharString(), value);
@@ -909,14 +947,21 @@ class MockSupport
     virtual bool hasReturnValue()
     {
         cum_value v;
-        return cum_scope_return_value(scope_, &v) != 0;
+        int st = cum_scope_return_value(scope_, &v);
+        return st == CUM_RET_VALUE || st == CUM_RET_UNMATCHED;
     }
 
     virtual MockNamedValue returnValue()
     {
         cum_value v;
-        int has = cum_scope_return_value(scope_, &v);
-        return has ? MockNamedValue(v) : MockNamedValue();
+        switch (cum_scope_return_value(scope_, &v)) {
+        case CUM_RET_VALUE:
+            return MockNamedValue("returnValue", v);
+        case CUM_RET_UNMATCHED:
+            return MockNamedValue("no return value");
+        default:
+            return MockNamedValue("");
+        }
     }
 
     virtual bool boolReturnValue() { return returnValue().getBoolValue(); }
@@ -1082,7 +1127,7 @@ class MockSupport
     {
         cum_value v;
         int has = cum_scope_get_data(scope_, name.asCharString(), &v);
-        return has ? MockNamedValue(v) : MockNamedValue();
+        return has ? MockNamedValue(name, v) : MockNamedValue("");
     }
 
     virtual void installComparator(const SimpleString &typeName,

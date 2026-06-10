@@ -7,7 +7,7 @@
  * accessors stay inline. */
 
 #include "CppUTest/CppUTestConfig.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <stdarg.h>
 

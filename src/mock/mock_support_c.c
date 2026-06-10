@@ -1,8 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "CppUTestExt/MockSupport_c.h"
-#include <cpputest_core/mock.h>
-#include <cpputest_core/core.h>
+#include "cpputest_core/mock.h"
+#include "cpputest_core/core.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -371,46 +371,59 @@ static MockActualCall_c *act_with_out_of_type(const char *type,
     return &actual_table;
 }
 
+/* Upstream's hasReturnValue_c routes to currentMockSupport->hasReturnValue()
+ * (MockSupport_c.cpp:1088) — SCOPE-level and name-based: true for a queued
+ * return value and for an unmatched call ("no return value"). The same
+ * function serves both the actual-call and support tables. */
 static int act_has_return_value(void)
 {
     cum_value v;
-    return cum_actual_return_value(cur_actual, &v);
+    int st = cum_scope_return_value(scope(), &v);
+    return st == CUM_RET_VALUE || st == CUM_RET_UNMATCHED;
 }
 
+/* upstream maps actualCall->returnValue() — the no-value states are int-0
+ * MockNamedValues, so they convert to MOCKVALUETYPE_INTEGER 0 */
 static MockValue_c act_return_value(void)
 {
     cum_value v;
-    int has = cum_actual_return_value(cur_actual, &v);
-    return to_mock_value(&v, has);
+    if (cum_actual_return_value(cur_actual, &v) != CUM_RET_VALUE) {
+        v = make_value(CUM_T_INT);
+        v.v.i = 0;
+    }
+    return to_mock_value(&v, 1);
 }
 
 /* Upstream's typed return getters go through MockNamedValue::get*Value,
  * whose STRCMP_EQUAL type assert counts one check and FAILS the test on a
- * type mismatch. An ignored call (disabled mock, cur_actual NULL) skips the
- * assert and returns the default, like MockIgnoredActualCall. */
+ * type mismatch. The empty value IS type int 0 upstream, so the assert
+ * compares against "int" when no value is queued. An ignored call (disabled
+ * mock / ignoreOtherCalls / tracing) skips the assert and returns zero,
+ * like MockIgnoredActualCall. */
 static void act_ret_type_assert(const char *want)
 {
     cum_value v;
-    int has = cum_actual_return_value(cur_actual, &v);
-    cu_assert_cstr_equal(want, has ? cum_value_type_name(&v) : "", NULL,
-                         __FILE__, (size_t)__LINE__);
+    int st = cum_actual_return_value(cur_actual, &v);
+    cu_assert_cstr_equal(want,
+                         st == CUM_RET_VALUE ? cum_value_type_name(&v) : "int",
+                         NULL, __FILE__, (size_t)__LINE__);
 }
 
 #define ACT_RETURN(fnname, cumtype, field, ctype, zero, typestr)               \
     static ctype act_ret_##fnname(void)                                        \
     {                                                                          \
         cum_value v;                                                           \
-        if (!cur_actual)                                                       \
+        if (cum_actual_return_value(cur_actual, &v) == CUM_RET_IGNORED)        \
             return zero;                                                       \
         act_ret_type_assert(typestr);                                          \
-        if (cum_actual_return_value(cur_actual, &v) && v.type == cumtype)      \
+        if (cum_actual_return_value(cur_actual, &v) == CUM_RET_VALUE &&        \
+            v.type == cumtype)                                                 \
             return v.v.field;                                                  \
         return zero;                                                           \
     }                                                                          \
     static ctype act_ret_##fnname##_default(ctype defaultValue)                \
     {                                                                          \
-        cum_value v;                                                           \
-        if (!cur_actual || !cum_actual_return_value(cur_actual, &v))           \
+        if (!act_has_return_value())                                           \
             return defaultValue;                                               \
         return act_ret_##fnname();                                             \
     }
@@ -418,26 +431,30 @@ static void act_ret_type_assert(const char *want)
 /* integer getters mirror upstream MockNamedValue's WIDENING coercion
  * (MockNamedValue.cpp:204-285): a compatible narrower value is returned
  * without the counting type assert; only the fallback asserts. The accept
- * expression sees the fetched value as `v` and assigns `coerced`. */
+ * expression sees the fetched value as `v` and assigns `coerced`. The
+ * no-value states coerce as int 0. */
 #define ACT_RETURN_COERCED(fnname, field, ctype, typestr, accept)              \
     static ctype act_ret_##fnname(void)                                        \
     {                                                                          \
         cum_value v;                                                           \
-        if (!cur_actual)                                                       \
+        int st = cum_actual_return_value(cur_actual, &v);                      \
+        if (st == CUM_RET_IGNORED)                                             \
             return 0;                                                          \
-        if (cum_actual_return_value(cur_actual, &v)) {                         \
+        if (st != CUM_RET_VALUE) {                                             \
+            v = make_value(CUM_T_INT);                                         \
+            v.v.i = 0;                                                         \
+        }                                                                      \
+        {                                                                      \
             ctype coerced;                                                     \
             if (accept)                                                        \
                 return coerced;                                                \
         }                                                                      \
         act_ret_type_assert(typestr);                                          \
-        cum_actual_return_value(cur_actual, &v);                               \
         return (ctype)v.v.field;                                               \
     }                                                                          \
     static ctype act_ret_##fnname##_default(ctype defaultValue)                \
     {                                                                          \
-        cum_value v;                                                           \
-        if (!cur_actual || !cum_actual_return_value(cur_actual, &v))           \
+        if (!act_has_return_value())                                           \
             return defaultValue;                                               \
         return act_ret_##fnname();                                             \
     }
@@ -449,17 +466,17 @@ static void act_ret_type_assert(const char *want)
 static int act_ret_bool(void)
 {
     cum_value v;
-    if (!cur_actual)
+    int st = cum_actual_return_value(cur_actual, &v);
+    if (st == CUM_RET_IGNORED)
         return 0;
     act_ret_type_assert("bool");
-    if (cum_actual_return_value(cur_actual, &v) && v.type == CUM_T_BOOL)
+    if (st == CUM_RET_VALUE && v.type == CUM_T_BOOL)
         return v.v.b;
     return 0;
 }
 static int act_ret_bool_default(int defaultValue)
 {
-    cum_value v;
-    if (!cur_actual || !cum_actual_return_value(cur_actual, &v))
+    if (!act_has_return_value())
         return defaultValue != 0;
     return act_ret_bool();
 }
@@ -592,77 +609,10 @@ static MockActualCall_c *sup_actual_call(const char *name)
     return &actual_table;
 }
 
-static int sup_has_return_value(void)
-{
-    cum_value v;
-    return cum_scope_return_value(scope(), &v);
-}
-
-static MockValue_c sup_return_value(void)
-{
-    cum_value v;
-    int has = cum_scope_return_value(scope(), &v);
-    return to_mock_value(&v, has);
-}
-
-#define SUP_RETURN(fnname, cumtype, field, ctype, zero)                        \
-    static ctype sup_ret_##fnname(void)                                        \
-    {                                                                          \
-        cum_value v;                                                           \
-        if (cum_scope_return_value(scope(), &v) && v.type == cumtype)          \
-            return v.v.field;                                                  \
-        return zero;                                                           \
-    }                                                                          \
-    static ctype sup_ret_##fnname##_default(ctype defaultValue)                \
-    {                                                                          \
-        cum_value v;                                                           \
-        if (cum_scope_return_value(scope(), &v) && v.type == cumtype)          \
-            return v.v.field;                                                  \
-        return defaultValue;                                                   \
-    }
-
-/* see act_ret_bool_default: the user-supplied default is normalized too */
-static int sup_ret_bool(void)
-{
-    cum_value v;
-    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_BOOL)
-        return v.v.b;
-    return 0;
-}
-static int sup_ret_bool_default(int defaultValue)
-{
-    cum_value v;
-    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_BOOL)
-        return v.v.b;
-    return defaultValue != 0;
-}
-
-SUP_RETURN(int, CUM_T_INT, i, int, 0)
-SUP_RETURN(uint, CUM_T_UINT, ui, unsigned int, 0)
-SUP_RETURN(long, CUM_T_LONG, l, long int, 0)
-SUP_RETURN(ulong, CUM_T_ULONG, ul, unsigned long int, 0)
-SUP_RETURN(ll, CUM_T_LONGLONG, ll, cpputest_longlong, 0)
-SUP_RETURN(ull, CUM_T_ULONGLONG, ull, cpputest_ulonglong, 0)
-SUP_RETURN(string, CUM_T_STRING, str, const char *, NULL)
-SUP_RETURN(pointer, CUM_T_POINTER, ptr, void *, NULL)
-SUP_RETURN(const_pointer, CUM_T_CONST_POINTER, cptr, const void *, NULL)
-SUP_RETURN(fp, CUM_T_FUNCTIONPOINTER, fptr, cum_fp, NULL)
-
-static double sup_ret_double(void)
-{
-    cum_value v;
-    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_DOUBLE)
-        return v.v.dbl.value;
-    return 0.0;
-}
-
-static double sup_ret_double_default(double defaultValue)
-{
-    cum_value v;
-    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_DOUBLE)
-        return v.v.dbl.value;
-    return defaultValue;
-}
+/* Upstream's support table reuses the SAME C functions as the actual-call
+ * table (MockSupport_c.cpp gMockSupport vs gActualCall): typed getters read
+ * the static last actual call, hasReturnValue is scope-level. No sup_ret_*
+ * family exists upstream, so none exists here. */
 
 #define SUP_SET_DATA(fnname, cumtype, field, ctype)                            \
     static void sup_set_##fnname(const char *name, ctype value)                \
@@ -818,32 +768,32 @@ static MockSupport_c support_table = {sup_strict_order,
                                       sup_expect_no_call,
                                       sup_expect_n_calls,
                                       sup_actual_call,
-                                      sup_has_return_value,
-                                      sup_return_value,
-                                      sup_ret_bool,
-                                      sup_ret_bool_default,
-                                      sup_ret_int,
-                                      sup_ret_int_default,
-                                      sup_ret_uint,
-                                      sup_ret_uint_default,
-                                      sup_ret_long,
-                                      sup_ret_long_default,
-                                      sup_ret_ulong,
-                                      sup_ret_ulong_default,
-                                      sup_ret_ll,
-                                      sup_ret_ll_default,
-                                      sup_ret_ull,
-                                      sup_ret_ull_default,
-                                      sup_ret_string,
-                                      sup_ret_string_default,
-                                      sup_ret_double,
-                                      sup_ret_double_default,
-                                      sup_ret_pointer,
-                                      sup_ret_pointer_default,
-                                      sup_ret_const_pointer,
-                                      sup_ret_const_pointer_default,
-                                      sup_ret_fp,
-                                      sup_ret_fp_default,
+                                      act_has_return_value,
+                                      act_return_value,
+                                      act_ret_bool,
+                                      act_ret_bool_default,
+                                      act_ret_int,
+                                      act_ret_int_default,
+                                      act_ret_uint,
+                                      act_ret_uint_default,
+                                      act_ret_long,
+                                      act_ret_long_default,
+                                      act_ret_ulong,
+                                      act_ret_ulong_default,
+                                      act_ret_ll,
+                                      act_ret_ll_default,
+                                      act_ret_ull,
+                                      act_ret_ull_default,
+                                      act_ret_string,
+                                      act_ret_string_default,
+                                      act_ret_double,
+                                      act_ret_double_default,
+                                      act_ret_pointer,
+                                      act_ret_pointer_default,
+                                      act_ret_const_pointer,
+                                      act_ret_const_pointer_default,
+                                      act_ret_fp,
+                                      act_ret_fp_default,
                                       sup_set_bool_data,
                                       sup_set_int_data,
                                       sup_set_uint_data,

@@ -155,9 +155,19 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name,
                                       void *dst);
 
 /* return values: set on the expectation, read from the actual call (reading
- * finalizes the call, like upstream's checkExpectations-in-returnValue) */
+ * finalizes the call, like upstream's checkExpectations-in-returnValue).
+ * The read functions return one of the CUM_RET_* states below; *out is
+ * filled only for CUM_RET_VALUE. Upstream models the non-value states as
+ * differently-named int-0 MockNamedValues ("" / "no return value") and as
+ * MockIgnoredActualCall, which is why three distinct no-value states exist:
+ * typed getters silently return 0 for an ignored call, type-assert against
+ * "int" for the other two, and hasReturnValue is true for UNMATCHED. */
+#define CUM_RET_IGNORED 0   /* no call / disabled / ignored / tracing */
+#define CUM_RET_NONE 1      /* call matched, no return value queued */
+#define CUM_RET_VALUE 2     /* *out filled with the queued value */
+#define CUM_RET_UNMATCHED 3 /* call matched no expectation */
 void cum_expectation_and_return(cum_expectation *e, cum_value value);
-int cum_actual_return_value(cum_actual *a, cum_value *out); /* 1 if present */
+int cum_actual_return_value(cum_actual *a, cum_value *out);
 int cum_scope_return_value(cum_scope *s, cum_value *out); /* last actual call */
 
 /* per-scope data store (MockSupport::setData/getData/hasData). Object type

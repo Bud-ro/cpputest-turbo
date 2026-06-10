@@ -6,7 +6,7 @@
  * stay source compatible. */
 
 #include "CppUTest/TestFailure.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 class TestOutput;
 

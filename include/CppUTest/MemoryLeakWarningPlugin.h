@@ -6,7 +6,7 @@
 
 #include "CppUTest/TestPlugin.h"
 #include "CppUTest/TestResult.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #define IGNORE_ALL_LEAKS_IN_TEST()                                             \
     if (MemoryLeakWarningPlugin::getFirstPlugin())                             \

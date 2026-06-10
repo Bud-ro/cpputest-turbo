@@ -2,7 +2,7 @@
  * it — no C++ anywhere. Linked against the CPPUTEST_C_ONLY=1 library with
  * plain gcc. */
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <stdio.h>
 

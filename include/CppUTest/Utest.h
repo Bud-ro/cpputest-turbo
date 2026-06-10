@@ -8,7 +8,7 @@
 
 #include "CppUTest/CppUTestConfig.h"
 #include "CppUTest/SimpleString.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 class Utest
 {

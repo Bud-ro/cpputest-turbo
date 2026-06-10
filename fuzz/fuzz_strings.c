@@ -4,7 +4,7 @@
  * printable-escaping and difference-window arithmetic get exercised end to
  * end. Run under ASan/UBSan. Reproduce with FUZZ_SEED=<n>. */
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <stdio.h>
 #include <stdlib.h>

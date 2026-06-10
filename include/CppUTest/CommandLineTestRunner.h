@@ -8,7 +8,7 @@
 #include "CppUTest/CppUTestConfig.h"
 #include "CppUTest/TestRegistry.h"
 #include "CppUTest/MemoryLeakWarningPlugin.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <stdio.h>
 

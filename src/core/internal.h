@@ -1,7 +1,7 @@
 #ifndef CPPUTEST_CORE_INTERNAL_H
 #define CPPUTEST_CORE_INTERNAL_H
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 typedef enum {
     CU_OUTPUT_NORMAL,

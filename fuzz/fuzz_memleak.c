@@ -4,7 +4,7 @@
  * patterns, all inside a real test context so failure longjmps are handled.
  * Run under ASan/UBSan. Reproduce with FUZZ_SEED=<n>. */
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <stdio.h>
 #include <stdlib.h>

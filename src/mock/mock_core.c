@@ -1,7 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
-#include <cpputest_core/mock.h>
-#include <cpputest_core/core.h>
+#include "cpputest_core/mock.h"
+#include "cpputest_core/core.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -1121,19 +1121,20 @@ void cum_expectation_and_return(cum_expectation *e, cum_value value)
 /* reading the return value finalizes the call, like upstream */
 int cum_actual_return_value(cum_actual *a, cum_value *out)
 {
-    if (!a)
-        return 0;
+    if (!a || IS_TRACE(a))
+        return CUM_RET_IGNORED;
     actual_finalize(a);
     if (a->matching && a->matching->has_return) {
         *out = a->matching->return_value;
-        return 1;
+        return CUM_RET_VALUE;
     }
-    return 0;
+    return a->matching ? CUM_RET_NONE : CUM_RET_UNMATCHED;
 }
 
 int cum_scope_return_value(cum_scope *s, cum_value *out)
 {
-    return s->last_actual ? cum_actual_return_value(s->last_actual, out) : 0;
+    return s->last_actual ? cum_actual_return_value(s->last_actual, out)
+                          : CUM_RET_IGNORED;
 }
 
 void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)

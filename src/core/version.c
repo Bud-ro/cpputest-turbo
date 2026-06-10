@@ -1,4 +1,4 @@
-#include <cpputest_core/version.h>
+#include "cpputest_core/version.h"
 
 const char *cpputest_core_version(void)
 {

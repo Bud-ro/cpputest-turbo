@@ -16,6 +16,9 @@ echo "== unit tests =="
 echo "== conformance =="
 ./scripts/run-conformance.sh
 
+echo "== vendor smoke (nested third_party build) =="
+./scripts/check-vendor.sh
+
 # the heavier gates run by default; CHECK_FAST=1 skips them for quick loops
 if [ "${CHECK_FAST:-0}" != "1" ]; then
     echo "== static analyzer =="

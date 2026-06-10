@@ -7,7 +7,7 @@
 #include "CppUTest/TestPlugin.h"
 #include "CppUTest/TestOutput.h"
 #include "CppUTest/Utest.h"
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 class TestRegistry;
 

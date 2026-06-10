@@ -2,7 +2,7 @@
 #include "CppUTest/TestTestingFixture.h"
 #include "CppUTest/CommandLineTestRunner.h"
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 #include <string.h>
 
 static bool setupCalled = false;

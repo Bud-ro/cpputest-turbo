@@ -4,7 +4,7 @@
  * C-only consumers can build the library without it (make CPPUTEST_C_ONLY=1);
  * they lose nothing, since new/delete tracking is meaningless in C. */
 
-#include <cpputest_core/core.h>
+#include "cpputest_core/core.h"
 
 #include <cstdlib>
 #include <new>
