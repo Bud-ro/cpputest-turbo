@@ -22,10 +22,10 @@ static unsigned r(void)
 }
 
 static const char *const stems[] = {
-    "-h", "-v", "-vv", "-c", "-p", "-b", "-lg", "-ln", "-ll", "-ri", "-f",
-    "-e", "-ci", "-r", "-g", "-t", "-st", "-xt", "-xst", "-sg", "-xg",
-    "-xsg", "-n", "-sn", "-xn", "-xsn", "-s", "-o", "-k", "-j",
-    "TEST(", "IGNORE_TEST(", "", "-", "--",
+    "-h",   "-v",  "-vv", "-c",    "-p",           "-b",  "-lg", "-ln",  "-ll",
+    "-ri",  "-f",  "-e",  "-ci",   "-r",           "-g",  "-t",  "-st",  "-xt",
+    "-xst", "-sg", "-xg", "-xsg",  "-n",           "-sn", "-xn", "-xsn", "-s",
+    "-o",   "-k",  "-j",  "TEST(", "IGNORE_TEST(", "",    "-",   "--",
 };
 
 static char *random_token(void)
@@ -40,8 +40,8 @@ static char *random_token(void)
         pos = len;
     }
     unsigned extra = r() % 12;
-    static const char tailchars[] =
-        "abzAZ019.,()<>|*?%:\\\"/- \t" "\x01\x7f\xff";
+    static const char tailchars[] = "abzAZ019.,()<>|*?%:\\\"/- \t"
+                                    "\x01\x7f\xff";
     for (unsigned i = 0; i < extra && pos < sizeof buf - 1; i++)
         buf[pos++] = tailchars[r() % (sizeof tailchars - 1)];
     buf[pos] = '\0';

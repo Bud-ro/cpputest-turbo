@@ -24,10 +24,10 @@ struct cu_test {
     const char *name;
     const char *file;
     size_t line;
-    int is_ignored;   /* registered via IGNORE_TEST */
-    int run_ignored;  /* -ri: run ignored tests anyway */
-    int has_failed;   /* valid during/after this test's run */
-    void *user;       /* owning shim object (e.g. C++ UtestShell) */
+    int is_ignored;  /* registered via IGNORE_TEST */
+    int run_ignored; /* -ri: run ignored tests anyway */
+    int has_failed;  /* valid during/after this test's run */
+    void *user;      /* owning shim object (e.g. C++ UtestShell) */
     const cu_test_ops *ops;
     cu_test *next;
 };
@@ -138,24 +138,26 @@ static inline void cu_memcmp_check(const void *e, const void *a, size_t n,
  * all longjmp out of the test */
 void cu_fail_check(const char *check_string, const char *condition_string,
                    const char *text, const char *file, size_t line);
-void cu_fail_longs(long e, long a, const char *text, const char *file, size_t line);
+void cu_fail_longs(long e, long a, const char *text, const char *file,
+                   size_t line);
 void cu_fail_unsigned_longs(unsigned long e, unsigned long a, const char *text,
                             const char *file, size_t line);
 void cu_fail_longlongs(long long e, long long a, const char *text,
                        const char *file, size_t line);
 void cu_fail_unsigned_longlongs(unsigned long long e, unsigned long long a,
-                                const char *text, const char *file, size_t line);
+                                const char *text, const char *file,
+                                size_t line);
 void cu_fail_signed_bytes(signed char e, signed char a, const char *text,
                           const char *file, size_t line);
 void cu_fail_pointers(const void *e, const void *a, const char *text,
                       const char *file, size_t line);
-void cu_fail_functionpointers(void (*e)(void), void (*a)(void), const char *text,
-                              const char *file, size_t line);
+void cu_fail_functionpointers(void (*e)(void), void (*a)(void),
+                              const char *text, const char *file, size_t line);
 void cu_fail_doubles(double e, double a, double t, const char *text,
                      const char *file, size_t line);
 void cu_fail_bits(unsigned long e, unsigned long a, unsigned long mask,
-                  size_t byte_count, const char *text,
-                  const char *file, size_t line);
+                  size_t byte_count, const char *text, const char *file,
+                  size_t line);
 void cu_fail_equals_strings(const char *e, const char *a, const char *text,
                             const char *file, size_t line);
 void cu_fail_with_message(const char *file, size_t line, const char *message);
@@ -168,33 +170,40 @@ void cu_fail(const char *text, const char *file, size_t line);
 void cu_assert_cstr_equal(const char *expected, const char *actual,
                           const char *text, const char *file, size_t line);
 void cu_assert_cstr_nequal(const char *expected, const char *actual,
-                           size_t length, const char *text,
-                           const char *file, size_t line);
+                           size_t length, const char *text, const char *file,
+                           size_t line);
 void cu_assert_cstr_nocase_equal(const char *expected, const char *actual,
-                                 const char *text, const char *file, size_t line);
+                                 const char *text, const char *file,
+                                 size_t line);
 void cu_assert_cstr_contains(const char *expected, const char *actual,
                              const char *text, const char *file, size_t line);
 void cu_assert_cstr_nocase_contains(const char *expected, const char *actual,
-                                    const char *text, const char *file, size_t line);
+                                    const char *text, const char *file,
+                                    size_t line);
 void cu_assert_longs_equal(long expected, long actual, const char *text,
                            const char *file, size_t line);
-void cu_assert_unsigned_longs_equal(unsigned long expected, unsigned long actual,
-                                    const char *text, const char *file, size_t line);
+void cu_assert_unsigned_longs_equal(unsigned long expected,
+                                    unsigned long actual, const char *text,
+                                    const char *file, size_t line);
 void cu_assert_longlongs_equal(long long expected, long long actual,
                                const char *text, const char *file, size_t line);
 void cu_assert_unsigned_longlongs_equal(unsigned long long expected,
                                         unsigned long long actual,
-                                        const char *text, const char *file, size_t line);
+                                        const char *text, const char *file,
+                                        size_t line);
 void cu_assert_signed_bytes_equal(signed char expected, signed char actual,
-                                  const char *text, const char *file, size_t line);
+                                  const char *text, const char *file,
+                                  size_t line);
 void cu_assert_pointers_equal(const void *expected, const void *actual,
                               const char *text, const char *file, size_t line);
-void cu_assert_functionpointers_equal(void (*expected)(void), void (*actual)(void),
-                                      const char *text, const char *file, size_t line);
+void cu_assert_functionpointers_equal(void (*expected)(void),
+                                      void (*actual)(void), const char *text,
+                                      const char *file, size_t line);
 void cu_assert_doubles_equal(double expected, double actual, double threshold,
                              const char *text, const char *file, size_t line);
-void cu_assert_binary_equal(const void *expected, const void *actual, size_t length,
-                            const char *text, const char *file, size_t line);
+void cu_assert_binary_equal(const void *expected, const void *actual,
+                            size_t length, const char *text, const char *file,
+                            size_t line);
 void cu_assert_bits_equal(unsigned long expected, unsigned long actual,
                           unsigned long mask, size_t byte_count,
                           const char *text, const char *file, size_t line);
@@ -240,18 +249,20 @@ void cu_print_text(const char *text);
 #define CU_MEM_NEW_ARRAY 1
 #define CU_MEM_MALLOC 2
 
-void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line, int type);
+void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line,
+                           int type);
 void cu_mem_free_tracked(void *p, const char *file, size_t line, int type);
-void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line);
-void cu_mem_tracking_set(int on);   /* turnOn/OffNewDeleteOverloads */
-int cu_mem_tracking(void);          /* areNewDeleteOverloaded */
+void *cu_mem_realloc_tracked(void *p, size_t size, const char *file,
+                             size_t line);
+void cu_mem_tracking_set(int on); /* turnOn/OffNewDeleteOverloads */
+int cu_mem_tracking(void);        /* areNewDeleteOverloaded */
 /* free a pointer that MAY be a tracked block even though tracking is now
  * off (the tracked user pointer is offset into the malloc block; a raw
  * free would corrupt the heap) */
 void cu_mem_release_if_tracked(void *p);
 void cu_mem_save_and_disable_tracking(void); /* ref-counted */
 void cu_mem_restore_tracking(void);
-void cu_mem_start_checking(void);   /* per-test checking period */
+void cu_mem_start_checking(void); /* per-test checking period */
 void cu_mem_stop_checking(void);
 void cu_mem_mark_checking_as_global(void);
 size_t cu_mem_leak_count(int checking_only);
@@ -266,11 +277,14 @@ void cpputest_free(void *p);
 char *cpputest_strdup(const char *s);
 char *cpputest_strndup(const char *s, size_t n);
 void *cpputest_malloc_location(size_t size, const char *file, size_t line);
-void *cpputest_calloc_location(size_t count, size_t size, const char *file, size_t line);
-void *cpputest_realloc_location(void *p, size_t size, const char *file, size_t line);
+void *cpputest_calloc_location(size_t count, size_t size, const char *file,
+                               size_t line);
+void *cpputest_realloc_location(void *p, size_t size, const char *file,
+                                size_t line);
 void cpputest_free_location(void *p, const char *file, size_t line);
 char *cpputest_strdup_location(const char *s, const char *file, size_t line);
-char *cpputest_strndup_location(const char *s, size_t n, const char *file, size_t line);
+char *cpputest_strndup_location(const char *s, size_t n, const char *file,
+                                size_t line);
 void cpputest_malloc_set_out_of_memory(void);
 void cpputest_malloc_set_not_out_of_memory(void);
 void cpputest_malloc_set_out_of_memory_countdown(int countdown);

@@ -11,7 +11,7 @@
 
 class OrderedTestShell : public UtestShell
 {
-public:
+  public:
     OrderedTestShell() : _nextOrderedTest(NULLPTR), _level(0) {}
     virtual ~OrderedTestShell() CPPUTEST_DESTRUCTOR_OVERRIDE {}
 
@@ -45,9 +45,12 @@ public:
 
     static OrderedTestShell *getOrderedTestHead() { return orderedTestHead(); }
     static bool firstOrderedTest() { return getOrderedTestHead() == NULLPTR; }
-    static void setOrderedTestHead(OrderedTestShell *test) { orderedTestHead() = test; }
+    static void setOrderedTestHead(OrderedTestShell *test)
+    {
+        orderedTestHead() = test;
+    }
 
-private:
+  private:
     static OrderedTestShell *&orderedTestHead()
     {
         static OrderedTestShell *head = NULLPTR;
@@ -60,7 +63,7 @@ private:
 
 class OrderedTestInstaller
 {
-public:
+  public:
     explicit OrderedTestInstaller(OrderedTestShell &test, const char *groupName,
                                   const char *testName, const char *fileName,
                                   size_t lineNumber, int level)
@@ -79,10 +82,11 @@ public:
 
     virtual ~OrderedTestInstaller() {}
 
-private:
+  private:
     void addOrderedTestInOrder(OrderedTestShell *test)
     {
-        if (test->getLevel() < OrderedTestShell::getOrderedTestHead()->getLevel())
+        if (test->getLevel() <
+            OrderedTestShell::getOrderedTestHead()->getLevel())
             OrderedTestShell::addOrderedTestToHead(test);
         else
             addOrderedTestInOrderNotAtHeadPosition(test);
@@ -104,23 +108,38 @@ private:
     }
 };
 
-#define TEST_ORDERED(testGroup, testName, testLevel) \
-  /* declarations for compilers */ \
-  class TEST_##testGroup##_##testName##_TestShell; \
-  extern TEST_##testGroup##_##testName##_TestShell TEST_##testGroup##_##testName##_Instance; \
-  class TEST_##testGroup##_##testName##_Test : public TEST_GROUP_##CppUTestGroup##testGroup \
-{ public: TEST_##testGroup##_##testName##_Test () : TEST_GROUP_##CppUTestGroup##testGroup () {} \
-       void testBody() CPPUTEST_OVERRIDE; }; \
-  class TEST_##testGroup##_##testName##_TestShell : public OrderedTestShell { \
-       virtual Utest* createTest() CPPUTEST_OVERRIDE { return new TEST_##testGroup##_##testName##_Test; } \
-  }  TEST_##testGroup##_##testName##_Instance; \
-  static OrderedTestInstaller TEST_##testGroup##_##testName##_Installer(TEST_##testGroup##_##testName##_Instance, #testGroup, #testName, __FILE__,__LINE__, testLevel); \
-   void TEST_##testGroup##_##testName##_Test::testBody()
+#define TEST_ORDERED(testGroup, testName, testLevel)                           \
+    /* declarations for compilers */                                           \
+    class TEST_##testGroup##_##testName##_TestShell;                           \
+    extern TEST_##testGroup##_##testName##_TestShell                           \
+        TEST_##testGroup##_##testName##_Instance;                              \
+    class TEST_##testGroup##_##testName##_Test                                 \
+        : public TEST_GROUP_##CppUTestGroup##testGroup                         \
+    {                                                                          \
+      public:                                                                  \
+        TEST_##testGroup##_##testName##_Test()                                 \
+            : TEST_GROUP_##CppUTestGroup##testGroup()                          \
+        {                                                                      \
+        }                                                                      \
+        void testBody() CPPUTEST_OVERRIDE;                                     \
+    };                                                                         \
+    class TEST_##testGroup##_##testName##_TestShell : public OrderedTestShell  \
+    {                                                                          \
+        virtual Utest *createTest() CPPUTEST_OVERRIDE                          \
+        {                                                                      \
+            return new TEST_##testGroup##_##testName##_Test;                   \
+        }                                                                      \
+    } TEST_##testGroup##_##testName##_Instance;                                \
+    static OrderedTestInstaller TEST_##testGroup##_##testName##_Installer(     \
+        TEST_##testGroup##_##testName##_Instance, #testGroup, #testName,       \
+        __FILE__, __LINE__, testLevel);                                        \
+    void TEST_##testGroup##_##testName##_Test::testBody()
 
-#define TEST_ORDERED_C_WRAPPER(group_name, test_name, testLevel) \
-  extern "C" void test_##group_name##_##test_name##_wrapper_c(void); \
-  TEST_ORDERED(group_name, test_name, testLevel) { \
-      test_##group_name##_##test_name##_wrapper_c(); \
-  }
+#define TEST_ORDERED_C_WRAPPER(group_name, test_name, testLevel)               \
+    extern "C" void test_##group_name##_##test_name##_wrapper_c(void);         \
+    TEST_ORDERED(group_name, test_name, testLevel)                             \
+    {                                                                          \
+        test_##group_name##_##test_name##_wrapper_c();                         \
+    }
 
 #endif

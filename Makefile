@@ -11,8 +11,11 @@ INCLUDES := -Iinclude
 # build); the flags the build REQUIRES are kept separate and always applied.
 CFLAGS       ?= -O2 -g
 CXXFLAGS     ?= -O2 -g
-REQ_CFLAGS   := -std=c11 -Wall -Wextra -Werror $(INCLUDES)
-REQ_CXXFLAGS := -std=c++11 -Wall -Wextra -Werror $(INCLUDES)
+REQ_CFLAGS   := -std=c11 -Wall -Wextra -Werror -Wpedantic -Wshadow \
+                -Wstrict-prototypes -Wmissing-prototypes -Wundef \
+                -Wwrite-strings $(INCLUDES)
+REQ_CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -Wpedantic -Wshadow \
+                -Wundef $(INCLUDES)
 
 PREFIX   ?= /usr/local
 DESTDIR  ?=

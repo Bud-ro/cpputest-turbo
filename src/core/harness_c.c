@@ -2,6 +2,8 @@
 
 #include "internal.h"
 
+#include "CppUTest/TestHarness_c.h" /* prototypes for what we implement */
+
 #include <stdio.h>
 
 /* C implementations of the TestHarness_c.h *_LOCATION functions, mirroring
@@ -17,15 +19,17 @@ void CHECK_EQUAL_C_BOOL_LOCATION(int expected, int actual, const char *text,
 void CHECK_EQUAL_C_INT_LOCATION(int expected, int actual, const char *text,
                                 const char *fileName, size_t lineNumber)
 {
-    cu_assert_longs_equal((long)expected, (long)actual, text, fileName, lineNumber);
+    cu_assert_longs_equal((long)expected, (long)actual, text, fileName,
+                          lineNumber);
 }
 
 void CHECK_EQUAL_C_UINT_LOCATION(unsigned int expected, unsigned int actual,
                                  const char *text, const char *fileName,
                                  size_t lineNumber)
 {
-    cu_assert_unsigned_longs_equal((unsigned long)expected, (unsigned long)actual,
-                                   text, fileName, lineNumber);
+    cu_assert_unsigned_longs_equal((unsigned long)expected,
+                                   (unsigned long)actual, text, fileName,
+                                   lineNumber);
 }
 
 void CHECK_EQUAL_C_LONG_LOCATION(long expected, long actual, const char *text,
@@ -38,7 +42,8 @@ void CHECK_EQUAL_C_ULONG_LOCATION(unsigned long expected, unsigned long actual,
                                   const char *text, const char *fileName,
                                   size_t lineNumber)
 {
-    cu_assert_unsigned_longs_equal(expected, actual, text, fileName, lineNumber);
+    cu_assert_unsigned_longs_equal(expected, actual, text, fileName,
+                                   lineNumber);
 }
 
 void CHECK_EQUAL_C_LONGLONG_LOCATION(long long expected, long long actual,
@@ -53,21 +58,23 @@ void CHECK_EQUAL_C_ULONGLONG_LOCATION(unsigned long long expected,
                                       const char *text, const char *fileName,
                                       size_t lineNumber)
 {
-    cu_assert_unsigned_longlongs_equal(expected, actual, text, fileName, lineNumber);
+    cu_assert_unsigned_longlongs_equal(expected, actual, text, fileName,
+                                       lineNumber);
 }
 
-void CHECK_EQUAL_C_REAL_LOCATION(double expected, double actual, double threshold,
-                                 const char *text, const char *fileName,
-                                 size_t lineNumber)
+void CHECK_EQUAL_C_REAL_LOCATION(double expected, double actual,
+                                 double threshold, const char *text,
+                                 const char *fileName, size_t lineNumber)
 {
-    cu_assert_doubles_equal(expected, actual, threshold, text, fileName, lineNumber);
+    cu_assert_doubles_equal(expected, actual, threshold, text, fileName,
+                            lineNumber);
 }
 
 void CHECK_EQUAL_C_CHAR_LOCATION(char expected, char actual, const char *text,
                                  const char *fileName, size_t lineNumber)
 {
-    char e[2] = { expected, '\0' };
-    char a[2] = { actual, '\0' };
+    char e[2] = {expected, '\0'};
+    char a[2] = {actual, '\0'};
     cu_assert_equals(expected != actual, e, a, text, fileName, lineNumber);
 }
 
@@ -117,10 +124,12 @@ void CHECK_EQUAL_C_BITS_LOCATION(unsigned int expected, unsigned int actual,
                                  const char *text, const char *fileName,
                                  size_t lineNumber)
 {
-    cu_assert_bits_equal(expected, actual, mask, size, text, fileName, lineNumber);
+    cu_assert_bits_equal(expected, actual, mask, size, text, fileName,
+                         lineNumber);
 }
 
-void FAIL_TEXT_C_LOCATION(const char *text, const char *fileName, size_t lineNumber)
+void FAIL_TEXT_C_LOCATION(const char *text, const char *fileName,
+                          size_t lineNumber)
 {
     cu_fail(text, fileName, lineNumber);
 }
@@ -133,6 +142,6 @@ void FAIL_C_LOCATION(const char *fileName, size_t lineNumber)
 void CHECK_C_LOCATION(int condition, const char *conditionString,
                       const char *text, const char *fileName, size_t lineNumber)
 {
-    cu_assert_true(condition != 0, "CHECK_C", conditionString, text,
-                   fileName, lineNumber);
+    cu_assert_true(condition != 0, "CHECK_C", conditionString, text, fileName,
+                   lineNumber);
 }

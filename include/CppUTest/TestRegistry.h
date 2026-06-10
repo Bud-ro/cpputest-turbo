@@ -21,7 +21,7 @@ inline int CppUTestPluginParseHook(int ac, const char *const *av, int index);
 
 class TestRegistry
 {
-public:
+  public:
     /* instances are constructible like upstream; the default registry wraps
      * the process-wide C core list */
     TestRegistry() : firstPlugin_(NullTestPlugin::instance()), head_(NULLPTR) {}
@@ -114,7 +114,7 @@ public:
         return firstPlugin_->removePluginByName(name);
     }
 
-private:
+  private:
     static TestRegistry *&currentSlot()
     {
         static TestRegistry *current = NULLPTR;
@@ -153,10 +153,12 @@ extern "C" inline void CppUTestPluginPostHook(cu_test *t)
         *static_cast<UtestShell *>(t->user), result);
 }
 
-extern "C" inline int CppUTestPluginParseHook(int ac, const char *const *av, int index)
+extern "C" inline int CppUTestPluginParseHook(int ac, const char *const *av,
+                                              int index)
 {
-    return TestRegistry::getCurrentRegistry()->getFirstPlugin()->parseAllArguments(
-               ac, av, index)
+    return TestRegistry::getCurrentRegistry()
+                   ->getFirstPlugin()
+                   ->parseAllArguments(ac, av, index)
                ? 1
                : 0;
 }

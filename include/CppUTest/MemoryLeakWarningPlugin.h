@@ -8,15 +8,17 @@
 #include "CppUTest/TestResult.h"
 #include <cpputest_core/core.h>
 
-#define IGNORE_ALL_LEAKS_IN_TEST() \
-    if (MemoryLeakWarningPlugin::getFirstPlugin()) MemoryLeakWarningPlugin::getFirstPlugin()->ignoreAllLeaksInTest()
+#define IGNORE_ALL_LEAKS_IN_TEST()                                             \
+    if (MemoryLeakWarningPlugin::getFirstPlugin())                             \
+    MemoryLeakWarningPlugin::getFirstPlugin()->ignoreAllLeaksInTest()
 
-#define EXPECT_N_LEAKS(n) \
-    if (MemoryLeakWarningPlugin::getFirstPlugin()) MemoryLeakWarningPlugin::getFirstPlugin()->expectLeaksInTest(n)
+#define EXPECT_N_LEAKS(n)                                                      \
+    if (MemoryLeakWarningPlugin::getFirstPlugin())                             \
+    MemoryLeakWarningPlugin::getFirstPlugin()->expectLeaksInTest(n)
 
 class MemoryLeakWarningPlugin : public TestPlugin
 {
-public:
+  public:
     MemoryLeakWarningPlugin(const SimpleString &name)
         : TestPlugin(name), ignoreAllWarnings_(false),
           destroyGlobalDetectorInDestructor_(false), expectedLeaks_(0),
@@ -36,13 +38,15 @@ public:
         }
     }
 
-    virtual void preTestAction(UtestShell &, TestResult &result) CPPUTEST_OVERRIDE
+    virtual void preTestAction(UtestShell &,
+                               TestResult &result) CPPUTEST_OVERRIDE
     {
         cu_mem_start_checking();
         failureCount_ = result.getFailureCount();
     }
 
-    virtual void postTestAction(UtestShell &test, TestResult &result) CPPUTEST_OVERRIDE
+    virtual void postTestAction(UtestShell &test,
+                                TestResult &result) CPPUTEST_OVERRIDE
     {
         cu_mem_stop_checking();
         size_t leaks = cu_mem_leak_count(1);
@@ -53,9 +57,9 @@ public:
                 TestFailure f(&test, cu_mem_leak_report(1));
                 result.addFailure(f);
             } else if (expectedLeaks_ > 0) {
-                result.print(StringFromFormat(
-                                 "Warning: Expected %d leak(s), but leak detection was disabled",
-                                 (int)expectedLeaks_)
+                result.print(StringFromFormat("Warning: Expected %d leak(s), "
+                                              "but leak detection was disabled",
+                                              (int)expectedLeaks_)
                                  .asCharString());
             }
         }
@@ -75,25 +79,32 @@ public:
     void ignoreAllLeaksInTest() { ignoreAllWarnings_ = true; }
     void expectLeaksInTest(size_t n) { expectedLeaks_ = n; }
 
-    void destroyGlobalDetectorAndTurnOffMemoryLeakDetectionInDestructor(bool des)
+    void
+    destroyGlobalDetectorAndTurnOffMemoryLeakDetectionInDestructor(bool des)
     {
         destroyGlobalDetectorInDestructor_ = des;
     }
 
-    static MemoryLeakWarningPlugin *getFirstPlugin() { return firstPluginSlot(); }
-
-    static void turnOffNewDeleteOverloads() { cu_mem_tracking_set(0); }
-    static void turnOnDefaultNotThreadSafeNewDeleteOverloads() { cu_mem_tracking_set(1); }
-    static void turnOnThreadSafeNewDeleteOverloads() { cu_mem_tracking_set(1); }
-    static bool areNewDeleteOverloaded() { return cu_mem_tracking() != 0; }
-    static void saveAndDisableNewDeleteOverloads() { cu_mem_save_and_disable_tracking(); }
-    static void restoreNewDeleteOverloads() { cu_mem_restore_tracking(); }
-    static void destroyGlobalDetector()
+    static MemoryLeakWarningPlugin *getFirstPlugin()
     {
-        cu_mem_destroy_all();
+        return firstPluginSlot();
     }
 
-private:
+    static void turnOffNewDeleteOverloads() { cu_mem_tracking_set(0); }
+    static void turnOnDefaultNotThreadSafeNewDeleteOverloads()
+    {
+        cu_mem_tracking_set(1);
+    }
+    static void turnOnThreadSafeNewDeleteOverloads() { cu_mem_tracking_set(1); }
+    static bool areNewDeleteOverloaded() { return cu_mem_tracking() != 0; }
+    static void saveAndDisableNewDeleteOverloads()
+    {
+        cu_mem_save_and_disable_tracking();
+    }
+    static void restoreNewDeleteOverloads() { cu_mem_restore_tracking(); }
+    static void destroyGlobalDetector() { cu_mem_destroy_all(); }
+
+  private:
     static MemoryLeakWarningPlugin *&firstPluginSlot()
     {
         static MemoryLeakWarningPlugin *first = NULLPTR;

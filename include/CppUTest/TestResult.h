@@ -12,7 +12,7 @@ class TestOutput;
 
 class TestResult
 {
-public:
+  public:
     TestResult() : output_(NULLPTR), bound_(false) { zeroStats(); }
     /* upstream form: a result bound to an output object; used with
      * TestRegistry::runAllTests(result) which fills the stats */
@@ -37,7 +37,10 @@ public:
     virtual size_t getTestCount() const { return stats_.test_count; }
     virtual size_t getRunCount() const { return stats_.run_count; }
     virtual size_t getIgnoredCount() const { return stats_.ignored_count; }
-    virtual size_t getFilteredOutCount() const { return stats_.filtered_out_count; }
+    virtual size_t getFilteredOutCount() const
+    {
+        return stats_.filtered_out_count;
+    }
 
     virtual void countCheck() { cu_count_check(); }
 
@@ -52,11 +55,12 @@ public:
 
     TestOutput *getOutputForCapture() { return output_; }
 
-private:
+  private:
     void zeroStats()
     {
         stats_.test_count = stats_.run_count = stats_.check_count = 0;
-        stats_.failure_count = stats_.ignored_count = stats_.filtered_out_count = 0;
+        stats_.failure_count = stats_.ignored_count =
+            stats_.filtered_out_count = 0;
     }
 
     TestOutput *output_;

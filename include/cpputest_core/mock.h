@@ -74,8 +74,9 @@ const char *cum_scope_name(const cum_scope *s);
 void cum_strict_order(cum_scope *s);
 cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount,
                                     const char *name); /* NULL when disabled */
-cum_actual *cum_actual_call(cum_scope *s, const char *name); /* NULL: disabled/ignored */
-void cum_check_expectations_all(void); /* recursive over every scope */
+cum_actual *cum_actual_call(cum_scope *s,
+                            const char *name); /* NULL: disabled/ignored */
+void cum_check_expectations_all(void);         /* recursive over every scope */
 void cum_clear_all(void);
 /* clear ONE scope (upstream child-scope clear: the scope itself survives) */
 void cum_clear_scope(cum_scope *s);
@@ -86,7 +87,8 @@ int cum_is_enabled(const cum_scope *s);
 void cum_crash_on_failure(int crash);
 
 /* expectation knobs */
-void cum_expectation_with_call_order(cum_expectation *e, unsigned start, unsigned end);
+void cum_expectation_with_call_order(cum_expectation *e, unsigned start,
+                                     unsigned end);
 void cum_expectation_ignore_other_parameters(cum_expectation *e);
 /* onObject (expected side): the call must later be passed to this object */
 void cum_expectation_on_object(cum_expectation *e, void *object_ptr);
@@ -102,12 +104,14 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
                                     cum_value value);
 
 /* actual-call input parameter (checkInputParameter flow; may fail+longjmp) */
-void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value);
+void cum_actual_with_parameter(cum_actual *a, const char *name,
+                               cum_value value);
 
 /* custom-type comparators/copiers (MockNamedValueComparator/Copier). The
  * C++ shim registers adapters; ctx is the C++ object. to_string returns a
  * malloc'd string (freed with cu_str_free). */
-typedef int (*cum_comparator_equal_fn)(void *ctx, const void *o1, const void *o2);
+typedef int (*cum_comparator_equal_fn)(void *ctx, const void *o1,
+                                       const void *o2);
 typedef char *(*cum_comparator_string_fn)(void *ctx, const void *o);
 typedef void (*cum_copier_fn)(void *ctx, void *dst, const void *src);
 void cum_install_comparator(const char *type_name, void *ctx,
@@ -137,13 +141,14 @@ void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
                                            const void *value, size_t size);
 void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
                                                       const char *name);
-void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst);
+void cum_actual_with_output_parameter(cum_actual *a, const char *name,
+                                      void *dst);
 
 /* return values: set on the expectation, read from the actual call (reading
  * finalizes the call, like upstream's checkExpectations-in-returnValue) */
 void cum_expectation_and_return(cum_expectation *e, cum_value value);
 int cum_actual_return_value(cum_actual *a, cum_value *out); /* 1 if present */
-int cum_scope_return_value(cum_scope *s, cum_value *out);   /* last actual call */
+int cum_scope_return_value(cum_scope *s, cum_value *out); /* last actual call */
 
 /* per-scope data store (MockSupport::setData/getData/hasData). Object type
  * names are copied; everything else stores raw pointers like upstream. */

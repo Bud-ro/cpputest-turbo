@@ -11,7 +11,7 @@
 
 class ExecFunction
 {
-public:
+  public:
     ExecFunction() {}
     virtual ~ExecFunction() {}
     virtual void exec() = 0;
@@ -19,10 +19,13 @@ public:
 
 class ExecFunctionWithoutParameters : public ExecFunction
 {
-public:
+  public:
     void (*testFunction_)();
 
-    ExecFunctionWithoutParameters(void (*testFunction)()) : testFunction_(testFunction) {}
+    ExecFunctionWithoutParameters(void (*testFunction)())
+        : testFunction_(testFunction)
+    {
+    }
     virtual ~ExecFunctionWithoutParameters() {}
     virtual void exec() CPPUTEST_OVERRIDE
     {
@@ -33,12 +36,13 @@ public:
 
 class ExecFunctionTest : public Utest
 {
-public:
+  public:
     void (*setup_)();
     void (*teardown_)();
     ExecFunction *testFunction_;
 
-    ExecFunctionTest(void (*setup)(), void (*teardown)(), ExecFunction *testFunction)
+    ExecFunctionTest(void (*setup)(), void (*teardown)(),
+                     ExecFunction *testFunction)
         : setup_(setup), teardown_(teardown), testFunction_(testFunction)
     {
     }
@@ -61,12 +65,13 @@ public:
 
 class ExecFunctionTestShell : public UtestShell
 {
-public:
+  public:
     void (*setup_)();
     void (*teardown_)();
     ExecFunction *testFunction_;
 
-    ExecFunctionTestShell() : setup_(NULLPTR), teardown_(NULLPTR), testFunction_(NULLPTR)
+    ExecFunctionTestShell()
+        : setup_(NULLPTR), teardown_(NULLPTR), testFunction_(NULLPTR)
     {
         setGroupName("Generic");
         setTestName("Generic Test");
@@ -80,9 +85,8 @@ public:
 
 class TestTestingFixture
 {
-public:
-    TestTestingFixture()
-        : verbose_(false), ownsExecFunction_(false)
+  public:
+    TestTestingFixture() : verbose_(false), ownsExecFunction_(false)
     {
         registry_ = new TestRegistry;
         TestRegistry::getCurrentRegistry()->setCurrentRegistry(registry_);
@@ -115,7 +119,8 @@ public:
     void setTestFunction(void (*testFunction)())
     {
         clearExecFunction();
-        genTest_->testFunction_ = new ExecFunctionWithoutParameters(testFunction);
+        genTest_->testFunction_ =
+            new ExecFunctionWithoutParameters(testFunction);
         ownsExecFunction_ = true;
     }
 
@@ -127,7 +132,10 @@ public:
     }
 
     void setSetup(void (*setupFunction)()) { genTest_->setup_ = setupFunction; }
-    void setTeardown(void (*teardownFunction)()) { genTest_->teardown_ = teardownFunction; }
+    void setTeardown(void (*teardownFunction)())
+    {
+        genTest_->teardown_ = teardownFunction;
+    }
     void setOutputVerbose() { verbose_ = true; }
 
     void runTestWithMethod(void (*method)())
@@ -168,19 +176,21 @@ public:
 
     /* upstream-exact: one failure, output contains text, and the failing
      * macro must have jumped (the line after it must not have executed) */
-    void checkTestFailsWithProperTestLocation(const char *text, const char *file,
-                                              size_t line)
+    void checkTestFailsWithProperTestLocation(const char *text,
+                                              const char *file, size_t line)
     {
         if (getFailureCount() != 1)
-            FAIL_LOCATION(StringFromFormat(
-                              "Expected one test failure, but got %d amount of test failures",
-                              (int)getFailureCount())
+            FAIL_LOCATION(StringFromFormat("Expected one test failure, but got "
+                                           "%d amount of test failures",
+                                           (int)getFailureCount())
                               .asCharString(),
                           file, line);
         STRCMP_CONTAINS_LOCATION(text, output_.asCharString(), "", file, line);
         if (lineExecutedFlag())
-            FAIL_LOCATION("The test should jump/throw on failure and not execute the next line. However, the next line was executed.",
-                          file, line);
+            FAIL_LOCATION(
+                "The test should jump/throw on failure and not execute the "
+                "next line. However, the next line was executed.",
+                file, line);
     }
 
     static void lineExecutedAfterCheck() { lineExecutedFlag() = true; }
@@ -190,7 +200,7 @@ public:
         return executed;
     }
 
-private:
+  private:
     static TestTestingFixture *&currentFixture()
     {
         static TestTestingFixture *fixture = NULLPTR;
@@ -214,7 +224,8 @@ private:
     void clearStats()
     {
         stats_.test_count = stats_.run_count = stats_.check_count = 0;
-        stats_.failure_count = stats_.ignored_count = stats_.filtered_out_count = 0;
+        stats_.failure_count = stats_.ignored_count =
+            stats_.filtered_out_count = 0;
     }
 
     TestRegistry *registry_;

@@ -41,10 +41,26 @@ static void drop_sink(const char *text, void *arg)
     (void)arg;
 }
 
-static void *t_create(cu_test *t) { (void)t; return NULL; }
-static void t_destroy(cu_test *t, void *f) { (void)t; (void)f; }
-static void t_setup(cu_test *t, void *f) { (void)t; (void)f; }
-static void t_teardown(cu_test *t, void *f) { (void)t; (void)f; }
+static void *t_create(cu_test *t)
+{
+    (void)t;
+    return NULL;
+}
+static void t_destroy(cu_test *t, void *f)
+{
+    (void)t;
+    (void)f;
+}
+static void t_setup(cu_test *t, void *f)
+{
+    (void)t;
+    (void)f;
+}
+static void t_teardown(cu_test *t, void *f)
+{
+    (void)t;
+    (void)f;
+}
 
 static void t_body(cu_test *t, void *f)
 {
@@ -55,8 +71,8 @@ static void t_body(cu_test *t, void *f)
 
     switch (r() % 6) {
     case 0:
-        cu_assert_cstr_equal(buf_e, buf_a, r() % 2 ? buf_e : NULL,
-                             __FILE__, __LINE__);
+        cu_assert_cstr_equal(buf_e, buf_a, r() % 2 ? buf_e : NULL, __FILE__,
+                             __LINE__);
         break;
     case 1:
         cu_assert_cstr_nocase_equal(buf_e, buf_a, NULL, __FILE__, __LINE__);
@@ -70,17 +86,18 @@ static void t_body(cu_test *t, void *f)
         break;
     case 4:
         cu_assert_binary_equal(buf_e, buf_a,
-                               (r() % 2 ? strlen(buf_e) : strlen(buf_a)),
-                               NULL, __FILE__, __LINE__);
+                               (r() % 2 ? strlen(buf_e) : strlen(buf_a)), NULL,
+                               __FILE__, __LINE__);
         break;
     default:
-        cu_assert_cstr_nequal(buf_e, buf_a, r() % 600, NULL,
-                              __FILE__, __LINE__);
+        cu_assert_cstr_nequal(buf_e, buf_a, r() % 600, NULL, __FILE__,
+                              __LINE__);
         break;
     }
 }
 
-static const cu_test_ops ops = { t_create, t_destroy, t_setup, t_body, t_teardown };
+static const cu_test_ops ops = {t_create, t_destroy, t_setup, t_body,
+                                t_teardown};
 static cu_test the_test;
 
 int main(void)

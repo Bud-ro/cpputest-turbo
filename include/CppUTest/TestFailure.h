@@ -10,19 +10,18 @@
 
 class TestFailure
 {
-public:
+  public:
     TestFailure(UtestShell *shell, const char *fileName, size_t lineNumber,
                 const SimpleString &theMessage)
-        : testName_(shell ? shell->getName() : ""),
-          fileName_(fileName), lineNumber_(lineNumber), message_(theMessage)
+        : testName_(shell ? shell->getName() : ""), fileName_(fileName),
+          lineNumber_(lineNumber), message_(theMessage)
     {
     }
 
     TestFailure(UtestShell *shell, const SimpleString &theMessage)
         : testName_(shell ? shell->getName() : ""),
           fileName_(shell ? shell->getFile() : "unknown file"),
-          lineNumber_(shell ? shell->getLineNumber() : 0),
-          message_(theMessage)
+          lineNumber_(shell ? shell->getLineNumber() : 0), message_(theMessage)
     {
     }
 
@@ -34,7 +33,7 @@ public:
     virtual size_t getFailureLineNumber() const { return lineNumber_; }
     virtual SimpleString getMessage() const { return message_; }
 
-private:
+  private:
     SimpleString testName_;
     SimpleString fileName_;
     size_t lineNumber_;

@@ -73,8 +73,10 @@ void cu_fork_run_one_test(cu_test *t, cu_result *res)
         if (w == -1) {
             if (errno == EINTR) {
                 if (retries > 30) {
-                    add_process_failure(t,
-                        "Call to waitpid() failed with EINTR. Tried 30 times and giving up! Sometimes happens in debugger");
+                    add_process_failure(
+                        t,
+                        "Call to waitpid() failed with EINTR. Tried 30 times "
+                        "and giving up! Sometimes happens in debugger");
                     return;
                 }
                 retries++;
@@ -230,7 +232,8 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
         }
         remove(path);
 
-        if (WIFSIGNALED(status) || (WIFEXITED(status) && WEXITSTATUS(status) != 0)) {
+        if (WIFSIGNALED(status) ||
+            (WIFEXITED(status) && WEXITSTATUS(status) != 0)) {
             /* a worker that died abnormally counts as one failure */
             res.failure_count++;
             fprintf(stdout, "\ncpputest: worker %d terminated abnormally\n", w);

@@ -1,0 +1,25 @@
+# cpputest-revibed code style. Matches the prevailing style of src/:
+# Linux-ish bracing (functions on their own line), 4-space indent,
+# right-aligned pointers, 80 columns.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++11
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 80
+UseTab: Never
+BreakBeforeBraces: Linux
+PointerAlignment: Right
+AlignAfterOpenBracket: Align
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+SpaceBeforeParens: ControlStatements
+IndentCaseLabels: false
+AlignTrailingComments: true
+ReflowComments: true
+# include order is semantic in this codebase (POSIX feature macros,
+# TestHarness.h chains, pre-includes before the new macro) — never reorder
+SortIncludes: Never

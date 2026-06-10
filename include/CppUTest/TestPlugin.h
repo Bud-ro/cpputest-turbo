@@ -14,7 +14,7 @@ class NullTestPlugin;
 
 class TestPlugin
 {
-public:
+  public:
     TestPlugin(const SimpleString &name);
     TestPlugin(TestPlugin *next) : next_(next), name_("null"), enabled_(true) {}
     virtual ~TestPlugin() {}
@@ -83,17 +83,17 @@ public:
     virtual void enable() { enabled_ = true; }
     virtual bool isEnabled() { return enabled_; }
 
-protected:
+  protected:
     TestPlugin *next_;
 
-private:
+  private:
     SimpleString name_;
     bool enabled_;
 };
 
 class NullTestPlugin : public TestPlugin
 {
-public:
+  public:
     NullTestPlugin() : TestPlugin(NULLPTR) {}
     virtual ~NullTestPlugin() {}
 
@@ -103,8 +103,14 @@ public:
         return &_instance;
     }
 
-    virtual void runAllPreTestAction(UtestShell &, TestResult &) CPPUTEST_OVERRIDE {}
-    virtual void runAllPostTestAction(UtestShell &, TestResult &) CPPUTEST_OVERRIDE {}
+    virtual void runAllPreTestAction(UtestShell &,
+                                     TestResult &) CPPUTEST_OVERRIDE
+    {
+    }
+    virtual void runAllPostTestAction(UtestShell &,
+                                      TestResult &) CPPUTEST_OVERRIDE
+    {
+    }
 };
 
 inline TestPlugin::TestPlugin(const SimpleString &name)
@@ -114,19 +120,15 @@ inline TestPlugin::TestPlugin(const SimpleString &name)
 
 /* ------------------------- SetPointerPlugin ----------------------------- */
 
-struct cpputest_pair
-{
+struct cpputest_pair {
     void **orig;
     void *orig_value;
 };
 
 class SetPointerPlugin : public TestPlugin
 {
-public:
-    enum
-    {
-        MAX_SET = 32
-    };
+  public:
+    enum { MAX_SET = 32 };
 
     SetPointerPlugin(const SimpleString &name);
 
@@ -169,6 +171,10 @@ inline void SetPointerPlugin::postTestAction(UtestShell &, TestResult &)
     CppUTestStoreIndex() = 0;
 }
 
-#define UT_PTR_SET(a, b) do { CppUTestStore((void **)&(a)); (a) = b; } while (0)
+#define UT_PTR_SET(a, b)                                                       \
+    do {                                                                       \
+        CppUTestStore((void **)&(a));                                          \
+        (a) = b;                                                               \
+    } while (0)
 
 #endif

@@ -16,20 +16,10 @@ class TestResult;
 
 class TestOutput
 {
-public:
-    enum WorkingEnvironment
-    {
-        visualStudio,
-        eclipse,
-        detectEnvironment
-    };
+  public:
+    enum WorkingEnvironment { visualStudio, eclipse, detectEnvironment };
 
-    enum VerbosityLevel
-    {
-        level_quiet,
-        level_verbose,
-        level_veryVerbose
-    };
+    enum VerbosityLevel { level_quiet, level_verbose, level_veryVerbose };
 
     TestOutput() : verbose_(level_quiet), color_(false) {}
     virtual ~TestOutput() {}
@@ -50,7 +40,7 @@ public:
     virtual void printBuffer(const char *) = 0;
     virtual void flush() {}
 
-protected:
+  protected:
     void printLong(long n)
     {
         char buf[32];
@@ -71,7 +61,7 @@ protected:
 
 class ConsoleTestOutput : public TestOutput
 {
-public:
+  public:
     virtual void printBuffer(const char *s) CPPUTEST_OVERRIDE
     {
         fputs(s, stdout);
@@ -81,14 +71,14 @@ public:
 
 class StringBufferTestOutput : public TestOutput
 {
-public:
+  public:
     virtual ~StringBufferTestOutput() {}
 
     virtual void printBuffer(const char *s) CPPUTEST_OVERRIDE { output_ += s; }
     virtual void flush() CPPUTEST_OVERRIDE { output_ = ""; }
     const SimpleString &getOutput() { return output_; }
 
-protected:
+  protected:
     SimpleString output_;
 };
 

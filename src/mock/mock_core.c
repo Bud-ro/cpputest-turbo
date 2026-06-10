@@ -57,11 +57,19 @@ static void msb_add(msb *b, const char *s)
 /* ------------------------------ values ---------------------------------- */
 
 /* MockNamedValue type names, indexed by cum_type */
-static const char *type_names[] = {
-    "bool", "int", "unsigned int", "long int", "unsigned long int",
-    "long long int", "unsigned long long int", "double", "const char*",
-    "void*", "const void*", "void (*)()", "const unsigned char*"
-};
+static const char *type_names[] = {"bool",
+                                   "int",
+                                   "unsigned int",
+                                   "long int",
+                                   "unsigned long int",
+                                   "long long int",
+                                   "unsigned long long int",
+                                   "double",
+                                   "const char*",
+                                   "void*",
+                                   "const void*",
+                                   "void (*)()",
+                                   "const unsigned char*"};
 
 const char *cum_value_type_name(const cum_value *v)
 {
@@ -84,18 +92,24 @@ static int type_is_signed(cum_type t)
 static long long as_signed(const cum_value *v)
 {
     switch (v->type) {
-    case CUM_T_INT: return v->v.i;
-    case CUM_T_LONG: return v->v.l;
-    default: return v->v.ll;
+    case CUM_T_INT:
+        return v->v.i;
+    case CUM_T_LONG:
+        return v->v.l;
+    default:
+        return v->v.ll;
     }
 }
 
 static unsigned long long as_unsigned(const cum_value *v)
 {
     switch (v->type) {
-    case CUM_T_UINT: return v->v.ui;
-    case CUM_T_ULONG: return v->v.ul;
-    default: return v->v.ull;
+    case CUM_T_UINT:
+        return v->v.ui;
+    case CUM_T_ULONG:
+        return v->v.ul;
+    default:
+        return v->v.ull;
     }
 }
 
@@ -202,14 +216,19 @@ static int value_equals(const cum_value *e, const cum_value *a)
     if (e->type != a->type)
         return 0;
     switch (e->type) {
-    case CUM_T_BOOL: return e->v.b == a->v.b;
+    case CUM_T_BOOL:
+        return e->v.b == a->v.b;
     case CUM_T_DOUBLE:
-        return mock_doubles_equal(e->v.dbl.value, a->v.dbl.value, e->v.dbl.tolerance);
+        return mock_doubles_equal(e->v.dbl.value, a->v.dbl.value,
+                                  e->v.dbl.tolerance);
     case CUM_T_STRING:
         return 0 == strcmp(e->v.str ? e->v.str : "", a->v.str ? a->v.str : "");
-    case CUM_T_POINTER: return e->v.ptr == a->v.ptr;
-    case CUM_T_CONST_POINTER: return e->v.cptr == a->v.cptr;
-    case CUM_T_FUNCTIONPOINTER: return e->v.fptr == a->v.fptr;
+    case CUM_T_POINTER:
+        return e->v.ptr == a->v.ptr;
+    case CUM_T_CONST_POINTER:
+        return e->v.cptr == a->v.cptr;
+    case CUM_T_FUNCTIONPOINTER:
+        return e->v.fptr == a->v.fptr;
     case CUM_T_MEMBUFFER:
         return e->v.mem.size == a->v.mem.size &&
                0 == memcmp(e->v.mem.buf, a->v.mem.buf, e->v.mem.size);
@@ -220,7 +239,8 @@ static int value_equals(const cum_value *e, const cum_value *a)
         cum_comparator *c = find_in(comparators, cum_value_type_name(e));
         return c && c->equal ? c->equal(c->ctx, e->v.obj.ptr, a->v.obj.ptr) : 0;
     }
-    default: return 0;
+    default:
+        return 0;
     }
 }
 
@@ -228,16 +248,25 @@ static int value_equals(const cum_value *e, const cum_value *a)
 static char *value_to_string(const cum_value *v)
 {
     switch (v->type) {
-    case CUM_T_BOOL: return cu_str_printf("%s", v->v.b ? "true" : "false");
-    case CUM_T_INT: return cu_str_printf("%d (0x%x)", v->v.i, (unsigned)v->v.i);
-    case CUM_T_UINT: return cu_str_printf("%u (0x%x)", v->v.ui, v->v.ui);
-    case CUM_T_LONG: return cu_str_printf("%ld (0x%lx)", v->v.l, (unsigned long)v->v.l);
-    case CUM_T_ULONG: return cu_str_printf("%lu (0x%lx)", v->v.ul, v->v.ul);
+    case CUM_T_BOOL:
+        return cu_str_printf("%s", v->v.b ? "true" : "false");
+    case CUM_T_INT:
+        return cu_str_printf("%d (0x%x)", v->v.i, (unsigned)v->v.i);
+    case CUM_T_UINT:
+        return cu_str_printf("%u (0x%x)", v->v.ui, v->v.ui);
+    case CUM_T_LONG:
+        return cu_str_printf("%ld (0x%lx)", v->v.l, (unsigned long)v->v.l);
+    case CUM_T_ULONG:
+        return cu_str_printf("%lu (0x%lx)", v->v.ul, v->v.ul);
     case CUM_T_LONGLONG:
-        return cu_str_printf("%lld (0x%llx)", v->v.ll, (unsigned long long)v->v.ll);
-    case CUM_T_ULONGLONG: return cu_str_printf("%llu (0x%llx)", v->v.ull, v->v.ull);
-    case CUM_T_DOUBLE: return cu_str_from_double(v->v.dbl.value, 6);
-    case CUM_T_STRING: return cu_str_printf("%s", v->v.str ? v->v.str : "");
+        return cu_str_printf("%lld (0x%llx)", v->v.ll,
+                             (unsigned long long)v->v.ll);
+    case CUM_T_ULONGLONG:
+        return cu_str_printf("%llu (0x%llx)", v->v.ull, v->v.ull);
+    case CUM_T_DOUBLE:
+        return cu_str_from_double(v->v.dbl.value, 6);
+    case CUM_T_STRING:
+        return cu_str_printf("%s", v->v.str ? v->v.str : "");
     case CUM_T_POINTER:
         return cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.ptr);
     case CUM_T_CONST_POINTER:
@@ -263,7 +292,8 @@ static char *value_to_string(const cum_value *v)
         return cu_str_printf("No comparator found for type: \"%s\"",
                              cum_value_type_name(v));
     }
-    default: return cu_str_printf("?");
+    default:
+        return cu_str_printf("?");
     }
 }
 
@@ -298,13 +328,13 @@ struct cum_expectation {
     unsigned order_end;
     int out_of_order;
     int ignore_other_parameters;
-    int object_specific;       /* onObject() was used */
+    int object_specific; /* onObject() was used */
     const void *object_ptr;
-    int passed_to_object;      /* 1 unless object_specific and not yet passed */
-    int candidate; /* potentially matching the in-progress actual call */
+    int passed_to_object; /* 1 unless object_specific and not yet passed */
+    int candidate;        /* potentially matching the in-progress actual call */
     int has_return;
     cum_value return_value;
-    void *user;    /* C++ facade */
+    void *user; /* C++ facade */
     struct cum_expectation *next;
 };
 
@@ -395,8 +425,6 @@ const char *cum_trace_output(void)
 {
     return trace_buf ? trace_buf : "";
 }
-
-
 
 /* ------------------------------- scopes --------------------------------- */
 
@@ -489,8 +517,8 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
         if (e->order_start == e->order_end)
             msb_addf(b, "expected call order: <%u> -> ", e->order_start);
         else
-            msb_addf(b, "expected calls order: <%u..%u> -> ",
-                     e->order_start, e->order_end);
+            msb_addf(b, "expected calls order: <%u..%u> -> ", e->order_start,
+                     e->order_end);
     }
     if (!e->params && !e->out_params) {
         msb_add(b, e->ignore_other_parameters ? "all parameters ignored"
@@ -504,7 +532,8 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
             while (named && 0 != strcmp(named->name, p->name))
                 named = named->next;
             char *value = value_to_string(&(named ? named : p)->value);
-            msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name, value);
+            msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name,
+                     value);
             cu_str_free(value);
             if (p->next)
                 msb_add(b, ", ");
@@ -520,9 +549,9 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
         if (e->ignore_other_parameters)
             msb_add(b, ", other parameters are ignored");
     }
-    msb_addf(b, " (expected %u call%s, called %u time%s)",
-             e->expected_calls, e->expected_calls == 1 ? "" : "s",
-             e->actual_calls, e->actual_calls == 1 ? "" : "s");
+    msb_addf(b, " (expected %u call%s, called %u time%s)", e->expected_calls,
+             e->expected_calls == 1 ? "" : "s", e->actual_calls,
+             e->actual_calls == 1 ? "" : "s");
 }
 
 /* MockCheckedExpectedCall::missingParametersToString */
@@ -578,13 +607,15 @@ static int pred_fulfilled_named(const cum_expectation *e, const char *name)
     return is_fulfilled(e) && 0 == strcmp(e->name, name);
 }
 
-static int pred_unfulfilled_out_of_order(const cum_expectation *e, const char *arg)
+static int pred_unfulfilled_out_of_order(const cum_expectation *e,
+                                         const char *arg)
 {
     (void)arg;
     return !is_fulfilled(e) && e->out_of_order;
 }
 
-static int pred_fulfilled_out_of_order(const cum_expectation *e, const char *arg)
+static int pred_fulfilled_out_of_order(const cum_expectation *e,
+                                       const char *arg)
 {
     (void)arg;
     return is_fulfilled(e) && e->out_of_order;
@@ -626,10 +657,12 @@ static void msb_history(msb *b, cum_scope *only_scope, exp_pred unful,
 /* addExpectationsAndCallHistoryRelatedTo */
 static void msb_history_related(msb *b, cum_scope *s, const char *name)
 {
-    msb_addf(b, "\tEXPECTED calls that WERE NOT fulfilled related to function: %s\n",
-             name);
+    msb_addf(
+        b, "\tEXPECTED calls that WERE NOT fulfilled related to function: %s\n",
+        name);
     msb_calls_list(b, "\t\t", s, pred_unfulfilled_named, name);
-    msb_addf(b, "\n\tEXPECTED calls that WERE fulfilled related to function: %s\n",
+    msb_addf(b,
+             "\n\tEXPECTED calls that WERE fulfilled related to function: %s\n",
              name);
     msb_calls_list(b, "\t\t", s, pred_fulfilled_named, name);
 }
@@ -652,16 +685,21 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
     msb b;
     msb_init(&b);
     if (!name_known)
-        msb_addf(&b, "Mock Failure: Unexpected parameter name to function \"%s\": %s",
-                 fn, param_name);
+        msb_addf(
+            &b,
+            "Mock Failure: Unexpected parameter name to function \"%s\": %s",
+            fn, param_name);
     else
         msb_addf(&b,
-                 "Mock Failure: Unexpected parameter value to parameter \"%s\" to function \"%s\": <%s>",
+                 "Mock Failure: Unexpected parameter value to parameter \"%s\" "
+                 "to function \"%s\": <%s>",
                  param_name, fn, value_str);
     msb_add(&b, "\n");
     msb_history_related(&b, s, fn);
-    msb_addf(&b, "\n\tACTUAL unexpected parameter passed to function: %s\n", fn);
-    msb_addf(&b, "\t\t%s %s: <%s>", cum_value_type_name(value), param_name, value_str);
+    msb_addf(&b, "\n\tACTUAL unexpected parameter passed to function: %s\n",
+             fn);
+    msb_addf(&b, "\t\t%s %s: <%s>", cum_value_type_name(value), param_name,
+             value_str);
     cu_str_free(value_str);
     mock_fail(&b);
 }
@@ -688,15 +726,18 @@ static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
     msb_init(&b);
     if (name_known)
         msb_addf(&b,
-                 "Mock Failure: Unexpected parameter type \"%s\" to output parameter \"%s\" to function \"%s\"",
+                 "Mock Failure: Unexpected parameter type \"%s\" to output "
+                 "parameter \"%s\" to function \"%s\"",
                  actual_type, param_name, fn);
     else
         msb_addf(&b,
-                 "Mock Failure: Unexpected output parameter name to function \"%s\": %s",
+                 "Mock Failure: Unexpected output parameter name to function "
+                 "\"%s\": %s",
                  fn, param_name);
     msb_add(&b, "\n");
     msb_history_related(&b, s, fn);
-    msb_addf(&b, "\n\tACTUAL unexpected output parameter passed to function: %s\n",
+    msb_addf(&b,
+             "\n\tACTUAL unexpected output parameter passed to function: %s\n",
              fn);
     msb_addf(&b, "\t\t%s %s", actual_type, param_name);
     mock_fail(&b);
@@ -722,7 +763,8 @@ static void fail_expected_object_didnt_happen(cum_scope *s, const char *fn)
     msb b;
     msb_init(&b);
     msb_addf(&b,
-             "Mock Failure: Expected call on object for function \"%s\" but it did not happen.\n",
+             "Mock Failure: Expected call on object for function \"%s\" but it "
+             "did not happen.\n",
              fn);
     msb_history_related(&b, s, fn);
     mock_fail(&b);
@@ -732,10 +774,14 @@ static void fail_expected_parameter_didnt_happen(cum_scope *s, const char *fn)
 {
     msb b;
     msb_init(&b);
-    msb_addf(&b, "Mock Failure: Expected parameter for function \"%s\" did not happen.\n",
+    msb_addf(&b,
+             "Mock Failure: Expected parameter for function \"%s\" did not "
+             "happen.\n",
              fn);
-    msb_addf(&b, "\tEXPECTED calls with MISSING parameters related to function: %s\n",
-             fn);
+    msb_addf(
+        &b,
+        "\tEXPECTED calls with MISSING parameters related to function: %s\n",
+        fn);
     /* candidates of the in-progress call, two lines each */
     int count = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
@@ -769,12 +815,17 @@ static void fail_unexpected_call(cum_scope *s, const char *name)
         const char *suffix = "th";
         if (n < 11 || n > 13) {
             unsigned ones = n % 10;
-            if (ones == 3) suffix = "rd";
-            else if (ones == 2) suffix = "nd";
-            else if (ones == 1) suffix = "st";
+            if (ones == 3)
+                suffix = "rd";
+            else if (ones == 2)
+                suffix = "nd";
+            else if (ones == 1)
+                suffix = "st";
         }
-        msb_addf(&b, "Mock Failure: Unexpected additional (%u%s) call to function: ",
-                 n, suffix);
+        msb_addf(
+            &b,
+            "Mock Failure: Unexpected additional (%u%s) call to function: ", n,
+            suffix);
     } else {
         msb_add(&b, "Mock Failure: Unexpected call to function: ");
     }
@@ -811,7 +862,8 @@ void cum_strict_order(cum_scope *s)
     s->strict_ordering = 1;
 }
 
-cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount, const char *name)
+cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount,
+                                    const char *name)
 {
     if (!s->enabled)
         return NULL;
@@ -834,7 +886,8 @@ cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount, const char *n
     return e;
 }
 
-void cum_expectation_with_call_order(cum_expectation *e, unsigned start, unsigned end)
+void cum_expectation_with_call_order(cum_expectation *e, unsigned start,
+                                     unsigned end)
 {
     if (!e)
         return;
@@ -985,8 +1038,8 @@ static void trace_named_value(const char *name, const cum_value *v)
         trace_add(" ");
         trace_add(name);
         trace_add(":");
-        char *hex = cu_str_printf("0x%llx",
-                                  (unsigned long long)(size_t)v->v.obj.ptr);
+        char *hex =
+            cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.obj.ptr);
         trace_add(hex);
         cu_str_free(hex);
         return;
@@ -1013,7 +1066,8 @@ static void trace_pointer_param(const char *type_name, const char *name,
     cu_str_free(hex);
 }
 
-void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst)
+void cum_actual_with_output_parameter(cum_actual *a, const char *name,
+                                      void *dst)
 {
     if (IS_TRACE(a)) {
         trace_pointer_param(NULL, name, dst);
@@ -1038,7 +1092,8 @@ void cum_fail_no_way_to_compare(const char *type_name)
     msb b;
     msb_init(&b);
     msb_addf(&b,
-             "MockFailure: No way to compare type <%s>. Please install a MockNamedValueComparator.",
+             "MockFailure: No way to compare type <%s>. Please install a "
+             "MockNamedValueComparator.",
              type_name);
     mock_fail(&b);
 }
@@ -1048,7 +1103,8 @@ void cum_fail_no_way_to_copy(const char *type_name)
     msb b;
     msb_init(&b);
     msb_addf(&b,
-             "MockFailure: No way to copy type <%s>. Please install a MockNamedValueCopier.",
+             "MockFailure: No way to copy type <%s>. Please install a "
+             "MockNamedValueCopier.",
              type_name);
     mock_fail(&b);
 }
@@ -1094,7 +1150,8 @@ void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)
     free(d->owned_type_name);
     d->owned_type_name = NULL;
     if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
-        d->owned_type_name = strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+        d->owned_type_name =
+            strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
         value.v.obj.type_name = d->owned_type_name;
     }
     d->value = value;
@@ -1124,7 +1181,8 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
     cum_param *p = calloc(1, sizeof *p);
     p->name = strdup(name);
     if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
-        p->owned_type = strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+        p->owned_type =
+            strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
         value.v.obj.type_name = p->owned_type;
     }
     p->value = value;
@@ -1330,8 +1388,8 @@ void cum_actual_on_object(cum_actual *a, const void *object_ptr)
         return;
     if (IS_TRACE(a)) {
         trace_add(" onObject:");
-        char *hex = cu_str_printf("0x%llx",
-                                  (unsigned long long)(size_t)object_ptr);
+        char *hex =
+            cu_str_printf("0x%llx", (unsigned long long)(size_t)object_ptr);
         trace_add(hex);
         cu_str_free(hex);
         return;

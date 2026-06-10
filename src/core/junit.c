@@ -104,9 +104,8 @@ void cu_junit_test_ended(cu_output *out, const cu_result *res)
     j->tail->check_count = res->check_count;
 }
 
-void cu_junit_failure(cu_output *out, const cu_test *t,
-                      const char *fail_file, size_t fail_line,
-                      const char *message)
+void cu_junit_failure(cu_output *out, const cu_test *t, const char *fail_file,
+                      size_t fail_line, const char *message)
 {
     (void)t;
     cu_junit_state *j = out->junit;
@@ -131,16 +130,19 @@ void cu_junit_print(cu_output *out, const char *s)
 /* encodeXmlText, replacements applied in upstream order */
 static char *encode_xml(const char *text)
 {
-    static const struct { const char *from, *to; } reps[] = {
-        { "&", "&amp;" }, { "\"", "&quot;" }, { "<", "&lt;" },
-        { ">", "&gt;" }, { "\r", "&#13;" }, { "\n", "&#10;" },
+    static const struct {
+        const char *from, *to;
+    } reps[] = {
+        {"&", "&amp;"}, {"\"", "&quot;"}, {"<", "&lt;"},
+        {">", "&gt;"},  {"\r", "&#13;"},  {"\n", "&#10;"},
     };
     char *buf = strdup(text);
     for (size_t r = 0; r < sizeof reps / sizeof reps[0]; r++) {
         size_t flen = strlen(reps[r].from);
         size_t tlen = strlen(reps[r].to);
         size_t count = 0;
-        for (const char *p = buf; (p = strstr(p, reps[r].from)) != NULL; p += flen)
+        for (const char *p = buf; (p = strstr(p, reps[r].from)) != NULL;
+             p += flen)
             count++;
         if (!count)
             continue;
@@ -219,7 +221,8 @@ void cu_junit_group_ended(cu_output *out, const cu_result *res)
         if (cur->has_failure) {
             char *encoded = encode_xml(cur->failure_message);
             fprintf(f,
-                    "<failure message=\"%s:%d: %s\" type=\"AssertionFailedError\">\n",
+                    "<failure message=\"%s:%d: %s\" "
+                    "type=\"AssertionFailedError\">\n",
                     cur->failure_file, (int)cur->failure_line, encoded);
             free(encoded);
             fputs("</failure>\n", f);

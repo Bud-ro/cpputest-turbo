@@ -22,7 +22,7 @@ class SimpleString
     friend bool operator==(const SimpleString &left, const SimpleString &right);
     friend bool operator!=(const SimpleString &left, const SimpleString &right);
 
-public:
+  public:
     SimpleString(const char *value = "");
     SimpleString(const char *value, size_t repeatCount);
     SimpleString(const SimpleString &other);
@@ -48,7 +48,8 @@ public:
     size_t find(char ch) const;
     size_t findFrom(size_t starting_position, char ch) const;
     size_t count(const SimpleString &str) const;
-    void split(const SimpleString &delimiter, SimpleStringCollection &col) const;
+    void split(const SimpleString &delimiter,
+               SimpleStringCollection &col) const;
 
     void replace(char to, char with);
     void replace(const char *to, const char *with);
@@ -74,7 +75,7 @@ public:
     static void padStringsToSameLength(SimpleString &str1, SimpleString &str2,
                                        char padCharacter);
 
-private:
+  private:
     void copyFrom(const char *value);
     void append(const char *value, size_t n);
 
@@ -88,7 +89,7 @@ bool operator!=(const SimpleString &left, const SimpleString &right);
 
 class SimpleStringCollection
 {
-public:
+  public:
     SimpleStringCollection();
     ~SimpleStringCollection();
 
@@ -97,7 +98,7 @@ public:
     size_t size() const;
     SimpleString &operator[](size_t index);
 
-private:
+  private:
     SimpleString *collection_;
     SimpleString empty_;
     size_t size_;
@@ -160,7 +161,8 @@ SimpleString BracketsFormattedHexStringFrom(cpputest_ulonglong value);
 SimpleString StringFromBinary(const unsigned char *value, size_t size);
 SimpleString StringFromBinaryOrNull(const unsigned char *value, size_t size);
 SimpleString StringFromBinaryWithSize(const unsigned char *value, size_t size);
-SimpleString StringFromBinaryWithSizeOrNull(const unsigned char *value, size_t size);
+SimpleString StringFromBinaryWithSizeOrNull(const unsigned char *value,
+                                            size_t size);
 SimpleString StringFromMaskedBits(unsigned long value, unsigned long mask,
                                   size_t byteCount);
 

@@ -17,11 +17,11 @@
 #define GUARD_SIZE 3
 #define BUCKETS 1024
 
-static const char GuardBytes[GUARD_SIZE] = { 'B', 'A', 'S' };
+static const char GuardBytes[GUARD_SIZE] = {'B', 'A', 'S'};
 static const char *UNKNOWN = "<unknown>";
 
-static const char *alloc_names[] = { "new", "new []", "malloc", "unknown" };
-static const char *free_names[] = { "delete", "delete []", "free", "unknown" };
+static const char *alloc_names[] = {"new", "new []", "malloc", "unknown"};
+static const char *free_names[] = {"delete", "delete []", "free", "unknown"};
 
 typedef struct mem_node {
     void *ptr;
@@ -29,7 +29,7 @@ typedef struct mem_node {
     const char *file;
     size_t line;
     unsigned number;
-    int type; /* CU_MEM_NEW / CU_MEM_NEW_ARRAY / CU_MEM_MALLOC */
+    int type;     /* CU_MEM_NEW / CU_MEM_NEW_ARRAY / CU_MEM_MALLOC */
     int checking; /* allocated during the per-test checking period */
     struct mem_node *next;
 } mem_node;
@@ -54,18 +54,22 @@ static size_t bucket_of(const void *p)
 
 /* ------------------------ report string buffer -------------------------- */
 
-#define MEM_LEAK_TOO_MUCH "\netc etc etc etc. !!!! Too many memory leaks to report. Bailing out\n"
+#define MEM_LEAK_TOO_MUCH                                                      \
+    "\netc etc etc etc. !!!! Too many memory leaks to report. Bailing out\n"
 #define MEM_LEAK_FOOTER "Total number of leaks: "
-#define MEM_LEAK_ADDITION_MALLOC_WARNING "NOTE:\n" \
-    "\tMemory leak reports about malloc and free can be caused by allocating using the cpputest version of malloc,\n" \
-    "\tbut deallocate using the standard free.\n" \
-    "\tIf this is the case, check whether your malloc/free replacements are working (#define malloc cpputest_malloc etc).\n"
+#define MEM_LEAK_ADDITION_MALLOC_WARNING                                       \
+    "NOTE:\n"                                                                  \
+    "\tMemory leak reports about malloc and free can be caused by allocating " \
+    "using the cpputest version of malloc,\n"                                  \
+    "\tbut deallocate using the standard free.\n"                              \
+    "\tIf this is the case, check whether your malloc/free replacements are "  \
+    "working (#define malloc cpputest_malloc etc).\n"
 
 static struct {
     char buf[CU_MEM_BUFFER_LEN];
     size_t filled;
     size_t write_limit;
-} rb = { { 0 }, 0, CU_MEM_BUFFER_LEN - 1 };
+} rb = {{0}, 0, CU_MEM_BUFFER_LEN - 1};
 
 static void rb_clear(void)
 {
@@ -252,8 +256,8 @@ static void report_dealloc_failure(const char *headline, const mem_node *node,
            node ? node->file : UNKNOWN, node ? (int)node->line : 0,
            node ? (unsigned long)node->size : 0UL,
            node ? alloc_names[node->type] : "unknown");
-    rb_add("   deallocated at file: %s line: %d type: %s\n",
-           free_file, (int)free_line, free_names[free_type]);
+    rb_add("   deallocated at file: %s line: %d type: %s\n", free_file,
+           (int)free_line, free_names[free_type]);
     mem_fail(rb.buf);
 }
 
@@ -266,13 +270,13 @@ void cu_mem_free_tracked(void *p, const char *file, size_t line, int type)
 
     mem_node *node = remove_node(p);
     if (!node) {
-        report_dealloc_failure("Deallocating non-allocated memory\n",
-                               NULL, file, line, type);
+        report_dealloc_failure("Deallocating non-allocated memory\n", NULL,
+                               file, line, type);
         return; /* only reached outside a test run */
     }
     if (node->type != type) {
-        report_dealloc_failure("Allocation/deallocation type mismatch\n",
-                               node, file, line, type);
+        report_dealloc_failure("Allocation/deallocation type mismatch\n", node,
+                               file, line, type);
         free(node); /* node == block start */
         return;
     }
@@ -286,7 +290,8 @@ void cu_mem_free_tracked(void *p, const char *file, size_t line, int type)
     block_free(node); /* recycles or frees the whole block */
 }
 
-void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line)
+void *cu_mem_realloc_tracked(void *p, size_t size, const char *file,
+                             size_t line)
 {
     if (!file)
         file = UNKNOWN;
@@ -295,8 +300,8 @@ void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line
 
     mem_node *node = remove_node(p);
     if (!node) {
-        report_dealloc_failure("Deallocating non-allocated memory\n",
-                               NULL, file, line, CU_MEM_MALLOC);
+        report_dealloc_failure("Deallocating non-allocated memory\n", NULL,
+                               file, line, CU_MEM_MALLOC);
         return NULL;
     }
     size_t old_size = node->size;
@@ -377,8 +382,9 @@ const char *cu_mem_leak_report(int checking_only)
     int warn_malloc = 0;
 
     /* startMemoryLeakReporting: reserve room for footer + malloc warning */
-    size_t footer_reserve = sizeof(MEM_LEAK_FOOTER) + 10 + sizeof(MEM_LEAK_TOO_MUCH)
-                          + sizeof(MEM_LEAK_ADDITION_MALLOC_WARNING);
+    size_t footer_reserve = sizeof(MEM_LEAK_FOOTER) + 10 +
+                            sizeof(MEM_LEAK_TOO_MUCH) +
+                            sizeof(MEM_LEAK_ADDITION_MALLOC_WARNING);
     rb.write_limit = CU_MEM_BUFFER_LEN - footer_reserve;
 
     for (size_t b = 0; b < BUCKETS; b++) {
@@ -388,7 +394,8 @@ const char *cu_mem_leak_report(int checking_only)
             if (total_leaks == 0)
                 rb_add("Memory leak(s) found.\n");
             total_leaks++;
-            rb_add("Alloc num (%u) Leak size: %lu Allocated at: %s and line: %d. Type: \"%s\"\n\tMemory: <%p> Content:\n",
+            rb_add("Alloc num (%u) Leak size: %lu Allocated at: %s and line: "
+                   "%d. Type: \"%s\"\n\tMemory: <%p> Content:\n",
                    n->number, (unsigned long)n->size, n->file, (int)n->line,
                    alloc_names[n->type], n->ptr);
             rb_add_memory_dump(n->ptr, n->size);
@@ -452,8 +459,8 @@ void *cpputest_malloc(size_t size)
     return cpputest_malloc_location(size, UNKNOWN, 0);
 }
 
-void *cpputest_calloc_location(size_t count, size_t size,
-                               const char *file, size_t line)
+void *cpputest_calloc_location(size_t count, size_t size, const char *file,
+                               size_t line)
 {
     void *p = malloc_maybe_tracked(count * size, file, line);
     if (p)
@@ -480,8 +487,8 @@ void cu_mem_release_if_tracked(void *p)
         free(p);
 }
 
-void *cpputest_realloc_location(void *p, size_t size,
-                                const char *file, size_t line)
+void *cpputest_realloc_location(void *p, size_t size, const char *file,
+                                size_t line)
 {
     if (tracking_on)
         return cu_mem_realloc_tracked(p, size, file, line);
@@ -538,8 +545,8 @@ char *cpputest_strdup(const char *s)
     return cpputest_strdup_location(s, UNKNOWN, 0);
 }
 
-char *cpputest_strndup_location(const char *s, size_t n,
-                                const char *file, size_t line)
+char *cpputest_strndup_location(const char *s, size_t n, const char *file,
+                                size_t line)
 {
     size_t len = strlen(s);
     if (len > n)

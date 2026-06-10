@@ -15,7 +15,7 @@
 
 class MockSupportPlugin : public TestPlugin
 {
-public:
+  public:
     MockSupportPlugin(const SimpleString &name = "MockSupportPlugin")
         : TestPlugin(name), count_(0)
     {
@@ -35,22 +35,21 @@ public:
         addEntry(name, NULLPTR, &copier);
     }
 
-    virtual void clear()
-    {
-        count_ = 0;
-    }
+    virtual void clear() { count_ = 0; }
 
     virtual void preTestAction(UtestShell &, TestResult &) CPPUTEST_OVERRIDE
     {
         for (int i = 0; i < count_; i++) {
             if (entries_[i].comparator)
-                mock().installComparator(entries_[i].name, *entries_[i].comparator);
+                mock().installComparator(entries_[i].name,
+                                         *entries_[i].comparator);
             else
                 mock().installCopier(entries_[i].name, *entries_[i].copier);
         }
     }
 
-    virtual void postTestAction(UtestShell &test, TestResult &) CPPUTEST_OVERRIDE
+    virtual void postTestAction(UtestShell &test,
+                                TestResult &) CPPUTEST_OVERRIDE
     {
         if (!test.hasFailed())
             mock().checkExpectations();
@@ -58,21 +57,17 @@ public:
         mock().removeAllComparatorsAndCopiers();
     }
 
-private:
-    enum
-    {
-        kMaxEntries = 32,
-        kMaxName = 63
-    };
+  private:
+    enum { kMaxEntries = 32, kMaxName = 63 };
 
-    struct Entry
-    {
+    struct Entry {
         char name[kMaxName + 1];
         MockNamedValueComparator *comparator;
         MockNamedValueCopier *copier;
     };
 
-    void addEntry(const SimpleString &name, MockNamedValueComparator *comparator,
+    void addEntry(const SimpleString &name,
+                  MockNamedValueComparator *comparator,
                   MockNamedValueCopier *copier)
     {
         if (count_ >= kMaxEntries)

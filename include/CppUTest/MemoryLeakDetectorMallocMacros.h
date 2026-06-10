@@ -21,12 +21,17 @@
 extern "C" {
 #endif
 
-extern void *cpputest_malloc_location(size_t size, const char *file, size_t line);
-extern void *cpputest_calloc_location(size_t count, size_t size, const char *file, size_t line);
-extern void *cpputest_realloc_location(void *p, size_t size, const char *file, size_t line);
+extern void *cpputest_malloc_location(size_t size, const char *file,
+                                      size_t line);
+extern void *cpputest_calloc_location(size_t count, size_t size,
+                                      const char *file, size_t line);
+extern void *cpputest_realloc_location(void *p, size_t size, const char *file,
+                                       size_t line);
 extern void cpputest_free_location(void *p, const char *file, size_t line);
-extern char *cpputest_strdup_location(const char *s, const char *file, size_t line);
-extern char *cpputest_strndup_location(const char *s, size_t n, const char *file, size_t line);
+extern char *cpputest_strdup_location(const char *s, const char *file,
+                                      size_t line);
+extern char *cpputest_strndup_location(const char *s, size_t n,
+                                       const char *file, size_t line);
 
 #ifdef __cplusplus
 }

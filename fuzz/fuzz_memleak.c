@@ -34,18 +34,36 @@ static int live_count;
 static size_t random_size(void)
 {
     switch (r() % 6) {
-    case 0: return 0;
-    case 1: return r() % 8;
-    case 2: return 61 + r() % 8;   /* freelist class boundary */
-    case 3: return 125 + r() % 8;  /* another boundary */
-    case 4: return r() % 256;
-    default: return 900 + r() % 400; /* beyond freelist classes */
+    case 0:
+        return 0;
+    case 1:
+        return r() % 8;
+    case 2:
+        return 61 + r() % 8; /* freelist class boundary */
+    case 3:
+        return 125 + r() % 8; /* another boundary */
+    case 4:
+        return r() % 256;
+    default:
+        return 900 + r() % 400; /* beyond freelist classes */
     }
 }
 
-static void *t_create(cu_test *t) { (void)t; return NULL; }
-static void t_destroy(cu_test *t, void *f) { (void)t; (void)f; }
-static void t_setup(cu_test *t, void *f) { (void)t; (void)f; }
+static void *t_create(cu_test *t)
+{
+    (void)t;
+    return NULL;
+}
+static void t_destroy(cu_test *t, void *f)
+{
+    (void)t;
+    (void)f;
+}
+static void t_setup(cu_test *t, void *f)
+{
+    (void)t;
+    (void)f;
+}
 
 static void t_body(cu_test *t, void *f)
 {
@@ -58,10 +76,19 @@ static void t_body(cu_test *t, void *f)
             size_t sz = random_size();
             void *p = NULL;
             switch (r() % 4) {
-            case 0: p = cpputest_malloc(sz); break;
-            case 1: p = cpputest_calloc(sz ? sz : 1, 1); break;
-            case 2: p = cpputest_malloc_location(sz, "fuzz.c", r() % 1000); break;
-            default: p = cpputest_strdup("fuzz-string-content"); sz = 19; break;
+            case 0:
+                p = cpputest_malloc(sz);
+                break;
+            case 1:
+                p = cpputest_calloc(sz ? sz : 1, 1);
+                break;
+            case 2:
+                p = cpputest_malloc_location(sz, "fuzz.c", r() % 1000);
+                break;
+            default:
+                p = cpputest_strdup("fuzz-string-content");
+                sz = 19;
+                break;
             }
             if (p) {
                 memset(p, 0xAB, sz);
@@ -90,7 +117,7 @@ static void t_body(cu_test *t, void *f)
             }
         } else if (op < 82) { /* free something foreign: must fail the test */
             char local[8];
-            cpputest_free(local); /* longjmps out of the body */
+            cpputest_free(local);               /* longjmps out of the body */
         } else if (op < 84 && live_count > 0) { /* genuine double free */
             int idx = (int)(r() % (unsigned)live_count);
             void *p = live[idx];
@@ -103,7 +130,8 @@ static void t_body(cu_test *t, void *f)
             void *p = live[idx];
             live[idx] = live[--live_count];
             live_size[idx] = live_size[live_count];
-            cu_mem_free_tracked(p, "fuzz.c", 1, CU_MEM_NEW); /* mismatch -> longjmp */
+            cu_mem_free_tracked(p, "fuzz.c", 1,
+                                CU_MEM_NEW); /* mismatch -> longjmp */
         } else { /* allocate-and-leak (cleaned between iterations) */
             void *p = cpputest_malloc(r() % 64);
             (void)p;
@@ -120,7 +148,8 @@ static void t_teardown(cu_test *t, void *f)
     (void)f;
 }
 
-static const cu_test_ops ops_tbl = { t_create, t_destroy, t_setup, t_body, t_teardown };
+static const cu_test_ops ops_tbl = {t_create, t_destroy, t_setup, t_body,
+                                    t_teardown};
 static cu_test the_test;
 
 int main(void)

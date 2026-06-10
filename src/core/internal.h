@@ -39,8 +39,8 @@ typedef struct cu_output {
     size_t dot_count;
     const char *progress_indicator; /* "." or "!" for the test in flight */
     cu_output_type type;
-    int also_console;          /* -ojunit with -v/-vv: composite with console */
-    const char *package_name;  /* -k */
+    int also_console;         /* -ojunit with -v/-vv: composite with console */
+    const char *package_name; /* -k */
     cu_junit_state *junit;
     const cu_test *tc_current; /* TeamCity currtest_ */
     const char *tc_group;      /* TeamCity currGroup_ (NULL before a group) */
@@ -100,7 +100,8 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total);
 
 /* runner.c internals shared with fork.c */
 void cu_run_test_actions(cu_test *t);
-void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out);
+void cu_run_all_tests_internal(const cu_args *a, cu_result *res,
+                               cu_output *out);
 void cu_set_current_result_output(cu_result *res, cu_output *out);
 
 /* registry list reordering (UtestShellPointerArray) */
@@ -113,9 +114,8 @@ void cu_out_group_started(cu_output *out, const cu_test *t);
 void cu_out_group_ended(cu_output *out, const cu_result *res);
 void cu_out_test_started(cu_output *out, const cu_test *t);
 void cu_out_test_ended(cu_output *out, const cu_result *res);
-void cu_out_failure(cu_output *out, const cu_test *t,
-                    const char *fail_file, size_t fail_line,
-                    const char *message);
+void cu_out_failure(cu_output *out, const cu_test *t, const char *fail_file,
+                    size_t fail_line, const char *message);
 void cu_out_summary(cu_output *out, const cu_result *res);
 /* TestOutput::print(const char*) / print(number): JUnit accumulates strings
  * into <system-out> and DROPS numbers (upstream no-op overrides) */
@@ -128,9 +128,8 @@ cu_junit_state *cu_junit_create(void);
 void cu_junit_destroy(cu_junit_state *j);
 void cu_junit_test_started(cu_output *out, const cu_test *t);
 void cu_junit_test_ended(cu_output *out, const cu_result *res);
-void cu_junit_failure(cu_output *out, const cu_test *t,
-                      const char *fail_file, size_t fail_line,
-                      const char *message);
+void cu_junit_failure(cu_output *out, const cu_test *t, const char *fail_file,
+                      size_t fail_line, const char *message);
 void cu_junit_group_ended(cu_output *out, const cu_result *res);
 void cu_junit_print(cu_output *out, const char *s);
 

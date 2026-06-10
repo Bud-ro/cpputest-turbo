@@ -20,7 +20,11 @@
 #include <stdlib.h>
 
 static int fz_trace;
-#define TR(...) do { if (fz_trace) fprintf(stderr, __VA_ARGS__); } while (0)
+#define TR(...)                                                                \
+    do {                                                                       \
+        if (fz_trace)                                                          \
+            fprintf(stderr, __VA_ARGS__);                                      \
+    } while (0)
 
 static unsigned long long fz_rng;
 
@@ -32,21 +36,21 @@ static unsigned fz_r(void)
     return (unsigned)(fz_rng >> 32);
 }
 
-static const char *const kNames[] = { "alpha", "beta", "gamma" };
-static const char *const kParams[] = { "a", "b", "c" };
-static const char *const kStrings[] = { "x", "yy", "" };
-static const char *const kScopes[] = { "", "s1" };
+static const char *const kNames[] = {"alpha", "beta", "gamma"};
+static const char *const kParams[] = {"a", "b", "c"};
+static const char *const kStrings[] = {"x", "yy", ""};
+static const char *const kScopes[] = {"", "s1"};
 
-static unsigned char out_src[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+static unsigned char out_src[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 static unsigned char out_dst[8];
-static int fz_objs[3] = { 10, 20, 30 };
+static int fz_objs[3] = {10, 20, 30};
 static int fz_copy_dst;
-static const unsigned char fz_membuf[3] = { 0xAA, 0xBB, 0xCC };
+static const unsigned char fz_membuf[3] = {0xAA, 0xBB, 0xCC};
 
 /* deterministic custom type "FZT": compares/prints the pointed-to int */
 class FzComparator : public MockNamedValueComparator
 {
-public:
+  public:
     bool isEqual(const void *object1, const void *object2) CPPUTEST_OVERRIDE
     {
         return *(const int *)object1 == *(const int *)object2;
@@ -59,7 +63,7 @@ public:
 
 class FzCopier : public MockNamedValueCopier
 {
-public:
+  public:
     void copy(void *out, const void *in) CPPUTEST_OVERRIDE
     {
         *(int *)out = *(const int *)in;
@@ -83,15 +87,60 @@ static void add_expect_params(MockExpectedCall &e)
     for (unsigned i = 0; i < n; i++) {
         const char *p = kParams[fz_r() % 3];
         switch (fz_r() % 9) {
-        case 6: { int idx = (int)(fz_r() % 3); TR(" ep-oftype(%s=obj%d)", p, idx); e.withParameterOfType("FZT", p, &fz_objs[idx]); break; }
-        case 7: { unsigned sz = 1 + fz_r() % 3; TR(" ep-membuf(%s,%u)", p, sz); e.withParameter(p, fz_membuf, sz); break; }
-        case 8: { int idx = (int)(fz_r() % 3); TR(" ep-outoftype(%s=obj%d)", p, idx); e.withOutputParameterOfTypeReturning("FZT", p, &fz_objs[idx]); break; }
-        case 0: { int v = (int)(fz_r() % 3); TR(" ep-int(%s=%d)", p, v); e.withParameter(p, v); break; }
-        case 1: { unsigned long v = fz_r() % 3; TR(" ep-ul(%s=%lu)", p, v); e.withParameter(p, v); break; }
-        case 2: { const char *v = kStrings[fz_r() % 3]; TR(" ep-str(%s=%s)", p, v); e.withParameter(p, v); break; }
-        case 3: { double v = (double)(fz_r() % 3); TR(" ep-dbl(%s=%g)", p, v); e.withParameter(p, v, 0.25); break; }
-        case 4: { void *v = (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10); TR(" ep-ptr(%s=%p)", p, v); e.withParameter(p, v); break; }
-        default: { unsigned sz = fz_r() % 2 ? 4u : 8u; TR(" ep-out(%s,%u)", p, sz); e.withOutputParameterReturning(p, out_src, sz); break; }
+        case 6: {
+            int idx = (int)(fz_r() % 3);
+            TR(" ep-oftype(%s=obj%d)", p, idx);
+            e.withParameterOfType("FZT", p, &fz_objs[idx]);
+            break;
+        }
+        case 7: {
+            unsigned sz = 1 + fz_r() % 3;
+            TR(" ep-membuf(%s,%u)", p, sz);
+            e.withParameter(p, fz_membuf, sz);
+            break;
+        }
+        case 8: {
+            int idx = (int)(fz_r() % 3);
+            TR(" ep-outoftype(%s=obj%d)", p, idx);
+            e.withOutputParameterOfTypeReturning("FZT", p, &fz_objs[idx]);
+            break;
+        }
+        case 0: {
+            int v = (int)(fz_r() % 3);
+            TR(" ep-int(%s=%d)", p, v);
+            e.withParameter(p, v);
+            break;
+        }
+        case 1: {
+            unsigned long v = fz_r() % 3;
+            TR(" ep-ul(%s=%lu)", p, v);
+            e.withParameter(p, v);
+            break;
+        }
+        case 2: {
+            const char *v = kStrings[fz_r() % 3];
+            TR(" ep-str(%s=%s)", p, v);
+            e.withParameter(p, v);
+            break;
+        }
+        case 3: {
+            double v = (double)(fz_r() % 3);
+            TR(" ep-dbl(%s=%g)", p, v);
+            e.withParameter(p, v, 0.25);
+            break;
+        }
+        case 4: {
+            void *v = (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10);
+            TR(" ep-ptr(%s=%p)", p, v);
+            e.withParameter(p, v);
+            break;
+        }
+        default: {
+            unsigned sz = fz_r() % 2 ? 4u : 8u;
+            TR(" ep-out(%s,%u)", p, sz);
+            e.withOutputParameterReturning(p, out_src, sz);
+            break;
+        }
         }
     }
     if (fz_r() % 4 == 0)
@@ -103,9 +152,15 @@ static void add_expect_params(MockExpectedCall &e)
     }
     if (fz_r() % 3 == 0) {
         switch (fz_r() % 3) {
-        case 0: e.andReturnValue((int)(fz_r() % 100)); break;
-        case 1: e.andReturnValue(kStrings[fz_r() % 3]); break;
-        default: e.andReturnValue(1.5); break;
+        case 0:
+            e.andReturnValue((int)(fz_r() % 100));
+            break;
+        case 1:
+            e.andReturnValue(kStrings[fz_r() % 3]);
+            break;
+        default:
+            e.andReturnValue(1.5);
+            break;
         }
     }
 }
@@ -116,15 +171,58 @@ static void add_actual_params(MockActualCall &a)
     for (unsigned i = 0; i < n; i++) {
         const char *p = kParams[fz_r() % 3];
         switch (fz_r() % 9) {
-        case 6: { int idx = (int)(fz_r() % 3); TR(" ap-oftype(%s=obj%d)", p, idx); a.withParameterOfType("FZT", p, &fz_objs[idx]); break; }
-        case 7: { unsigned sz = 1 + fz_r() % 3; TR(" ap-membuf(%s,%u)", p, sz); a.withParameter(p, fz_membuf, sz); break; }
-        case 8: { TR(" ap-outoftype(%s)", p); a.withOutputParameterOfType("FZT", p, &fz_copy_dst); break; }
-        case 0: { int v = (int)(fz_r() % 3); TR(" ap-int(%s=%d)", p, v); a.withParameter(p, v); break; }
-        case 1: { unsigned long v = fz_r() % 3; TR(" ap-ul(%s=%lu)", p, v); a.withParameter(p, v); break; }
-        case 2: { const char *v = kStrings[fz_r() % 3]; TR(" ap-str(%s=%s)", p, v); a.withParameter(p, v); break; }
-        case 3: { double v = (double)(fz_r() % 3); TR(" ap-dbl(%s=%g)", p, v); a.withParameter(p, v); break; }
-        case 4: { void *v = (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10); TR(" ap-ptr(%s=%p)", p, v); a.withParameter(p, v); break; }
-        default: { TR(" ap-out(%s)", p); a.withOutputParameter(p, out_dst); break; }
+        case 6: {
+            int idx = (int)(fz_r() % 3);
+            TR(" ap-oftype(%s=obj%d)", p, idx);
+            a.withParameterOfType("FZT", p, &fz_objs[idx]);
+            break;
+        }
+        case 7: {
+            unsigned sz = 1 + fz_r() % 3;
+            TR(" ap-membuf(%s,%u)", p, sz);
+            a.withParameter(p, fz_membuf, sz);
+            break;
+        }
+        case 8: {
+            TR(" ap-outoftype(%s)", p);
+            a.withOutputParameterOfType("FZT", p, &fz_copy_dst);
+            break;
+        }
+        case 0: {
+            int v = (int)(fz_r() % 3);
+            TR(" ap-int(%s=%d)", p, v);
+            a.withParameter(p, v);
+            break;
+        }
+        case 1: {
+            unsigned long v = fz_r() % 3;
+            TR(" ap-ul(%s=%lu)", p, v);
+            a.withParameter(p, v);
+            break;
+        }
+        case 2: {
+            const char *v = kStrings[fz_r() % 3];
+            TR(" ap-str(%s=%s)", p, v);
+            a.withParameter(p, v);
+            break;
+        }
+        case 3: {
+            double v = (double)(fz_r() % 3);
+            TR(" ap-dbl(%s=%g)", p, v);
+            a.withParameter(p, v);
+            break;
+        }
+        case 4: {
+            void *v = (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10);
+            TR(" ap-ptr(%s=%p)", p, v);
+            a.withParameter(p, v);
+            break;
+        }
+        default: {
+            TR(" ap-out(%s)", p);
+            a.withOutputParameter(p, out_dst);
+            break;
+        }
         }
     }
 }
@@ -179,10 +277,22 @@ static void fz_sequence(unsigned long long seed)
             add_actual_params(a);
             if (fz_r() % 4 == 0) {
                 switch (fz_r() % 4) {
-                case 0: TR(" retIntOrDefault"); a.returnIntValueOrDefault(-1); break;
-                case 1: TR(" retStringOrDefault"); a.returnStringValueOrDefault("dflt"); break;
-                case 2: TR(" retDoubleOrDefault"); a.returnDoubleValueOrDefault(0.5); break;
-                default: TR(" retULongOrDefault"); a.returnUnsignedLongIntValueOrDefault(9); break;
+                case 0:
+                    TR(" retIntOrDefault");
+                    a.returnIntValueOrDefault(-1);
+                    break;
+                case 1:
+                    TR(" retStringOrDefault");
+                    a.returnStringValueOrDefault("dflt");
+                    break;
+                case 2:
+                    TR(" retDoubleOrDefault");
+                    a.returnDoubleValueOrDefault(0.5);
+                    break;
+                default:
+                    TR(" retULongOrDefault");
+                    a.returnUnsignedLongIntValueOrDefault(9);
+                    break;
                 }
             }
             TR("\n");
@@ -235,35 +345,33 @@ static void fz_sequence(unsigned long long seed)
     mock().checkExpectations();
 }
 
-TEST_GROUP(MockFuzz)
-{
-    TEST_TEARDOWN()
-    {
-        mock().clear();
-        mock().removeAllComparatorsAndCopiers();
-    }
-};
+TEST_GROUP(MockFuzz){TEST_TEARDOWN(){mock().clear();
+mock().removeAllComparatorsAndCopiers();
+}
+}
+;
 
 static unsigned long long base_seed;
 
-#define FZ_TEST(N) \
-    TEST(MockFuzz, seq##N) \
-    { \
-        fz_sequence(base_seed * 50 + N); \
+#define FZ_TEST(N)                                                             \
+    TEST(MockFuzz, seq##N)                                                     \
+    {                                                                          \
+        fz_sequence(base_seed * 50 + N);                                       \
     }
 
-FZ_TEST(0) FZ_TEST(1) FZ_TEST(2) FZ_TEST(3) FZ_TEST(4)
-FZ_TEST(5) FZ_TEST(6) FZ_TEST(7) FZ_TEST(8) FZ_TEST(9)
-FZ_TEST(10) FZ_TEST(11) FZ_TEST(12) FZ_TEST(13) FZ_TEST(14)
-FZ_TEST(15) FZ_TEST(16) FZ_TEST(17) FZ_TEST(18) FZ_TEST(19)
-FZ_TEST(20) FZ_TEST(21) FZ_TEST(22) FZ_TEST(23) FZ_TEST(24)
-FZ_TEST(25) FZ_TEST(26) FZ_TEST(27) FZ_TEST(28) FZ_TEST(29)
-FZ_TEST(30) FZ_TEST(31) FZ_TEST(32) FZ_TEST(33) FZ_TEST(34)
-FZ_TEST(35) FZ_TEST(36) FZ_TEST(37) FZ_TEST(38) FZ_TEST(39)
-FZ_TEST(40) FZ_TEST(41) FZ_TEST(42) FZ_TEST(43) FZ_TEST(44)
-FZ_TEST(45) FZ_TEST(46) FZ_TEST(47) FZ_TEST(48) FZ_TEST(49)
+FZ_TEST(0)
+FZ_TEST(1) FZ_TEST(2) FZ_TEST(3) FZ_TEST(4) FZ_TEST(5) FZ_TEST(6) FZ_TEST(7)
+    FZ_TEST(8) FZ_TEST(9) FZ_TEST(10) FZ_TEST(11) FZ_TEST(12) FZ_TEST(13)
+        FZ_TEST(14) FZ_TEST(15) FZ_TEST(16) FZ_TEST(17) FZ_TEST(18) FZ_TEST(19)
+            FZ_TEST(20) FZ_TEST(21) FZ_TEST(22) FZ_TEST(23) FZ_TEST(24)
+                FZ_TEST(25) FZ_TEST(26) FZ_TEST(27) FZ_TEST(28) FZ_TEST(29)
+                    FZ_TEST(30) FZ_TEST(31) FZ_TEST(32) FZ_TEST(33) FZ_TEST(34)
+                        FZ_TEST(35) FZ_TEST(36) FZ_TEST(37) FZ_TEST(38)
+                            FZ_TEST(39) FZ_TEST(40) FZ_TEST(41) FZ_TEST(42)
+                                FZ_TEST(43) FZ_TEST(44) FZ_TEST(45) FZ_TEST(46)
+                                    FZ_TEST(47) FZ_TEST(48) FZ_TEST(49)
 
-int main(int argc, char **argv)
+                                        int main(int argc, char **argv)
 {
     const char *seed_env = getenv("FUZZ_SEED");
     base_seed = seed_env ? strtoull(seed_env, NULL, 10) : 0;

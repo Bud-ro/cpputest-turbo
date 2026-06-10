@@ -64,7 +64,8 @@ static int test_will_run(const cu_test *t)
 /* UtestShell::getFormattedName(): "<macro>(<group>, <name>)" */
 static void print_formatted_name(const cu_test *t)
 {
-    const char *macro = (t->is_ignored && !t->run_ignored) ? "IGNORE_TEST" : "TEST";
+    const char *macro =
+        (t->is_ignored && !t->run_ignored) ? "IGNORE_TEST" : "TEST";
     emit("%s(%s, %s)", macro, t->group, t->name);
 }
 
@@ -189,9 +190,8 @@ static void console_failure(const cu_test *t, const char *fail_file,
     emit("\n\t%s\n\n", message);
 }
 
-void cu_out_failure(cu_output *out, const cu_test *t,
-                    const char *fail_file, size_t fail_line,
-                    const char *message)
+void cu_out_failure(cu_output *out, const cu_test *t, const char *fail_file,
+                    size_t fail_line, const char *message)
 {
     if (out->type == CU_OUTPUT_TYPE_JUNIT) {
         cu_junit_failure(out, t, fail_file, fail_line, message);
@@ -221,7 +221,8 @@ void cu_out_failure(cu_output *out, const cu_test *t,
 
 static int result_is_failure(const cu_result *res)
 {
-    return res->failure_count != 0 || (res->run_count + res->ignored_count) == 0;
+    return res->failure_count != 0 ||
+           (res->run_count + res->ignored_count) == 0;
 }
 
 void cu_out_summary(cu_output *out, const cu_result *res)
@@ -245,14 +246,17 @@ void cu_out_summary(cu_output *out, const cu_result *res)
             emit_str("\033[32;1m");
         emit_str("OK (");
     }
-    emit("%lu tests, %lu ran, %lu checks, %lu ignored, %lu filtered out, %lu ms)",
-           (unsigned long)res->test_count, (unsigned long)res->run_count,
-           (unsigned long)res->check_count, (unsigned long)res->ignored_count,
-           (unsigned long)res->filtered_out_count, (unsigned long)res->total_ms);
+    emit("%lu tests, %lu ran, %lu checks, %lu ignored, %lu filtered out, %lu "
+         "ms)",
+         (unsigned long)res->test_count, (unsigned long)res->run_count,
+         (unsigned long)res->check_count, (unsigned long)res->ignored_count,
+         (unsigned long)res->filtered_out_count, (unsigned long)res->total_ms);
     if (out->color)
         emit_str("\033[m");
     if (ran_nothing)
-        emit_str("\nNote: test run failed because no tests were run or ignored. Assuming something went wrong. This often happens because of linking errors or typos in test filter.");
+        emit_str("\nNote: test run failed because no tests were run or "
+                 "ignored. Assuming something went wrong. This often happens "
+                 "because of linking errors or typos in test filter.");
     emit_str("\n\n");
 }
 

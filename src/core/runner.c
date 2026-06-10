@@ -82,7 +82,8 @@ cu_output *cu_output_current(void)
 }
 
 /* Returns 1 if fn completed, 0 if it longjmp'd out. */
-static int cu_protected_call(void (*fn)(cu_test *, void *), cu_test *t, void *fixture)
+static int cu_protected_call(void (*fn)(cu_test *, void *), cu_test *t,
+                             void *fixture)
 {
     if (0 == setjmp(jmp_stack[jmp_index])) {
         jmp_index++;
@@ -127,9 +128,18 @@ void cu_exit_current_test(void)
     cu_longjmp_out();
 }
 
-static void do_setup(cu_test *t, void *fixture)    { t->ops->setup(t, fixture); }
-static void do_body(cu_test *t, void *fixture)     { t->ops->body(t, fixture); }
-static void do_teardown(cu_test *t, void *fixture) { t->ops->teardown(t, fixture); }
+static void do_setup(cu_test *t, void *fixture)
+{
+    t->ops->setup(t, fixture);
+}
+static void do_body(cu_test *t, void *fixture)
+{
+    t->ops->body(t, fixture);
+}
+static void do_teardown(cu_test *t, void *fixture)
+{
+    t->ops->teardown(t, fixture);
+}
 
 static void vv(const char *s)
 {
@@ -230,12 +240,14 @@ void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out)
             current_test = t;
             cu_run_one_test(t, res, a->run_separate_process);
             current_test = NULL;
-            res->current_test_ms = cu_time_in_millis() - res->current_test_time_started;
+            res->current_test_ms =
+                cu_time_in_millis() - res->current_test_time_started;
             cu_out_test_ended(out, res);
         }
         if (group_changes(t)) {
             group_start = 1;
-            res->current_group_ms = cu_time_in_millis() - res->current_group_time_started;
+            res->current_group_ms =
+                cu_time_in_millis() - res->current_group_time_started;
             cu_out_group_ended(out, res);
         }
     }
@@ -246,7 +258,8 @@ void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out)
 /* TestResult::isFailure */
 static int cu_is_failure(const cu_result *res)
 {
-    return res->failure_count != 0 || (res->run_count + res->ignored_count) == 0;
+    return res->failure_count != 0 ||
+           (res->run_count + res->ignored_count) == 0;
 }
 
 /* TestRegistry::listTestGroupNames / listTestGroupAndCaseNames: unique
@@ -267,7 +280,8 @@ static void list_unique(const cu_args *a, int with_names)
                 cu_result dummy = {0};
                 if (!test_should_run(a, p, &dummy))
                     continue;
-                seen = 0 == strcmp(p->group, t->group) && 0 == strcmp(p->name, t->name);
+                seen = 0 == strcmp(p->group, t->group) &&
+                       0 == strcmp(p->name, t->name);
             } else {
                 seen = 0 == strcmp(p->group, t->group);
             }
@@ -356,7 +370,8 @@ int cu_run_all(int argc, const char *const *argv)
 
     memset(&out, 0, sizeof out);
     out.level = args.very_verbose ? CU_OUTPUT_VERY_VERBOSE
-              : args.verbose ? CU_OUTPUT_VERBOSE : CU_OUTPUT_NORMAL;
+                : args.verbose    ? CU_OUTPUT_VERBOSE
+                                  : CU_OUTPUT_NORMAL;
     out.color = args.color;
     out.progress_indicator = ".";
     out.type = args.output_type;
@@ -423,5 +438,6 @@ int cu_run_all(int argc, const char *const *argv)
 
     cu_junit_destroy(out.junit);
     cu_args_free(&args);
-    return (int)(failed_test_count != 0 ? failed_test_count : failed_execution_count);
+    return (int)(failed_test_count != 0 ? failed_test_count
+                                        : failed_execution_count);
 }

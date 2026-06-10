@@ -150,9 +150,8 @@ static int is_control(char c)
  * as "\xNN " — uppercase hex with a trailing space. */
 char *cu_str_printable(const char *s)
 {
-    static const char *short_escapes[] = {
-        "\\a", "\\b", "\\t", "\\n", "\\v", "\\f", "\\r"
-    };
+    static const char *short_escapes[] = {"\\a", "\\b", "\\t", "\\n",
+                                          "\\v", "\\f", "\\r"};
     sb b;
     sb_init(&b);
     for (const char *p = s; *p; p++) {
@@ -254,9 +253,8 @@ static void sb_difference_at_pos(sb *b, const char *actual, size_t offset,
 {
     const size_t window = 20;
     const size_t half = window / 2;
-    char *different = cu_str_printf(
-        "difference starts at position %lu at: <",
-        (unsigned long)reported_position);
+    char *different = cu_str_printf("difference starts at position %lu at: <",
+                                    (unsigned long)reported_position);
 
     sb padded;
     sb_init(&padded);
@@ -344,8 +342,8 @@ void cu_fail(const char *text, const char *file, size_t line)
 /* StringEqualFailure (used by both case-sensitive and nocase variants; the
  * difference scan honors `nocase`) */
 static void raise_string_equal(const char *expected, const char *actual,
-                               int nocase, const char *text,
-                               const char *file, size_t line)
+                               int nocase, const char *text, const char *file,
+                               size_t line)
 {
     sb b;
     sb_init(&b);
@@ -357,14 +355,17 @@ static void raise_string_equal(const char *expected, const char *actual,
         size_t fail_start = 0;
         size_t fail_start_printable = 0;
         if (nocase) {
-            while (tolower_c(actual[fail_start]) == tolower_c(expected[fail_start]) &&
+            while (tolower_c(actual[fail_start]) ==
+                       tolower_c(expected[fail_start]) &&
                    actual[fail_start])
                 fail_start++;
-            while (tolower_c(pa[fail_start_printable]) == tolower_c(pe[fail_start_printable]) &&
+            while (tolower_c(pa[fail_start_printable]) ==
+                       tolower_c(pe[fail_start_printable]) &&
                    pa[fail_start_printable])
                 fail_start_printable++;
         } else {
-            while (actual[fail_start] == expected[fail_start] && actual[fail_start])
+            while (actual[fail_start] == expected[fail_start] &&
+                   actual[fail_start])
                 fail_start++;
             while (pa[fail_start_printable] == pe[fail_start_printable] &&
                    pa[fail_start_printable])
@@ -389,14 +390,13 @@ void cu_assert_cstr_equal(const char *expected, const char *actual,
     cu_count_check();
     if (actual == NULL && expected == NULL)
         return;
-    if (actual == NULL || expected == NULL ||
-        0 != strcmp(expected, actual))
+    if (actual == NULL || expected == NULL || 0 != strcmp(expected, actual))
         raise_string_equal(expected, actual, 0, text, file, line);
 }
 
 void cu_assert_cstr_nequal(const char *expected, const char *actual,
-                           size_t length, const char *text,
-                           const char *file, size_t line)
+                           size_t length, const char *text, const char *file,
+                           size_t line)
 {
     cu_count_check();
     if (actual == NULL && expected == NULL)
@@ -407,7 +407,8 @@ void cu_assert_cstr_nequal(const char *expected, const char *actual,
 }
 
 void cu_assert_cstr_nocase_equal(const char *expected, const char *actual,
-                                 const char *text, const char *file, size_t line)
+                                 const char *text, const char *file,
+                                 size_t line)
 {
     cu_count_check();
     if (actual == NULL && expected == NULL)
@@ -425,8 +426,8 @@ static void raise_contains(const char *expected, const char *actual,
     sb b;
     sb_init(&b);
     sb_user_text(&b, text);
-    sb_addf(&b, "actual <%s>\n\tdid not contain  <%s>",
-            actual ? actual : "", expected ? expected : "");
+    sb_addf(&b, "actual <%s>\n\tdid not contain  <%s>", actual ? actual : "",
+            expected ? expected : "");
     sb_raise(&b, file, line);
 }
 
@@ -441,7 +442,8 @@ void cu_assert_cstr_contains(const char *expected, const char *actual,
 }
 
 void cu_assert_cstr_nocase_contains(const char *expected, const char *actual,
-                                    const char *text, const char *file, size_t line)
+                                    const char *text, const char *file,
+                                    size_t line)
 {
     cu_count_check();
     if (actual == NULL && expected == NULL)
@@ -470,12 +472,16 @@ void cu_fail_longs(long expected, long actual, const char *text,
     sb b;
     sb_init(&b);
     sb_padded_decimal_hex(&b, ed, eh, ad, ah, text);
-    free(ed); free(ad); free(eh); free(ah);
+    free(ed);
+    free(ad);
+    free(eh);
+    free(ah);
     sb_raise(&b, file, line);
 }
 
-void cu_assert_unsigned_longs_equal(unsigned long expected, unsigned long actual,
-                                    const char *text, const char *file, size_t line)
+void cu_assert_unsigned_longs_equal(unsigned long expected,
+                                    unsigned long actual, const char *text,
+                                    const char *file, size_t line)
 {
     cu_count_check();
     if (expected == actual)
@@ -493,7 +499,10 @@ void cu_fail_unsigned_longs(unsigned long expected, unsigned long actual,
     sb b;
     sb_init(&b);
     sb_padded_decimal_hex(&b, ed, eh, ad, ah, text);
-    free(ed); free(ad); free(eh); free(ah);
+    free(ed);
+    free(ad);
+    free(eh);
+    free(ah);
     sb_raise(&b, file, line);
 }
 
@@ -506,8 +515,8 @@ void cu_assert_longlongs_equal(long long expected, long long actual,
     cu_fail_longlongs(expected, actual, text, file, line);
 }
 
-void cu_fail_longlongs(long long expected, long long actual,
-                       const char *text, const char *file, size_t line)
+void cu_fail_longlongs(long long expected, long long actual, const char *text,
+                       const char *file, size_t line)
 {
     char *ed = cu_str_printf("%lld", expected);
     char *ad = cu_str_printf("%lld", actual);
@@ -516,13 +525,17 @@ void cu_fail_longlongs(long long expected, long long actual,
     sb b;
     sb_init(&b);
     sb_padded_decimal_hex(&b, ed, eh, ad, ah, text);
-    free(ed); free(ad); free(eh); free(ah);
+    free(ed);
+    free(ad);
+    free(eh);
+    free(ah);
     sb_raise(&b, file, line);
 }
 
 void cu_assert_unsigned_longlongs_equal(unsigned long long expected,
                                         unsigned long long actual,
-                                        const char *text, const char *file, size_t line)
+                                        const char *text, const char *file,
+                                        size_t line)
 {
     cu_count_check();
     if (expected == actual)
@@ -531,8 +544,8 @@ void cu_assert_unsigned_longlongs_equal(unsigned long long expected,
 }
 
 void cu_fail_unsigned_longlongs(unsigned long long expected,
-                                unsigned long long actual,
-                                const char *text, const char *file, size_t line)
+                                unsigned long long actual, const char *text,
+                                const char *file, size_t line)
 {
     char *ed = cu_str_printf("%llu", expected);
     char *ad = cu_str_printf("%llu", actual);
@@ -541,12 +554,16 @@ void cu_fail_unsigned_longlongs(unsigned long long expected,
     sb b;
     sb_init(&b);
     sb_padded_decimal_hex(&b, ed, eh, ad, ah, text);
-    free(ed); free(ad); free(eh); free(ah);
+    free(ed);
+    free(ad);
+    free(eh);
+    free(ah);
     sb_raise(&b, file, line);
 }
 
 void cu_assert_signed_bytes_equal(signed char expected, signed char actual,
-                                  const char *text, const char *file, size_t line)
+                                  const char *text, const char *file,
+                                  size_t line)
 {
     cu_count_check();
     if (expected == actual)
@@ -564,14 +581,17 @@ void cu_fail_signed_bytes(signed char expected, signed char actual,
     sb b;
     sb_init(&b);
     sb_padded_decimal_hex(&b, ed, eh, ad, ah, text);
-    free(ed); free(ad); free(eh); free(ah);
+    free(ed);
+    free(ad);
+    free(eh);
+    free(ah);
     sb_raise(&b, file, line);
 }
 
 /* EqualsFailure with "0x<hex>" rendering (StringFrom(const void*)) */
 static void raise_pointers_equal(unsigned long long expected,
-                                 unsigned long long actual,
-                                 const char *text, const char *file, size_t line)
+                                 unsigned long long actual, const char *text,
+                                 const char *file, size_t line)
 {
     sb b;
     sb_init(&b);
@@ -586,8 +606,8 @@ void cu_assert_pointers_equal(const void *expected, const void *actual,
     cu_count_check();
     if (expected != actual)
         raise_pointers_equal((unsigned long long)(size_t)expected,
-                             (unsigned long long)(size_t)actual,
-                             text, file, line);
+                             (unsigned long long)(size_t)actual, text, file,
+                             line);
 }
 
 void cu_fail_pointers(const void *expected, const void *actual,
@@ -604,14 +624,15 @@ void cu_fail_functionpointers(void (*expected)(void), void (*actual)(void),
                          (unsigned long long)(size_t)actual, text, file, line);
 }
 
-void cu_assert_functionpointers_equal(void (*expected)(void), void (*actual)(void),
-                                      const char *text, const char *file, size_t line)
+void cu_assert_functionpointers_equal(void (*expected)(void),
+                                      void (*actual)(void), const char *text,
+                                      const char *file, size_t line)
 {
     cu_count_check();
     if (expected != actual)
         raise_pointers_equal((unsigned long long)(size_t)expected,
-                             (unsigned long long)(size_t)actual,
-                             text, file, line);
+                             (unsigned long long)(size_t)actual, text, file,
+                             line);
 }
 
 /* Utest.cpp doubles_equal: any NaN (incl. threshold) -> unequal; both
@@ -647,12 +668,15 @@ void cu_fail_doubles(double expected, double actual, double threshold,
     sb_addf(&b, " threshold used was <%s>", t);
     if (isnan(expected) || isnan(actual) || isnan(threshold))
         sb_add(&b, "\n\tCannot make comparisons with Nan");
-    free(e); free(a); free(t);
+    free(e);
+    free(a);
+    free(t);
     sb_raise(&b, file, line);
 }
 
-void cu_assert_binary_equal(const void *expected, const void *actual, size_t length,
-                            const char *text, const char *file, size_t line)
+void cu_assert_binary_equal(const void *expected, const void *actual,
+                            size_t length, const char *text, const char *file,
+                            size_t line)
 {
     cu_count_check();
     if (length == 0)
@@ -698,8 +722,8 @@ void cu_assert_bits_equal(unsigned long expected, unsigned long actual,
 }
 
 void cu_fail_bits(unsigned long expected, unsigned long actual,
-                  unsigned long mask, size_t byte_count,
-                  const char *text, const char *file, size_t line)
+                  unsigned long mask, size_t byte_count, const char *text,
+                  const char *file, size_t line)
 {
     char *e = cu_str_from_masked_bits(expected, mask, byte_count);
     char *a = cu_str_from_masked_bits(actual, mask, byte_count);

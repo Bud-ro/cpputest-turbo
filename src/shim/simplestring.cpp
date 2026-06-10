@@ -252,8 +252,8 @@ void SimpleString::copyToBuffer(char *bufferToCopy, size_t bufferSize) const
 
 static bool ss_isSpace(char ch)
 {
-    return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' ||
-           ch == '\f' || ch == '\v';
+    return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\f' ||
+           ch == '\v';
 }
 
 static bool ss_isDigit(char ch)
@@ -357,14 +357,14 @@ SimpleString SimpleString::printable() const
     return result;
 }
 
-void SimpleString::padStringsToSameLength(SimpleString &str1, SimpleString &str2,
-                                          char padCharacter)
+void SimpleString::padStringsToSameLength(SimpleString &str1,
+                                          SimpleString &str2, char padCharacter)
 {
     if (str1.size() > str2.size()) {
         padStringsToSameLength(str2, str1, padCharacter);
         return;
     }
-    char pad[2] = { padCharacter, '\0' };
+    char pad[2] = {padCharacter, '\0'};
     str1 = SimpleString(pad, str2.size() - str1.size()) + str1;
 }
 
@@ -377,21 +377,65 @@ static SimpleString takeOwnership(char *s)
     return result;
 }
 
-SimpleString StringFrom(bool value) { return SimpleString(value ? "true" : "false"); }
-SimpleString StringFrom(const char *value) { return SimpleString(value); }
-SimpleString StringFrom(char value) { return takeOwnership(cu_str_printf("%c", value)); }
-SimpleString StringFrom(int value) { return takeOwnership(cu_str_printf("%d", value)); }
-SimpleString StringFrom(unsigned int value) { return takeOwnership(cu_str_printf("%u", value)); }
-SimpleString StringFrom(long value) { return takeOwnership(cu_str_printf("%ld", value)); }
-SimpleString StringFrom(unsigned long value) { return takeOwnership(cu_str_printf("%lu", value)); }
-SimpleString StringFrom(cpputest_longlong value) { return takeOwnership(cu_str_printf("%lld", value)); }
-SimpleString StringFrom(cpputest_ulonglong value) { return takeOwnership(cu_str_printf("%llu", value)); }
-SimpleString StringFrom(double value, int precision) { return takeOwnership(cu_str_from_double(value, precision)); }
-SimpleString StringFrom(const SimpleString &value) { return value; }
-SimpleString StringFrom(const void *value) { return takeOwnership(cu_str_printf("0x%llx", (cpputest_ulonglong)(size_t)value)); }
-SimpleString StringFrom(void (*value)()) { return takeOwnership(cu_str_printf("0x%llx", (cpputest_ulonglong)(size_t)value)); }
+SimpleString StringFrom(bool value)
+{
+    return SimpleString(value ? "true" : "false");
+}
+SimpleString StringFrom(const char *value)
+{
+    return SimpleString(value);
+}
+SimpleString StringFrom(char value)
+{
+    return takeOwnership(cu_str_printf("%c", value));
+}
+SimpleString StringFrom(int value)
+{
+    return takeOwnership(cu_str_printf("%d", value));
+}
+SimpleString StringFrom(unsigned int value)
+{
+    return takeOwnership(cu_str_printf("%u", value));
+}
+SimpleString StringFrom(long value)
+{
+    return takeOwnership(cu_str_printf("%ld", value));
+}
+SimpleString StringFrom(unsigned long value)
+{
+    return takeOwnership(cu_str_printf("%lu", value));
+}
+SimpleString StringFrom(cpputest_longlong value)
+{
+    return takeOwnership(cu_str_printf("%lld", value));
+}
+SimpleString StringFrom(cpputest_ulonglong value)
+{
+    return takeOwnership(cu_str_printf("%llu", value));
+}
+SimpleString StringFrom(double value, int precision)
+{
+    return takeOwnership(cu_str_from_double(value, precision));
+}
+SimpleString StringFrom(const SimpleString &value)
+{
+    return value;
+}
+SimpleString StringFrom(const void *value)
+{
+    return takeOwnership(
+        cu_str_printf("0x%llx", (cpputest_ulonglong)(size_t)value));
+}
+SimpleString StringFrom(void (*value)())
+{
+    return takeOwnership(
+        cu_str_printf("0x%llx", (cpputest_ulonglong)(size_t)value));
+}
 #if defined(__cplusplus) && __cplusplus >= 201103L
-SimpleString StringFrom(decltype(nullptr)) { return "(null)"; }
+SimpleString StringFrom(decltype(nullptr))
+{
+    return "(null)";
+}
 #endif
 
 SimpleString StringFromOrNull(const char *expected)
@@ -452,28 +496,76 @@ SimpleString StringFrom(const std::string &value)
 }
 #endif
 
-SimpleString HexStringFrom(unsigned long value) { return takeOwnership(cu_str_printf("%lx", value)); }
-SimpleString HexStringFrom(long value) { return HexStringFrom((unsigned long)value); }
-SimpleString HexStringFrom(unsigned int value) { return takeOwnership(cu_str_printf("%x", value)); }
-SimpleString HexStringFrom(int value) { return HexStringFrom((unsigned int)value); }
-SimpleString HexStringFrom(signed char value) { return takeOwnership(cu_str_hex_from_signed_char(value)); }
-SimpleString HexStringFrom(cpputest_ulonglong value) { return takeOwnership(cu_str_printf("%llx", value)); }
-SimpleString HexStringFrom(cpputest_longlong value) { return HexStringFrom((cpputest_ulonglong)value); }
-SimpleString HexStringFrom(const void *value) { return HexStringFrom((cpputest_ulonglong)(size_t)value); }
-SimpleString HexStringFrom(void (*value)()) { return HexStringFrom((cpputest_ulonglong)(size_t)value); }
+SimpleString HexStringFrom(unsigned long value)
+{
+    return takeOwnership(cu_str_printf("%lx", value));
+}
+SimpleString HexStringFrom(long value)
+{
+    return HexStringFrom((unsigned long)value);
+}
+SimpleString HexStringFrom(unsigned int value)
+{
+    return takeOwnership(cu_str_printf("%x", value));
+}
+SimpleString HexStringFrom(int value)
+{
+    return HexStringFrom((unsigned int)value);
+}
+SimpleString HexStringFrom(signed char value)
+{
+    return takeOwnership(cu_str_hex_from_signed_char(value));
+}
+SimpleString HexStringFrom(cpputest_ulonglong value)
+{
+    return takeOwnership(cu_str_printf("%llx", value));
+}
+SimpleString HexStringFrom(cpputest_longlong value)
+{
+    return HexStringFrom((cpputest_ulonglong)value);
+}
+SimpleString HexStringFrom(const void *value)
+{
+    return HexStringFrom((cpputest_ulonglong)(size_t)value);
+}
+SimpleString HexStringFrom(void (*value)())
+{
+    return HexStringFrom((cpputest_ulonglong)(size_t)value);
+}
 
 SimpleString BracketsFormattedHexString(SimpleString hexString)
 {
     return SimpleString("(0x") + hexString + ")";
 }
 
-SimpleString BracketsFormattedHexStringFrom(int value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(unsigned int value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(long value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(unsigned long value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(signed char value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(cpputest_longlong value) { return BracketsFormattedHexString(HexStringFrom(value)); }
-SimpleString BracketsFormattedHexStringFrom(cpputest_ulonglong value) { return BracketsFormattedHexString(HexStringFrom(value)); }
+SimpleString BracketsFormattedHexStringFrom(int value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(unsigned int value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(long value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(unsigned long value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(signed char value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(cpputest_longlong value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
+SimpleString BracketsFormattedHexStringFrom(cpputest_ulonglong value)
+{
+    return BracketsFormattedHexString(HexStringFrom(value));
+}
 
 SimpleString StringFromBinary(const unsigned char *value, size_t size)
 {
@@ -487,7 +579,8 @@ SimpleString StringFromBinaryOrNull(const unsigned char *value, size_t size)
 
 SimpleString StringFromBinaryWithSize(const unsigned char *value, size_t size)
 {
-    SimpleString result = StringFromFormat("Size = %u | HexContents = ", (unsigned)size);
+    SimpleString result =
+        StringFromFormat("Size = %u | HexContents = ", (unsigned)size);
     size_t displayedSize = (size > 128) ? 128 : size;
     result += StringFromBinaryOrNull(value, displayedSize);
     if (size > displayedSize)
@@ -495,7 +588,8 @@ SimpleString StringFromBinaryWithSize(const unsigned char *value, size_t size)
     return result;
 }
 
-SimpleString StringFromBinaryWithSizeOrNull(const unsigned char *value, size_t size)
+SimpleString StringFromBinaryWithSizeOrNull(const unsigned char *value,
+                                            size_t size)
 {
     return value ? StringFromBinaryWithSize(value, size) : StringFrom("(null)");
 }

@@ -11,19 +11,99 @@
 #include <cpputest_core/mock.h>
 
 /* value constructors shared by expected/actual facades */
-inline cum_value CppUMockBool(bool v) { cum_value x; x.type = CUM_T_BOOL; x.v.b = v ? 1 : 0; return x; }
-inline cum_value CppUMockInt(int v) { cum_value x; x.type = CUM_T_INT; x.v.i = v; return x; }
-inline cum_value CppUMockUInt(unsigned int v) { cum_value x; x.type = CUM_T_UINT; x.v.ui = v; return x; }
-inline cum_value CppUMockLong(long v) { cum_value x; x.type = CUM_T_LONG; x.v.l = v; return x; }
-inline cum_value CppUMockULong(unsigned long v) { cum_value x; x.type = CUM_T_ULONG; x.v.ul = v; return x; }
-inline cum_value CppUMockLongLong(cpputest_longlong v) { cum_value x; x.type = CUM_T_LONGLONG; x.v.ll = v; return x; }
-inline cum_value CppUMockULongLong(cpputest_ulonglong v) { cum_value x; x.type = CUM_T_ULONGLONG; x.v.ull = v; return x; }
-inline cum_value CppUMockDouble(double v, double tolerance) { cum_value x; x.type = CUM_T_DOUBLE; x.v.dbl.value = v; x.v.dbl.tolerance = tolerance; return x; }
-inline cum_value CppUMockString(const char *v) { cum_value x; x.type = CUM_T_STRING; x.v.str = v; return x; }
-inline cum_value CppUMockPointer(void *v) { cum_value x; x.type = CUM_T_POINTER; x.v.ptr = v; return x; }
-inline cum_value CppUMockConstPointer(const void *v) { cum_value x; x.type = CUM_T_CONST_POINTER; x.v.cptr = v; return x; }
-inline cum_value CppUMockFunctionPointer(void (*v)()) { cum_value x; x.type = CUM_T_FUNCTIONPOINTER; x.v.fptr = (void (*)(void))v; return x; }
-inline cum_value CppUMockMemBuffer(const unsigned char *buf, size_t size) { cum_value x; x.type = CUM_T_MEMBUFFER; x.v.mem.buf = buf; x.v.mem.size = size; return x; }
+inline cum_value CppUMockBool(bool v)
+{
+    cum_value x;
+    x.type = CUM_T_BOOL;
+    x.v.b = v ? 1 : 0;
+    return x;
+}
+inline cum_value CppUMockInt(int v)
+{
+    cum_value x;
+    x.type = CUM_T_INT;
+    x.v.i = v;
+    return x;
+}
+inline cum_value CppUMockUInt(unsigned int v)
+{
+    cum_value x;
+    x.type = CUM_T_UINT;
+    x.v.ui = v;
+    return x;
+}
+inline cum_value CppUMockLong(long v)
+{
+    cum_value x;
+    x.type = CUM_T_LONG;
+    x.v.l = v;
+    return x;
+}
+inline cum_value CppUMockULong(unsigned long v)
+{
+    cum_value x;
+    x.type = CUM_T_ULONG;
+    x.v.ul = v;
+    return x;
+}
+inline cum_value CppUMockLongLong(cpputest_longlong v)
+{
+    cum_value x;
+    x.type = CUM_T_LONGLONG;
+    x.v.ll = v;
+    return x;
+}
+inline cum_value CppUMockULongLong(cpputest_ulonglong v)
+{
+    cum_value x;
+    x.type = CUM_T_ULONGLONG;
+    x.v.ull = v;
+    return x;
+}
+inline cum_value CppUMockDouble(double v, double tolerance)
+{
+    cum_value x;
+    x.type = CUM_T_DOUBLE;
+    x.v.dbl.value = v;
+    x.v.dbl.tolerance = tolerance;
+    return x;
+}
+inline cum_value CppUMockString(const char *v)
+{
+    cum_value x;
+    x.type = CUM_T_STRING;
+    x.v.str = v;
+    return x;
+}
+inline cum_value CppUMockPointer(void *v)
+{
+    cum_value x;
+    x.type = CUM_T_POINTER;
+    x.v.ptr = v;
+    return x;
+}
+inline cum_value CppUMockConstPointer(const void *v)
+{
+    cum_value x;
+    x.type = CUM_T_CONST_POINTER;
+    x.v.cptr = v;
+    return x;
+}
+inline cum_value CppUMockFunctionPointer(void (*v)())
+{
+    cum_value x;
+    x.type = CUM_T_FUNCTIONPOINTER;
+    x.v.fptr = (void (*)(void))v;
+    return x;
+}
+inline cum_value CppUMockMemBuffer(const unsigned char *buf, size_t size)
+{
+    cum_value x;
+    x.type = CUM_T_MEMBUFFER;
+    x.v.mem.buf = buf;
+    x.v.mem.size = size;
+    return x;
+}
 
 /* upstream's default tolerance for withParameter(name, double) */
 #define MOCK_SUPPORT_DEFAULT_DOUBLE_TOLERANCE 0.005
@@ -48,7 +128,7 @@ inline cum_value CppUMockConstObject(const SimpleString &type, const void *ptr)
 
 class MockNamedValueComparator
 {
-public:
+  public:
     MockNamedValueComparator() {}
     virtual ~MockNamedValueComparator() {}
     virtual bool isEqual(const void *object1, const void *object2) = 0;
@@ -57,7 +137,7 @@ public:
 
 class MockNamedValueCopier
 {
-public:
+  public:
     MockNamedValueCopier() {}
     virtual ~MockNamedValueCopier() {}
     virtual void copy(void *out, const void *in) = 0;
@@ -68,12 +148,14 @@ extern "C" {
 
 inline int CppUMockComparatorEqual(void *ctx, const void *o1, const void *o2)
 {
-    return static_cast<MockNamedValueComparator *>(ctx)->isEqual(o1, o2) ? 1 : 0;
+    return static_cast<MockNamedValueComparator *>(ctx)->isEqual(o1, o2) ? 1
+                                                                         : 0;
 }
 
 inline char *CppUMockComparatorToString(void *ctx, const void *o)
 {
-    SimpleString s = static_cast<MockNamedValueComparator *>(ctx)->valueToString(o);
+    SimpleString s =
+        static_cast<MockNamedValueComparator *>(ctx)->valueToString(o);
     return cu_str_printf("%s", s.asCharString());
 }
 
@@ -88,17 +170,32 @@ inline void CppUMockCopierCopy(void *ctx, void *dst, const void *src)
  * as returned by getData()/returnValue() */
 class MockNamedValue
 {
-public:
-    MockNamedValue() : has_(false) { value_.type = CUM_T_INT; value_.v.i = 0; }
-    MockNamedValue(cum_value value, bool has = true) : value_(value), has_(has) {}
+  public:
+    MockNamedValue() : has_(false)
+    {
+        value_.type = CUM_T_INT;
+        value_.v.i = 0;
+    }
+    MockNamedValue(cum_value value, bool has = true) : value_(value), has_(has)
+    {
+    }
 
     SimpleString getType() const
     {
-        return has_ ? SimpleString(cum_value_type_name(&value_)) : SimpleString("");
+        return has_ ? SimpleString(cum_value_type_name(&value_))
+                    : SimpleString("");
     }
 
-    bool getBoolValue() const { check("bool"); return value_.v.b != 0; }
-    int getIntValue() const { check("int"); return value_.v.i; }
+    bool getBoolValue() const
+    {
+        check("bool");
+        return value_.v.b != 0;
+    }
+    int getIntValue() const
+    {
+        check("int");
+        return value_.v.i;
+    }
     /* upstream's typed getters apply integer WIDENING coercion before the
      * type assert (MockNamedValue.cpp:204-285); coerced reads don't count
      * a check. Coercion only applies to a real value (has_). */
@@ -157,18 +254,38 @@ public:
         check("unsigned long long int");
         return value_.v.ull;
     }
-    double getDoubleValue() const { check("double"); return value_.v.dbl.value; }
-    const char *getStringValue() const { check("const char*"); return value_.v.str; }
-    void *getPointerValue() const { check("void*"); return value_.v.ptr; }
-    const void *getConstPointerValue() const { check("const void*"); return value_.v.cptr; }
-    void (*getFunctionPointerValue() const)() { check("void (*)()"); return (void (*)())value_.v.fptr; }
+    double getDoubleValue() const
+    {
+        check("double");
+        return value_.v.dbl.value;
+    }
+    const char *getStringValue() const
+    {
+        check("const char*");
+        return value_.v.str;
+    }
+    void *getPointerValue() const
+    {
+        check("void*");
+        return value_.v.ptr;
+    }
+    const void *getConstPointerValue() const
+    {
+        check("const void*");
+        return value_.v.cptr;
+    }
+    void (*getFunctionPointerValue() const)()
+    {
+        check("void (*)()");
+        return (void (*)())value_.v.fptr;
+    }
     void *getObjectPointer() const { return (void *)value_.v.obj.ptr; }
     const void *getConstObjectPointer() const { return value_.v.obj.ptr; }
 
     bool hasValue() const { return has_; }
     cum_value rawValue() const { return value_; }
 
-private:
+  private:
     void check(const char *expectedType) const
     {
         STRCMP_EQUAL(expectedType, has_ ? cum_value_type_name(&value_) : "");
@@ -180,7 +297,7 @@ private:
 
 class MockExpectedCall
 {
-public:
+  public:
     MockExpectedCall(cum_expectation *handle = NULLPTR) : handle_(handle) {}
     virtual ~MockExpectedCall() {}
 
@@ -196,35 +313,144 @@ public:
         return *this;
     }
 
-    MockExpectedCall &withParameter(const SimpleString &name, bool value) { return withBoolParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, int value) { return withIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, unsigned int value) { return withUnsignedIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, long int value) { return withLongIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, unsigned long int value) { return withUnsignedLongIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, cpputest_longlong value) { return withLongLongIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, cpputest_ulonglong value) { return withUnsignedLongLongIntParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, double value) { return withDoubleParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, double value, double tolerance) { return withDoubleParameterAndTolerance(name, value, tolerance); }
-    MockExpectedCall &withParameter(const SimpleString &name, const char *value) { return withStringParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, void *value) { return withPointerParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, const void *value) { return withConstPointerParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, void (*value)()) { return withFunctionPointerParameter(name, value); }
-    MockExpectedCall &withParameter(const SimpleString &name, const unsigned char *value, size_t size) { return withMemoryBufferParameter(name, value, size); }
+    MockExpectedCall &withParameter(const SimpleString &name, bool value)
+    {
+        return withBoolParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, int value)
+    {
+        return withIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name,
+                                    unsigned int value)
+    {
+        return withUnsignedIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, long int value)
+    {
+        return withLongIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name,
+                                    unsigned long int value)
+    {
+        return withUnsignedLongIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name,
+                                    cpputest_longlong value)
+    {
+        return withLongLongIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name,
+                                    cpputest_ulonglong value)
+    {
+        return withUnsignedLongLongIntParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, double value)
+    {
+        return withDoubleParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, double value,
+                                    double tolerance)
+    {
+        return withDoubleParameterAndTolerance(name, value, tolerance);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, const char *value)
+    {
+        return withStringParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, void *value)
+    {
+        return withPointerParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, const void *value)
+    {
+        return withConstPointerParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name, void (*value)())
+    {
+        return withFunctionPointerParameter(name, value);
+    }
+    MockExpectedCall &withParameter(const SimpleString &name,
+                                    const unsigned char *value, size_t size)
+    {
+        return withMemoryBufferParameter(name, value, size);
+    }
 
-    virtual MockExpectedCall &withBoolParameter(const SimpleString &name, bool value) { return addParam(name, CppUMockBool(value)); }
-    virtual MockExpectedCall &withIntParameter(const SimpleString &name, int value) { return addParam(name, CppUMockInt(value)); }
-    virtual MockExpectedCall &withUnsignedIntParameter(const SimpleString &name, unsigned int value) { return addParam(name, CppUMockUInt(value)); }
-    virtual MockExpectedCall &withLongIntParameter(const SimpleString &name, long int value) { return addParam(name, CppUMockLong(value)); }
-    virtual MockExpectedCall &withUnsignedLongIntParameter(const SimpleString &name, unsigned long int value) { return addParam(name, CppUMockULong(value)); }
-    virtual MockExpectedCall &withLongLongIntParameter(const SimpleString &name, cpputest_longlong value) { return addParam(name, CppUMockLongLong(value)); }
-    virtual MockExpectedCall &withUnsignedLongLongIntParameter(const SimpleString &name, cpputest_ulonglong value) { return addParam(name, CppUMockULongLong(value)); }
-    virtual MockExpectedCall &withDoubleParameter(const SimpleString &name, double value) { return addParam(name, CppUMockDouble(value, MOCK_SUPPORT_DEFAULT_DOUBLE_TOLERANCE)); }
-    virtual MockExpectedCall &withDoubleParameterAndTolerance(const SimpleString &name, double value, double tolerance) { return addParam(name, CppUMockDouble(value, tolerance)); }
-    virtual MockExpectedCall &withStringParameter(const SimpleString &name, const char *value) { return addParam(name, CppUMockString(value)); }
-    virtual MockExpectedCall &withPointerParameter(const SimpleString &name, void *value) { return addParam(name, CppUMockPointer(value)); }
-    virtual MockExpectedCall &withConstPointerParameter(const SimpleString &name, const void *value) { return addParam(name, CppUMockConstPointer(value)); }
-    virtual MockExpectedCall &withFunctionPointerParameter(const SimpleString &name, void (*value)()) { return addParam(name, CppUMockFunctionPointer(value)); }
-    virtual MockExpectedCall &withMemoryBufferParameter(const SimpleString &name, const unsigned char *value, size_t size) { return addParam(name, CppUMockMemBuffer(value, size)); }
+    virtual MockExpectedCall &withBoolParameter(const SimpleString &name,
+                                                bool value)
+    {
+        return addParam(name, CppUMockBool(value));
+    }
+    virtual MockExpectedCall &withIntParameter(const SimpleString &name,
+                                               int value)
+    {
+        return addParam(name, CppUMockInt(value));
+    }
+    virtual MockExpectedCall &withUnsignedIntParameter(const SimpleString &name,
+                                                       unsigned int value)
+    {
+        return addParam(name, CppUMockUInt(value));
+    }
+    virtual MockExpectedCall &withLongIntParameter(const SimpleString &name,
+                                                   long int value)
+    {
+        return addParam(name, CppUMockLong(value));
+    }
+    virtual MockExpectedCall &
+    withUnsignedLongIntParameter(const SimpleString &name,
+                                 unsigned long int value)
+    {
+        return addParam(name, CppUMockULong(value));
+    }
+    virtual MockExpectedCall &withLongLongIntParameter(const SimpleString &name,
+                                                       cpputest_longlong value)
+    {
+        return addParam(name, CppUMockLongLong(value));
+    }
+    virtual MockExpectedCall &
+    withUnsignedLongLongIntParameter(const SimpleString &name,
+                                     cpputest_ulonglong value)
+    {
+        return addParam(name, CppUMockULongLong(value));
+    }
+    virtual MockExpectedCall &withDoubleParameter(const SimpleString &name,
+                                                  double value)
+    {
+        return addParam(
+            name, CppUMockDouble(value, MOCK_SUPPORT_DEFAULT_DOUBLE_TOLERANCE));
+    }
+    virtual MockExpectedCall &
+    withDoubleParameterAndTolerance(const SimpleString &name, double value,
+                                    double tolerance)
+    {
+        return addParam(name, CppUMockDouble(value, tolerance));
+    }
+    virtual MockExpectedCall &withStringParameter(const SimpleString &name,
+                                                  const char *value)
+    {
+        return addParam(name, CppUMockString(value));
+    }
+    virtual MockExpectedCall &withPointerParameter(const SimpleString &name,
+                                                   void *value)
+    {
+        return addParam(name, CppUMockPointer(value));
+    }
+    virtual MockExpectedCall &
+    withConstPointerParameter(const SimpleString &name, const void *value)
+    {
+        return addParam(name, CppUMockConstPointer(value));
+    }
+    virtual MockExpectedCall &
+    withFunctionPointerParameter(const SimpleString &name, void (*value)())
+    {
+        return addParam(name, CppUMockFunctionPointer(value));
+    }
+    virtual MockExpectedCall &
+    withMemoryBufferParameter(const SimpleString &name,
+                              const unsigned char *value, size_t size)
+    {
+        return addParam(name, CppUMockMemBuffer(value, size));
+    }
 
     virtual MockExpectedCall &ignoreOtherParameters()
     {
@@ -251,42 +477,81 @@ public:
         return addParam(name, CppUMockConstObject(type, value));
     }
 
-    virtual MockExpectedCall &withOutputParameterReturning(const SimpleString &name,
-                                                           const void *value, size_t size)
+    virtual MockExpectedCall &
+    withOutputParameterReturning(const SimpleString &name, const void *value,
+                                 size_t size)
     {
-        cum_expectation_with_output_parameter(handle_, name.asCharString(), value, size);
+        cum_expectation_with_output_parameter(handle_, name.asCharString(),
+                                              value, size);
         return *this;
     }
 
-    virtual MockExpectedCall &withOutputParameterOfTypeReturning(const SimpleString &type,
-                                                                 const SimpleString &name,
-                                                                 const void *value)
+    virtual MockExpectedCall &withOutputParameterOfTypeReturning(
+        const SimpleString &type, const SimpleString &name, const void *value)
     {
-        cum_expectation_with_output_parameter_of_type(handle_, type.asCharString(),
-                                                      name.asCharString(), value);
+        cum_expectation_with_output_parameter_of_type(
+            handle_, type.asCharString(), name.asCharString(), value);
         return *this;
     }
 
-    virtual MockExpectedCall &withUnmodifiedOutputParameter(const SimpleString &name)
+    virtual MockExpectedCall &
+    withUnmodifiedOutputParameter(const SimpleString &name)
     {
-        cum_expectation_with_unmodified_output_parameter(handle_, name.asCharString());
+        cum_expectation_with_unmodified_output_parameter(handle_,
+                                                         name.asCharString());
         return *this;
     }
 
-    virtual MockExpectedCall &andReturnValue(bool value) { return setReturn(CppUMockBool(value)); }
-    virtual MockExpectedCall &andReturnValue(int value) { return setReturn(CppUMockInt(value)); }
-    virtual MockExpectedCall &andReturnValue(unsigned int value) { return setReturn(CppUMockUInt(value)); }
-    virtual MockExpectedCall &andReturnValue(long int value) { return setReturn(CppUMockLong(value)); }
-    virtual MockExpectedCall &andReturnValue(unsigned long int value) { return setReturn(CppUMockULong(value)); }
-    virtual MockExpectedCall &andReturnValue(cpputest_longlong value) { return setReturn(CppUMockLongLong(value)); }
-    virtual MockExpectedCall &andReturnValue(cpputest_ulonglong value) { return setReturn(CppUMockULongLong(value)); }
-    virtual MockExpectedCall &andReturnValue(double value) { return setReturn(CppUMockDouble(value, 0.0)); }
-    virtual MockExpectedCall &andReturnValue(const char *value) { return setReturn(CppUMockString(value)); }
-    virtual MockExpectedCall &andReturnValue(void *value) { return setReturn(CppUMockPointer(value)); }
-    virtual MockExpectedCall &andReturnValue(const void *value) { return setReturn(CppUMockConstPointer(value)); }
-    virtual MockExpectedCall &andReturnValue(void (*value)()) { return setReturn(CppUMockFunctionPointer(value)); }
+    virtual MockExpectedCall &andReturnValue(bool value)
+    {
+        return setReturn(CppUMockBool(value));
+    }
+    virtual MockExpectedCall &andReturnValue(int value)
+    {
+        return setReturn(CppUMockInt(value));
+    }
+    virtual MockExpectedCall &andReturnValue(unsigned int value)
+    {
+        return setReturn(CppUMockUInt(value));
+    }
+    virtual MockExpectedCall &andReturnValue(long int value)
+    {
+        return setReturn(CppUMockLong(value));
+    }
+    virtual MockExpectedCall &andReturnValue(unsigned long int value)
+    {
+        return setReturn(CppUMockULong(value));
+    }
+    virtual MockExpectedCall &andReturnValue(cpputest_longlong value)
+    {
+        return setReturn(CppUMockLongLong(value));
+    }
+    virtual MockExpectedCall &andReturnValue(cpputest_ulonglong value)
+    {
+        return setReturn(CppUMockULongLong(value));
+    }
+    virtual MockExpectedCall &andReturnValue(double value)
+    {
+        return setReturn(CppUMockDouble(value, 0.0));
+    }
+    virtual MockExpectedCall &andReturnValue(const char *value)
+    {
+        return setReturn(CppUMockString(value));
+    }
+    virtual MockExpectedCall &andReturnValue(void *value)
+    {
+        return setReturn(CppUMockPointer(value));
+    }
+    virtual MockExpectedCall &andReturnValue(const void *value)
+    {
+        return setReturn(CppUMockConstPointer(value));
+    }
+    virtual MockExpectedCall &andReturnValue(void (*value)())
+    {
+        return setReturn(CppUMockFunctionPointer(value));
+    }
 
-private:
+  private:
     MockExpectedCall &setReturn(cum_value value)
     {
         cum_expectation_and_return(handle_, value);
@@ -304,7 +569,7 @@ private:
 
 class MockActualCall
 {
-public:
+  public:
     MockActualCall() : handle_(NULLPTR) {}
     virtual ~MockActualCall() {}
 
@@ -329,33 +594,131 @@ public:
         return *this;
     }
 
-    MockActualCall &withParameter(const SimpleString &name, bool value) { return withBoolParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, int value) { return withIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, unsigned int value) { return withUnsignedIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, long int value) { return withLongIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, unsigned long int value) { return withUnsignedLongIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, cpputest_longlong value) { return withLongLongIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, cpputest_ulonglong value) { return withUnsignedLongLongIntParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, double value) { return withDoubleParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, const char *value) { return withStringParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, void *value) { return withPointerParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, const void *value) { return withConstPointerParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, void (*value)()) { return withFunctionPointerParameter(name, value); }
-    MockActualCall &withParameter(const SimpleString &name, const unsigned char *value, size_t size) { return withMemoryBufferParameter(name, value, size); }
+    MockActualCall &withParameter(const SimpleString &name, bool value)
+    {
+        return withBoolParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, int value)
+    {
+        return withIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, unsigned int value)
+    {
+        return withUnsignedIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, long int value)
+    {
+        return withLongIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name,
+                                  unsigned long int value)
+    {
+        return withUnsignedLongIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name,
+                                  cpputest_longlong value)
+    {
+        return withLongLongIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name,
+                                  cpputest_ulonglong value)
+    {
+        return withUnsignedLongLongIntParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, double value)
+    {
+        return withDoubleParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, const char *value)
+    {
+        return withStringParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, void *value)
+    {
+        return withPointerParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, const void *value)
+    {
+        return withConstPointerParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name, void (*value)())
+    {
+        return withFunctionPointerParameter(name, value);
+    }
+    MockActualCall &withParameter(const SimpleString &name,
+                                  const unsigned char *value, size_t size)
+    {
+        return withMemoryBufferParameter(name, value, size);
+    }
 
-    virtual MockActualCall &withBoolParameter(const SimpleString &name, bool value) { return addParam(name, CppUMockBool(value)); }
-    virtual MockActualCall &withIntParameter(const SimpleString &name, int value) { return addParam(name, CppUMockInt(value)); }
-    virtual MockActualCall &withUnsignedIntParameter(const SimpleString &name, unsigned int value) { return addParam(name, CppUMockUInt(value)); }
-    virtual MockActualCall &withLongIntParameter(const SimpleString &name, long int value) { return addParam(name, CppUMockLong(value)); }
-    virtual MockActualCall &withUnsignedLongIntParameter(const SimpleString &name, unsigned long int value) { return addParam(name, CppUMockULong(value)); }
-    virtual MockActualCall &withLongLongIntParameter(const SimpleString &name, cpputest_longlong value) { return addParam(name, CppUMockLongLong(value)); }
-    virtual MockActualCall &withUnsignedLongLongIntParameter(const SimpleString &name, cpputest_ulonglong value) { return addParam(name, CppUMockULongLong(value)); }
-    virtual MockActualCall &withDoubleParameter(const SimpleString &name, double value) { return addParam(name, CppUMockDouble(value, 0.0)); }
-    virtual MockActualCall &withStringParameter(const SimpleString &name, const char *value) { return addParam(name, CppUMockString(value)); }
-    virtual MockActualCall &withPointerParameter(const SimpleString &name, void *value) { return addParam(name, CppUMockPointer(value)); }
-    virtual MockActualCall &withConstPointerParameter(const SimpleString &name, const void *value) { return addParam(name, CppUMockConstPointer(value)); }
-    virtual MockActualCall &withFunctionPointerParameter(const SimpleString &name, void (*value)()) { return addParam(name, CppUMockFunctionPointer(value)); }
-    virtual MockActualCall &withMemoryBufferParameter(const SimpleString &name, const unsigned char *value, size_t size) { return addParam(name, CppUMockMemBuffer(value, size)); }
+    virtual MockActualCall &withBoolParameter(const SimpleString &name,
+                                              bool value)
+    {
+        return addParam(name, CppUMockBool(value));
+    }
+    virtual MockActualCall &withIntParameter(const SimpleString &name,
+                                             int value)
+    {
+        return addParam(name, CppUMockInt(value));
+    }
+    virtual MockActualCall &withUnsignedIntParameter(const SimpleString &name,
+                                                     unsigned int value)
+    {
+        return addParam(name, CppUMockUInt(value));
+    }
+    virtual MockActualCall &withLongIntParameter(const SimpleString &name,
+                                                 long int value)
+    {
+        return addParam(name, CppUMockLong(value));
+    }
+    virtual MockActualCall &
+    withUnsignedLongIntParameter(const SimpleString &name,
+                                 unsigned long int value)
+    {
+        return addParam(name, CppUMockULong(value));
+    }
+    virtual MockActualCall &withLongLongIntParameter(const SimpleString &name,
+                                                     cpputest_longlong value)
+    {
+        return addParam(name, CppUMockLongLong(value));
+    }
+    virtual MockActualCall &
+    withUnsignedLongLongIntParameter(const SimpleString &name,
+                                     cpputest_ulonglong value)
+    {
+        return addParam(name, CppUMockULongLong(value));
+    }
+    virtual MockActualCall &withDoubleParameter(const SimpleString &name,
+                                                double value)
+    {
+        return addParam(name, CppUMockDouble(value, 0.0));
+    }
+    virtual MockActualCall &withStringParameter(const SimpleString &name,
+                                                const char *value)
+    {
+        return addParam(name, CppUMockString(value));
+    }
+    virtual MockActualCall &withPointerParameter(const SimpleString &name,
+                                                 void *value)
+    {
+        return addParam(name, CppUMockPointer(value));
+    }
+    virtual MockActualCall &withConstPointerParameter(const SimpleString &name,
+                                                      const void *value)
+    {
+        return addParam(name, CppUMockConstPointer(value));
+    }
+    virtual MockActualCall &
+    withFunctionPointerParameter(const SimpleString &name, void (*value)())
+    {
+        return addParam(name, CppUMockFunctionPointer(value));
+    }
+    virtual MockActualCall &
+    withMemoryBufferParameter(const SimpleString &name,
+                              const unsigned char *value, size_t size)
+    {
+        return addParam(name, CppUMockMemBuffer(value, size));
+    }
 
     virtual MockActualCall &withParameterOfType(const SimpleString &type,
                                                 const SimpleString &name,
@@ -368,7 +731,8 @@ public:
         return addParam(name, CppUMockConstObject(type, value));
     }
 
-    virtual MockActualCall &withOutputParameter(const SimpleString &name, void *output)
+    virtual MockActualCall &withOutputParameter(const SimpleString &name,
+                                                void *output)
     {
         cum_actual_with_output_parameter(handle_, name.asCharString(), output);
         return *this;
@@ -401,31 +765,100 @@ public:
     }
 
     virtual bool returnBoolValue() { return returnValue().getBoolValue(); }
-    virtual bool returnBoolValueOrDefault(bool d) { return hasReturnValue() ? returnBoolValue() : d; }
+    virtual bool returnBoolValueOrDefault(bool d)
+    {
+        return hasReturnValue() ? returnBoolValue() : d;
+    }
     virtual int returnIntValue() { return returnValue().getIntValue(); }
-    virtual int returnIntValueOrDefault(int d) { return hasReturnValue() ? returnIntValue() : d; }
-    virtual unsigned int returnUnsignedIntValue() { return returnValue().getUnsignedIntValue(); }
-    virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d) { return hasReturnValue() ? returnUnsignedIntValue() : d; }
-    virtual long int returnLongIntValue() { return returnValue().getLongIntValue(); }
-    virtual long int returnLongIntValueOrDefault(long int d) { return hasReturnValue() ? returnLongIntValue() : d; }
-    virtual unsigned long int returnUnsignedLongIntValue() { return returnValue().getUnsignedLongIntValue(); }
-    virtual unsigned long int returnUnsignedLongIntValueOrDefault(unsigned long int d) { return hasReturnValue() ? returnUnsignedLongIntValue() : d; }
-    virtual cpputest_longlong returnLongLongIntValue() { return returnValue().getLongLongIntValue(); }
-    virtual cpputest_longlong returnLongLongIntValueOrDefault(cpputest_longlong d) { return hasReturnValue() ? returnLongLongIntValue() : d; }
-    virtual cpputest_ulonglong returnUnsignedLongLongIntValue() { return returnValue().getUnsignedLongLongIntValue(); }
-    virtual cpputest_ulonglong returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d) { return hasReturnValue() ? returnUnsignedLongLongIntValue() : d; }
-    virtual double returnDoubleValue() { return returnValue().getDoubleValue(); }
-    virtual double returnDoubleValueOrDefault(double d) { return hasReturnValue() ? returnDoubleValue() : d; }
-    virtual const char *returnStringValue() { return returnValue().getStringValue(); }
-    virtual const char *returnStringValueOrDefault(const char *d) { return hasReturnValue() ? returnStringValue() : d; }
-    virtual void *returnPointerValue() { return returnValue().getPointerValue(); }
-    virtual void *returnPointerValueOrDefault(void *d) { return hasReturnValue() ? returnPointerValue() : d; }
-    virtual const void *returnConstPointerValue() { return returnValue().getConstPointerValue(); }
-    virtual const void *returnConstPointerValueOrDefault(const void *d) { return hasReturnValue() ? returnConstPointerValue() : d; }
-    virtual void (*returnFunctionPointerValue())() { return returnValue().getFunctionPointerValue(); }
-    virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))() { return hasReturnValue() ? returnFunctionPointerValue() : d; }
+    virtual int returnIntValueOrDefault(int d)
+    {
+        return hasReturnValue() ? returnIntValue() : d;
+    }
+    virtual unsigned int returnUnsignedIntValue()
+    {
+        return returnValue().getUnsignedIntValue();
+    }
+    virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d)
+    {
+        return hasReturnValue() ? returnUnsignedIntValue() : d;
+    }
+    virtual long int returnLongIntValue()
+    {
+        return returnValue().getLongIntValue();
+    }
+    virtual long int returnLongIntValueOrDefault(long int d)
+    {
+        return hasReturnValue() ? returnLongIntValue() : d;
+    }
+    virtual unsigned long int returnUnsignedLongIntValue()
+    {
+        return returnValue().getUnsignedLongIntValue();
+    }
+    virtual unsigned long int
+    returnUnsignedLongIntValueOrDefault(unsigned long int d)
+    {
+        return hasReturnValue() ? returnUnsignedLongIntValue() : d;
+    }
+    virtual cpputest_longlong returnLongLongIntValue()
+    {
+        return returnValue().getLongLongIntValue();
+    }
+    virtual cpputest_longlong
+    returnLongLongIntValueOrDefault(cpputest_longlong d)
+    {
+        return hasReturnValue() ? returnLongLongIntValue() : d;
+    }
+    virtual cpputest_ulonglong returnUnsignedLongLongIntValue()
+    {
+        return returnValue().getUnsignedLongLongIntValue();
+    }
+    virtual cpputest_ulonglong
+    returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d)
+    {
+        return hasReturnValue() ? returnUnsignedLongLongIntValue() : d;
+    }
+    virtual double returnDoubleValue()
+    {
+        return returnValue().getDoubleValue();
+    }
+    virtual double returnDoubleValueOrDefault(double d)
+    {
+        return hasReturnValue() ? returnDoubleValue() : d;
+    }
+    virtual const char *returnStringValue()
+    {
+        return returnValue().getStringValue();
+    }
+    virtual const char *returnStringValueOrDefault(const char *d)
+    {
+        return hasReturnValue() ? returnStringValue() : d;
+    }
+    virtual void *returnPointerValue()
+    {
+        return returnValue().getPointerValue();
+    }
+    virtual void *returnPointerValueOrDefault(void *d)
+    {
+        return hasReturnValue() ? returnPointerValue() : d;
+    }
+    virtual const void *returnConstPointerValue()
+    {
+        return returnValue().getConstPointerValue();
+    }
+    virtual const void *returnConstPointerValueOrDefault(const void *d)
+    {
+        return hasReturnValue() ? returnConstPointerValue() : d;
+    }
+    virtual void (*returnFunctionPointerValue())()
+    {
+        return returnValue().getFunctionPointerValue();
+    }
+    virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))()
+    {
+        return hasReturnValue() ? returnFunctionPointerValue() : d;
+    }
 
-private:
+  private:
     MockActualCall &addParam(const SimpleString &name, cum_value value)
     {
         cum_actual_with_parameter(handle_, name.asCharString(), value);
@@ -437,7 +870,7 @@ private:
 
 class MockSupport
 {
-public:
+  public:
     MockSupport(cum_scope *scope) : scope_(scope) {}
     virtual ~MockSupport() {}
 
@@ -488,29 +921,98 @@ public:
 
     virtual bool boolReturnValue() { return returnValue().getBoolValue(); }
     virtual int intReturnValue() { return returnValue().getIntValue(); }
-    virtual unsigned int unsignedIntReturnValue() { return returnValue().getUnsignedIntValue(); }
-    virtual long int longIntReturnValue() { return returnValue().getLongIntValue(); }
-    virtual unsigned long int unsignedLongIntReturnValue() { return returnValue().getUnsignedLongIntValue(); }
-    virtual cpputest_longlong longLongIntReturnValue() { return returnValue().getLongLongIntValue(); }
-    virtual cpputest_ulonglong unsignedLongLongIntReturnValue() { return returnValue().getUnsignedLongLongIntValue(); }
-    virtual const char *stringReturnValue() { return returnValue().getStringValue(); }
-    virtual double doubleReturnValue() { return returnValue().getDoubleValue(); }
-    virtual void *pointerReturnValue() { return returnValue().getPointerValue(); }
-    virtual const void *constPointerReturnValue() { return returnValue().getConstPointerValue(); }
-    virtual void (*functionPointerReturnValue())() { return returnValue().getFunctionPointerValue(); }
+    virtual unsigned int unsignedIntReturnValue()
+    {
+        return returnValue().getUnsignedIntValue();
+    }
+    virtual long int longIntReturnValue()
+    {
+        return returnValue().getLongIntValue();
+    }
+    virtual unsigned long int unsignedLongIntReturnValue()
+    {
+        return returnValue().getUnsignedLongIntValue();
+    }
+    virtual cpputest_longlong longLongIntReturnValue()
+    {
+        return returnValue().getLongLongIntValue();
+    }
+    virtual cpputest_ulonglong unsignedLongLongIntReturnValue()
+    {
+        return returnValue().getUnsignedLongLongIntValue();
+    }
+    virtual const char *stringReturnValue()
+    {
+        return returnValue().getStringValue();
+    }
+    virtual double doubleReturnValue()
+    {
+        return returnValue().getDoubleValue();
+    }
+    virtual void *pointerReturnValue()
+    {
+        return returnValue().getPointerValue();
+    }
+    virtual const void *constPointerReturnValue()
+    {
+        return returnValue().getConstPointerValue();
+    }
+    virtual void (*functionPointerReturnValue())()
+    {
+        return returnValue().getFunctionPointerValue();
+    }
 
-    virtual bool returnBoolValueOrDefault(bool d) { return hasReturnValue() ? boolReturnValue() : d; }
-    virtual int returnIntValueOrDefault(int d) { return hasReturnValue() ? intReturnValue() : d; }
-    virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d) { return hasReturnValue() ? unsignedIntReturnValue() : d; }
-    virtual long int returnLongIntValueOrDefault(long int d) { return hasReturnValue() ? longIntReturnValue() : d; }
-    virtual unsigned long int returnUnsignedLongIntValueOrDefault(unsigned long int d) { return hasReturnValue() ? unsignedLongIntReturnValue() : d; }
-    virtual cpputest_longlong returnLongLongIntValueOrDefault(cpputest_longlong d) { return hasReturnValue() ? longLongIntReturnValue() : d; }
-    virtual cpputest_ulonglong returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d) { return hasReturnValue() ? unsignedLongLongIntReturnValue() : d; }
-    virtual const char *returnStringValueOrDefault(const char *d) { return hasReturnValue() ? stringReturnValue() : d; }
-    virtual double returnDoubleValueOrDefault(double d) { return hasReturnValue() ? doubleReturnValue() : d; }
-    virtual void *returnPointerValueOrDefault(void *d) { return hasReturnValue() ? pointerReturnValue() : d; }
-    virtual const void *returnConstPointerValueOrDefault(const void *d) { return hasReturnValue() ? constPointerReturnValue() : d; }
-    virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))() { return hasReturnValue() ? functionPointerReturnValue() : d; }
+    virtual bool returnBoolValueOrDefault(bool d)
+    {
+        return hasReturnValue() ? boolReturnValue() : d;
+    }
+    virtual int returnIntValueOrDefault(int d)
+    {
+        return hasReturnValue() ? intReturnValue() : d;
+    }
+    virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d)
+    {
+        return hasReturnValue() ? unsignedIntReturnValue() : d;
+    }
+    virtual long int returnLongIntValueOrDefault(long int d)
+    {
+        return hasReturnValue() ? longIntReturnValue() : d;
+    }
+    virtual unsigned long int
+    returnUnsignedLongIntValueOrDefault(unsigned long int d)
+    {
+        return hasReturnValue() ? unsignedLongIntReturnValue() : d;
+    }
+    virtual cpputest_longlong
+    returnLongLongIntValueOrDefault(cpputest_longlong d)
+    {
+        return hasReturnValue() ? longLongIntReturnValue() : d;
+    }
+    virtual cpputest_ulonglong
+    returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d)
+    {
+        return hasReturnValue() ? unsignedLongLongIntReturnValue() : d;
+    }
+    virtual const char *returnStringValueOrDefault(const char *d)
+    {
+        return hasReturnValue() ? stringReturnValue() : d;
+    }
+    virtual double returnDoubleValueOrDefault(double d)
+    {
+        return hasReturnValue() ? doubleReturnValue() : d;
+    }
+    virtual void *returnPointerValueOrDefault(void *d)
+    {
+        return hasReturnValue() ? pointerReturnValue() : d;
+    }
+    virtual const void *returnConstPointerValueOrDefault(const void *d)
+    {
+        return hasReturnValue() ? constPointerReturnValue() : d;
+    }
+    virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))()
+    {
+        return hasReturnValue() ? functionPointerReturnValue() : d;
+    }
 
     /* data store */
     virtual bool hasData(const SimpleString &name)
@@ -518,25 +1020,62 @@ public:
         return cum_scope_has_data(scope_, name.asCharString()) != 0;
     }
 
-    virtual void setData(const SimpleString &name, bool value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockBool(value)); }
-    virtual void setData(const SimpleString &name, int value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockInt(value)); }
-    virtual void setData(const SimpleString &name, unsigned int value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockUInt(value)); }
-    virtual void setData(const SimpleString &name, long int value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockLong(value)); }
-    virtual void setData(const SimpleString &name, unsigned long int value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockULong(value)); }
-    virtual void setData(const SimpleString &name, const char *value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockString(value)); }
-    virtual void setData(const SimpleString &name, double value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockDouble(value, 0.0)); }
-    virtual void setData(const SimpleString &name, void *value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockPointer(value)); }
-    virtual void setData(const SimpleString &name, const void *value) { cum_scope_set_data(scope_, name.asCharString(), CppUMockConstPointer(value)); }
-    virtual void setData(const SimpleString &name, void (*value)()) { cum_scope_set_data(scope_, name.asCharString(), CppUMockFunctionPointer(value)); }
-
-    virtual void setDataObject(const SimpleString &name, const SimpleString &type, void *value)
+    virtual void setData(const SimpleString &name, bool value)
     {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockObject(type, value));
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockBool(value));
+    }
+    virtual void setData(const SimpleString &name, int value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockInt(value));
+    }
+    virtual void setData(const SimpleString &name, unsigned int value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockUInt(value));
+    }
+    virtual void setData(const SimpleString &name, long int value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockLong(value));
+    }
+    virtual void setData(const SimpleString &name, unsigned long int value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockULong(value));
+    }
+    virtual void setData(const SimpleString &name, const char *value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockString(value));
+    }
+    virtual void setData(const SimpleString &name, double value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(),
+                           CppUMockDouble(value, 0.0));
+    }
+    virtual void setData(const SimpleString &name, void *value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(), CppUMockPointer(value));
+    }
+    virtual void setData(const SimpleString &name, const void *value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(),
+                           CppUMockConstPointer(value));
+    }
+    virtual void setData(const SimpleString &name, void (*value)())
+    {
+        cum_scope_set_data(scope_, name.asCharString(),
+                           CppUMockFunctionPointer(value));
     }
 
-    virtual void setDataConstObject(const SimpleString &name, const SimpleString &type, const void *value)
+    virtual void setDataObject(const SimpleString &name,
+                               const SimpleString &type, void *value)
     {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockConstObject(type, value));
+        cum_scope_set_data(scope_, name.asCharString(),
+                           CppUMockObject(type, value));
+    }
+
+    virtual void setDataConstObject(const SimpleString &name,
+                                    const SimpleString &type, const void *value)
+    {
+        cum_scope_set_data(scope_, name.asCharString(),
+                           CppUMockConstObject(type, value));
     }
 
     virtual MockNamedValue getData(const SimpleString &name)
@@ -550,13 +1089,15 @@ public:
                                    MockNamedValueComparator &comparator)
     {
         cum_install_comparator(typeName.asCharString(), &comparator,
-                               CppUMockComparatorEqual, CppUMockComparatorToString);
+                               CppUMockComparatorEqual,
+                               CppUMockComparatorToString);
     }
 
     virtual void installCopier(const SimpleString &typeName,
                                MockNamedValueCopier &copier)
     {
-        cum_install_copier(typeName.asCharString(), &copier, CppUMockCopierCopy);
+        cum_install_copier(typeName.asCharString(), &copier,
+                           CppUMockCopierCopy);
     }
 
     virtual void removeAllComparatorsAndCopiers()
@@ -574,9 +1115,15 @@ public:
         else
             cum_clear_scope(scope_);
     }
-    virtual bool expectedCallsLeft() { return cum_expected_calls_left_all() != 0; }
+    virtual bool expectedCallsLeft()
+    {
+        return cum_expected_calls_left_all() != 0;
+    }
     virtual void ignoreOtherCalls() { cum_ignore_other_calls(scope_); }
-    virtual void tracing(bool enabled) { cum_set_tracing(scope_, enabled ? 1 : 0); }
+    virtual void tracing(bool enabled)
+    {
+        cum_set_tracing(scope_, enabled ? 1 : 0);
+    }
     virtual const char *getTraceOutput() { return cum_trace_output(); }
     virtual void disable() { cum_enable(scope_, 0); }
     virtual void enable() { cum_enable(scope_, 1); }
@@ -585,7 +1132,7 @@ public:
         cum_crash_on_failure(shouldCrash ? 1 : 0);
     }
 
-private:
+  private:
     static MockExpectedCall &ignoredExpectedCall()
     {
         static MockExpectedCall ignored(NULLPTR);
@@ -597,10 +1144,7 @@ private:
         delete static_cast<MockExpectedCall *>(facade);
     }
 
-    static void ensureFacadeFreeInstalled()
-    {
-        cum_set_facade_free(freeFacade);
-    }
+    static void ensureFacadeFreeInstalled() { cum_set_facade_free(freeFacade); }
 
     cum_scope *scope_;
     MockActualCall actualCall_;
@@ -610,8 +1154,7 @@ inline MockSupport &mock(const SimpleString &mockName = "",
                          void * /*failureReporterForThisCall*/ = NULLPTR)
 {
     /* one facade per scope, kept for the process lifetime */
-    struct ScopeNode
-    {
+    struct ScopeNode {
         SimpleString name;
         MockSupport *support;
         ScopeNode *next;

@@ -43,7 +43,7 @@ void operator delete[](void *p, const char *file, size_t line) noexcept;
 #endif /* CPPUTEST_HAVE_ALREADY_DECLARED_NEW_DELETE_OVERLOADS */
 
 #if CPPUTEST_USE_NEW_MACROS
-#define new new(__FILE__, __LINE__)
+#define new new (__FILE__, __LINE__)
 #endif
 
 #endif /* CPPUTEST_USE_MEM_LEAK_DETECTION && __cplusplus */
