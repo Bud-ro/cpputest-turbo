@@ -17,7 +17,14 @@
 #ifndef CPPUTEST_HAVE_ALREADY_DECLARED_NEW_DELETE_OVERLOADS
 #define CPPUTEST_HAVE_ALREADY_DECLARED_NEW_DELETE_OVERLOADS 1
 
+/* Pre-include the standard headers that use placement new so the `new`
+ * macro below cannot break them when user code includes them later
+ * (upstream does the same dance). */
+#if CPPUTEST_USE_STD_CPP_LIB
 #include <new>
+#include <memory>
+#include <string>
+#endif
 #include <stddef.h>
 
 void *operator new(size_t size, const char *file, int line);

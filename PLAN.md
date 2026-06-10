@@ -129,12 +129,12 @@ Makefile               Builds lib, tests, conformance, bench
 - [x] 6.5 MockSupportPlugin parity (auto checkExpectations/clear per test; comparator repository install deferred).
 
 ### Phase 7 — Conformance against upstream suite
-- [ ] 7.1 `conformance/` harness: build selected upstream `tests/CppUTest/*.cpp`
-      files against OUR headers + lib; classify each upstream test file:
-      PASS-required / SKIP (internals) with reason in `conformance/SKIPPED.md`.
+- [x] 7.1 `conformance/` harness: bundles manifest files (UNMODIFIED upstream
+      sources) into one binary against our headers+libs; full classification
+      in `conformance/SKIPPED.md` (PASSING/PLANNED/INTERNALS/OUT-OF-SCOPE).
 - [ ] 7.2 Get all PASS-required CppUTest-core files compiling and green.
 - [ ] 7.3 Same for `tests/CppUTestExt/` mock tests.
-- [ ] 7.4 Wire conformance into `scripts/check.sh`.
+- [x] 7.4 Wire conformance into `scripts/check.sh`.
 
 ### Phase 8 — Fork isolation & parallelism (opt-in)
 - [ ] 8.1 `-pfork`-style per-test fork isolation: crash containment (signal →
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #16: 7.1+7.4 done — conformance harness runs upstream sources UNMODIFIED (CheatSheetTest, MockCheatSheetTest, PreprocessorTest, CompatabilityTests green). Key fix: NewMacros must pre-include <new>/<memory>/<string> before defining the new macro (upstream dance) or user includes after TestHarness.h explode. Config gains CPPUTEST_USE_STD_CPP_LIB/USE_MEM_LEAK_DETECTION defaults. SKIPPED.md classifies all ~60 upstream files; PLANNED blockers: TestOutput.h shim (StringBufferTestOutput), TestFilter.h, TestFailure surface, MockFailure.h + failure-reporter injection in mock core, SimpleString statics. 7.2/7.3 = burn down PLANNED list.
 - 2026-06-09 #15: 6.4 done, Phase 6 COMPLETE — MockSupport_c.h upstream-identical struct surface implemented in pure C over the mock core (function-pointer tables on current-scope/expectation/actual globals like upstream; fn-ptr types need typedefs to pass through macros); 6 pure-C mock tests green. Deferred to conformance: mock tracing, onObject, MockSupportPlugin comparator repository, mock failure-reporter injection. NEXT: Phase 7 conformance harness.
 - 2026-06-09 #14: mock slice 5 / 6.3 done — comparator/copier registry in C core (C++ virtuals adapted via extern-C trampolines), withParameterOfType (object equality via comparator, custom valueToString in messages), withOutputParameterOfType[Returning] (copier-based), output-param TYPE matching incl. the "Unexpected parameter type" failure case, MockNoWayToCompare/Copy failures (note upstream "MockFailure:" without space), expectation-side type-name copies. REMAINING Phase 6: MockSupport_c (6.4), then mark 6.1/6.2/6.5 done (plugin exists; tracing/onObject deferred to conformance-driven work).
 - 2026-06-09 #13: mock slice 4 — output parameters (withOutputParameterReturning/withUnmodifiedOutputParameter/withOutputParameter, copy-on-match incl. the ignore-others first-matching copy path, MockUnexpectedOutputParameterFailure name-case golden-pinned, <output> rendering in callToString + missing-params) + MockSupportPlugin (post-test checkExpectations+clear). LESSON: bash heredoc mangles bang chars in python scripts — three replaces silently no-opd; use the Edit tool for code with exclamation marks. REMAINING in Phase 6: comparators/copiers (installComparator/withParameterOfType + OfType output params), MockSupport_c, tracing; 6.1/6.2 mostly done otherwise.

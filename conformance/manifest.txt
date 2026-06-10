@@ -1,0 +1,7 @@
+# Upstream test files that must compile UNMODIFIED against our headers and
+# pass when bundled into one binary (paths relative to third_party/cpputest).
+# Everything not listed here is recorded in SKIPPED.md with a reason.
+tests/CppUTest/CheatSheetTest.cpp
+tests/CppUTest/PreprocessorTest.cpp
+tests/CppUTest/CompatabilityTests.cpp
+tests/CppUTestExt/MockCheatSheetTest.cpp

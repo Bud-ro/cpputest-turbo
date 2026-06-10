@@ -29,6 +29,14 @@
 #define CPPUTEST_USE_LONG_LONG 1
 #endif
 
+#ifndef CPPUTEST_USE_STD_CPP_LIB
+#define CPPUTEST_USE_STD_CPP_LIB 1
+#endif
+
+#ifndef CPPUTEST_USE_MEM_LEAK_DETECTION
+#define CPPUTEST_USE_MEM_LEAK_DETECTION 1
+#endif
+
 #ifndef CPPUTEST_HAVE_EXCEPTIONS
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
 #define CPPUTEST_HAVE_EXCEPTIONS 1
