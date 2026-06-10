@@ -19,7 +19,7 @@ mkdir -p "$VEND"
 
 # Copy the working tree as a consumer would vendor it. Exclude dev-only bulk;
 # everything a consumer needs (Makefile, include/, src/) must survive.
-for d in Makefile include src; do
+for d in Makefile cpputest.pc.in include src; do
     cp -R "$SRC/$d" "$VEND/$d"
 done
 
@@ -151,5 +151,22 @@ for STD in c++11 c++14 c++17 c++20; do
         echo "ok: public headers clean under -std=$STD -Werror (+isystem)"
     fi
 done
+
+# --- install flow: make install to a DESTDIR, build a consumer against the
+# installed tree using the pkg-config file's own flags ---
+DEST="$WORK/destroot"
+make -C "$VEND" DESTDIR="$DEST" PREFIX=/usr install >/dev/null
+PC="$DEST/usr/lib/pkgconfig/cpputest.pc"
+test -f "$PC"
+PC_CFLAGS=$(PKG_CONFIG_PATH="$DEST/usr/lib/pkgconfig" \
+    pkg-config --define-prefix --cflags cpputest 2>/dev/null) || \
+    PC_CFLAGS="-I$DEST/usr/include"
+PC_LIBS=$(PKG_CONFIG_PATH="$DEST/usr/lib/pkgconfig" \
+    pkg-config --define-prefix --libs cpputest 2>/dev/null) || \
+    PC_LIBS="-L$DEST/usr/lib -lCppUTestExt -lCppUTest"
+"${CXX:-g++}" -std=c++11 -Wall -Wextra -Werror \
+    $PC_CFLAGS "$HOST/host_test.cpp" $PC_LIBS -o "$HOST/host_test_installed"
+"$HOST/host_test_installed" >/dev/null
+echo "ok: DESTDIR install + pkg-config consumer builds and passes"
 
 echo "vendor smoke green"

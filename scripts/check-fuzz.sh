@@ -31,15 +31,21 @@ $CXX $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
 rm -f "$OUT/libasan.a"
 ar rcs "$OUT/libasan.a" "$OUT"/*.o
 
-# upstream library for the differential fuzzer
-if [ ! -f .upstream-cache/libCppUTestUpstream.a ]; then
+# upstream library for the differential fuzzer; fork enabled so the -p
+# leg of the CLI fuzzer has a real oracle (autoconf'd upstream installs
+# define these on POSIX)
+if [ ! -f .upstream-cache/libCppUTestUpstream.a ] ||
+   [ ! -f .upstream-cache/fork-enabled ]; then
+    rm -rf .upstream-cache
     mkdir -p .upstream-cache
     ( cd .upstream-cache && \
-      g++ -std=c++11 -w -O2 -c ../third_party/cpputest/src/CppUTest/*.cpp \
+      g++ -std=c++11 -w -O2 -DCPPUTEST_HAVE_FORK=1 -DCPPUTEST_HAVE_WAITPID=1 \
+          -DCPPUTEST_HAVE_KILL=1 \
+          -c ../third_party/cpputest/src/CppUTest/*.cpp \
           ../third_party/cpputest/src/CppUTestExt/*.cpp \
           ../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
           -I../third_party/cpputest/include && \
-      ar rcs libCppUTestUpstream.a *.o )
+      ar rcs libCppUTestUpstream.a *.o && touch fork-enabled )
 fi
 
 $CC $CFLAGS fuzz/fuzz_args.c "$OUT/libasan.a" -o "$OUT/fuzz_args"
@@ -163,8 +169,9 @@ gen_flags() {
         pool[8]="-sgGroupB"; pool[9]="-snfails"; pool[10]="-xgGroupC";
         pool[11]="-xnignored"; pool[12]="-kpkg"; pool[13]="-lg";   pool[14]="-ln";
         pool[15]="-ri";  pool[16]="-ojunit";  pool[17]="-oteamcity";
+        pool[18]="-p";
         n = int(rand() * 5);
-        for (i = 0; i < n; i++) printf "%s ", pool[int(rand() * 18)];
+        for (i = 0; i < n; i++) printf "%s ", pool[int(rand() * 19)];
         print ""
     }'
 }
