@@ -265,7 +265,7 @@ static int cu_is_failure(const cu_result *res)
 /* TestRegistry::listTestGroupNames / listTestGroupAndCaseNames: unique
  * entries in registry order, joined by single spaces, no trailing space or
  * newline. Dedup matches upstream's #token# substring trick in effect. */
-static void list_unique(const cu_args *a, int with_names)
+static void list_unique(cu_output *out, const cu_args *a, int with_names)
 {
     size_t printed = 0;
     for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next) {
@@ -288,19 +288,34 @@ static void list_unique(const cu_args *a, int with_names)
         }
         if (seen)
             continue;
+        /* the listing goes through the SELECTED output, like upstream's
+         * TestResult tr(*output_) — JUnit swallows plain prints */
         if (printed++)
-            fputs(" ", stdout);
-        if (with_names)
-            printf("%s.%s", t->group, t->name);
-        else
-            fputs(t->group, stdout);
+            cu_out_print_str(out, " ");
+        if (with_names) {
+            cu_out_print_str(out, t->group);
+            cu_out_print_str(out, ".");
+            cu_out_print_str(out, t->name);
+        } else {
+            cu_out_print_str(out, t->group);
+        }
     }
 }
 
-static void list_locations(void)
+static void list_locations(cu_output *out)
 {
-    for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next)
-        printf("%s.%s.%s.%d\n", t->group, t->name, t->file, (int)t->line);
+    char buf[32];
+    for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next) {
+        cu_out_print_str(out, t->group);
+        cu_out_print_str(out, ".");
+        cu_out_print_str(out, t->name);
+        cu_out_print_str(out, ".");
+        cu_out_print_str(out, t->file);
+        cu_out_print_str(out, ".");
+        snprintf(buf, sizeof buf, "%d", (int)t->line);
+        cu_out_print_str(out, buf);
+        cu_out_print_str(out, "\n");
+    }
 }
 
 /* TestTestingFixture-style run: no CLI, default console output, stats out.
@@ -386,12 +401,14 @@ int cu_run_all(int argc, const char *const *argv)
 
     if (args.list_groups || args.list_names) {
         /* upstream checks -lg before -ln when both are given */
-        list_unique(&args, args.list_groups ? 0 : 1);
+        list_unique(&out, &args, args.list_groups ? 0 : 1);
+        cu_junit_destroy(out.junit);
         cu_args_free(&args);
         return 0;
     }
     if (args.list_locations) {
-        list_locations();
+        list_locations(&out);
+        cu_junit_destroy(out.junit);
         cu_args_free(&args);
         return 0;
     }

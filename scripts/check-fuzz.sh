@@ -88,6 +88,14 @@ $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
     fuzz/fuzz_compose_diff.cpp \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/composediff_upstream"
 
+# differential CLI fuzzer: one fixed suite, seeded random runner-flag
+# combinations; stdout, exit code, and JUnit XML files all compared
+$CXX $CXXFLAGS fuzz/fuzz_cli_diff.cpp "$OUT/libasan.a" \
+    -o "$OUT/clidiff_ours"
+$CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
+    fuzz/fuzz_cli_diff.cpp \
+    .upstream-cache/libCppUTestUpstream.a -o "$OUT/clidiff_upstream"
+
 norm() {
     # ms timings + library-INTERNAL failure locations (e.g. the type-check
     # assert in returnIntValue fires inside MockNamedValue.cpp upstream and
@@ -138,4 +146,63 @@ while [ "$round" -lt "$ROUNDS" ]; do
     round=$((round + 1))
 done
 echo "fuzz_mock_diff + fuzz_mock_c_diff + fuzz_compose_diff: $ROUNDS rounds identical to upstream"
+
+# ---- CLI flag-combination differential ----
+# JUnit XML carries wall-clock fields; everything else must be identical
+cli_norm() {
+    norm | sed -e 's/timestamp="[^"]*"/timestamp="T"/' \
+               -e 's/time="[^"]*"/time="t"/' \
+               -e "s/duration='[0-9]*'/duration='0'/"
+}
+
+gen_flags() {
+    awk -v seed="$1" 'BEGIN {
+        srand(seed + 7);
+        pool[0]="-v";    pool[1]="-c";        pool[2]="-r2";       pool[3]="-r3";
+        pool[4]="-s5";   pool[5]="-s11";      pool[6]="-gGroupA";  pool[7]="-npass";
+        pool[8]="-sgGroupB"; pool[9]="-snfails"; pool[10]="-xgGroupC";
+        pool[11]="-xnignored"; pool[12]="-kpkg"; pool[13]="-lg";   pool[14]="-ln";
+        pool[15]="-ri";  pool[16]="-ojunit";  pool[17]="-oteamcity";
+        n = int(rand() * 5);
+        for (i = 0; i < n; i++) printf "%s ", pool[int(rand() * 18)];
+        print ""
+    }'
+}
+
+CLI_ROUNDS=$((ROUNDS * 4))
+round=0
+while [ "$round" -lt "$CLI_ROUNDS" ]; do
+    FLAGS=$(gen_flags "$round")
+    rm -rf "$OUT/cli_o" "$OUT/cli_u"
+    mkdir -p "$OUT/cli_o" "$OUT/cli_u"
+    rc_o=0
+    (cd "$OUT/cli_o" && ../clidiff_ours $FLAGS >stdout.raw 2>&1) || rc_o=$?
+    rc_u=0
+    (cd "$OUT/cli_u" && ../clidiff_upstream $FLAGS >stdout.raw 2>&1) || rc_u=$?
+    if [ "$rc_o" -ne "$rc_u" ]; then
+        echo "CLI DIVERGENCE (exit) at round=$round flags='$FLAGS': ours=$rc_o upstream=$rc_u" >&2
+        exit 1
+    fi
+    for f in $(cd "$OUT/cli_u" && ls); do
+        if [ ! -f "$OUT/cli_o/$f" ]; then
+            echo "CLI DIVERGENCE (missing file $f) at round=$round flags='$FLAGS'" >&2
+            exit 1
+        fi
+        cli_norm <"$OUT/cli_o/$f" >"$OUT/cli_f_o.norm"
+        cli_norm <"$OUT/cli_u/$f" >"$OUT/cli_f_u.norm"
+        if ! cmp -s "$OUT/cli_f_o.norm" "$OUT/cli_f_u.norm"; then
+            echo "CLI DIVERGENCE ($f) at round=$round flags='$FLAGS'" >&2
+            diff -u "$OUT/cli_f_u.norm" "$OUT/cli_f_o.norm" | head -30 >&2
+            exit 1
+        fi
+    done
+    for f in $(cd "$OUT/cli_o" && ls); do
+        if [ ! -f "$OUT/cli_u/$f" ]; then
+            echo "CLI DIVERGENCE (extra file $f) at round=$round flags='$FLAGS'" >&2
+            exit 1
+        fi
+    done
+    round=$((round + 1))
+done
+echo "fuzz_cli_diff: $CLI_ROUNDS flag combos identical to upstream"
 echo "fuzz gate green"
