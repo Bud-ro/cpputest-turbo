@@ -172,6 +172,10 @@ public:
     { cu_assert_compare(comparison, checkString, comparisonString, text, fileName, lineNumber); }
     void print(const char *text, const char *fileName, size_t lineNumber)
     { cu_print(text, fileName, lineNumber); }
+    /* SimpleString overload without depending on its definition here */
+    template <typename StringT>
+    void print(const StringT &text, const char *fileName, size_t lineNumber)
+    { cu_print(text.asCharString(), fileName, lineNumber); }
     void countCheck() { cu_count_check(); }
 
     cu_test node_; /* registered with the C core; shim-internal */

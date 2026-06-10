@@ -90,6 +90,7 @@ public:
         cu_registry_add(&genTest_->node_);
         clearStats();
         currentFixture() = this;
+        lineExecutedFlag() = false;
     }
 
     virtual ~TestTestingFixture()
@@ -165,12 +166,21 @@ public:
         CHECK_FALSE(output_.contains(contains));
     }
 
+    /* upstream-exact: one failure, output contains text, and the failing
+     * macro must have jumped (the line after it must not have executed) */
     void checkTestFailsWithProperTestLocation(const char *text, const char *file,
                                               size_t line)
     {
-        LONGS_EQUAL(1, getFailureCount());
-        assertPrintContains(StringFromFormat("%s:%d: error:", file, (int)line));
-        assertPrintContains(text);
+        if (getFailureCount() != 1)
+            FAIL_LOCATION(StringFromFormat(
+                              "Expected one test failure, but got %d amount of test failures",
+                              (int)getFailureCount())
+                              .asCharString(),
+                          file, line);
+        STRCMP_CONTAINS_LOCATION(text, output_.asCharString(), "", file, line);
+        if (lineExecutedFlag())
+            FAIL_LOCATION("The test should jump/throw on failure and not execute the next line. However, the next line was executed.",
+                          file, line);
     }
 
     static void lineExecutedAfterCheck() { lineExecutedFlag() = true; }

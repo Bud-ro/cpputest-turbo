@@ -5,3 +5,5 @@ tests/CppUTest/CheatSheetTest.cpp
 tests/CppUTest/PreprocessorTest.cpp
 tests/CppUTest/CompatabilityTests.cpp
 tests/CppUTestExt/MockCheatSheetTest.cpp
+tests/CppUTest/TestUTestMacro.cpp
+tests/CppUTest/TestUTestStringMacro.cpp

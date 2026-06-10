@@ -280,11 +280,6 @@ static void sb_difference_at_pos(sb *b, const char *actual, size_t offset,
     free(different);
 }
 
-static const char *or_null(const char *s)
-{
-    return s ? s : "(null)";
-}
-
 static char *printable_or_null(const char *s)
 {
     return s ? cu_str_printable(s) : cu_str_printf("(null)");
@@ -410,7 +405,8 @@ void cu_assert_cstr_nocase_equal(const char *expected, const char *actual,
         raise_string_equal(expected, actual, 1, text, file, line);
 }
 
-/* ContainsFailure */
+/* ContainsFailure: upstream passes the raw char*s through SimpleString,
+ * which renders NULL as an EMPTY string (not "(null)") */
 static void raise_contains(const char *expected, const char *actual,
                            const char *text, const char *file, size_t line)
 {
@@ -418,7 +414,7 @@ static void raise_contains(const char *expected, const char *actual,
     sb_init(&b);
     sb_user_text(&b, text);
     sb_addf(&b, "actual <%s>\n\tdid not contain  <%s>",
-            or_null(actual), or_null(expected));
+            actual ? actual : "", expected ? expected : "");
     sb_raise(&b, file, line);
 }
 

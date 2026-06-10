@@ -39,8 +39,8 @@ Categories:
 | TestOutputTest.cpp | INTERNALS | TestOutput class virtuals with mocked time; formats covered by goldens |
 | TestRegistryTest.cpp | INTERNALS | registry plumbing via mock registry |
 | TestResultTest.cpp | INTERNALS | TestResult class with mocked output |
-| TestUTestMacro.cpp | PLANNED | needs TestOutput.h shim + fixture's checkTestFailsWithProperTestLocation paths |
-| TestUTestStringMacro.cpp | PLANNED | same as TestUTestMacro |
+| TestUTestMacro.cpp | **PASSING** | |
+| TestUTestStringMacro.cpp | **PASSING** | |
 | UtestPlatformTest.cpp | INTERNALS/Phase 8 | fork-mode platform behavior; revisit with Phase 8 |
 | UtestTest.cpp | PLANNED | needs TestOutput.h + UtestShell surface additions |
 
