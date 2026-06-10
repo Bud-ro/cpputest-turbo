@@ -99,7 +99,8 @@ norm() {
         -e 's|include/CppUTestExt/MockSupport\.h:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's/Alloc num ([0-9]*)/Alloc num (N)/' \
-        -e 's/Memory: <0x[0-9a-fA-F]*>/Memory: <0xADDR>/'
+        -e 's/Memory: <0x[0-9a-fA-F]*>/Memory: <0xADDR>/' \
+        -e 's/0x[0-9a-fA-F]\{5,\}/0xBIGADDR/g'
 }
 
 echo "== differential torture suites (vs upstream) =="

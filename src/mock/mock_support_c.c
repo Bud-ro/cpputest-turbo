@@ -420,11 +420,11 @@ static void act_ret_type_assert(const char *want)
     static ctype act_ret_##fnname(void)                                        \
     {                                                                          \
         cum_value v;                                                           \
-        if (cum_actual_return_value(cur_actual, &v) == CUM_RET_IGNORED)        \
+        int st = cum_actual_return_value(cur_actual, &v);                      \
+        if (st == CUM_RET_IGNORED || st == CUM_RET_TRACED)                     \
             return zero;                                                       \
         act_ret_type_assert(typestr);                                          \
-        if (cum_actual_return_value(cur_actual, &v) == CUM_RET_VALUE &&        \
-            v.type == cumtype)                                                 \
+        if (st == CUM_RET_VALUE && v.type == cumtype)                          \
             return v.v.field;                                                  \
         return zero;                                                           \
     }                                                                          \
@@ -445,7 +445,7 @@ static void act_ret_type_assert(const char *want)
     {                                                                          \
         cum_value v;                                                           \
         int st = cum_actual_return_value(cur_actual, &v);                      \
-        if (st == CUM_RET_IGNORED)                                             \
+        if (st == CUM_RET_IGNORED || st == CUM_RET_TRACED)                     \
             return 0;                                                          \
         if (st != CUM_RET_VALUE) {                                             \
             v = make_value(CUM_T_INT);                                         \
@@ -474,7 +474,7 @@ static int act_ret_bool(void)
 {
     cum_value v;
     int st = cum_actual_return_value(cur_actual, &v);
-    if (st == CUM_RET_IGNORED)
+    if (st == CUM_RET_IGNORED || st == CUM_RET_TRACED)
         return 0;
     act_ret_type_assert("bool");
     if (st == CUM_RET_VALUE && v.type == CUM_T_BOOL)
@@ -528,7 +528,7 @@ static double act_ret_double(void)
 {
     cum_value v;
     int st = cum_actual_return_value(cur_actual, &v);
-    if (st == CUM_RET_IGNORED)
+    if (st == CUM_RET_IGNORED || st == CUM_RET_TRACED)
         return 0.0;
     act_ret_type_assert("double");
     if (st == CUM_RET_VALUE && v.type == CUM_T_DOUBLE)

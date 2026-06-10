@@ -1124,8 +1124,10 @@ void cum_expectation_and_return(cum_expectation *e, cum_value value)
 /* reading the return value finalizes the call, like upstream */
 int cum_actual_return_value(cum_actual *a, cum_value *out)
 {
-    if (!a || IS_TRACE(a))
+    if (!a)
         return CUM_RET_IGNORED;
+    if (IS_TRACE(a))
+        return CUM_RET_TRACED;
     actual_finalize(a);
     if (a->matching && a->matching->has_return) {
         *out = a->matching->return_value;

@@ -796,7 +796,9 @@ class MockActualCall
     }
     virtual bool returnBoolValueOrDefault(bool d)
     {
-        return hasReturnValue() ? returnBoolValue() : d;
+        return traced() ? returnBoolValue()
+                        : hasReturnValue() ? returnBoolValue()
+                                           : d;
     }
     virtual int returnIntValue()
     {
@@ -804,7 +806,9 @@ class MockActualCall
     }
     virtual int returnIntValueOrDefault(int d)
     {
-        return hasReturnValue() ? returnIntValue() : d;
+        return traced() ? returnIntValue()
+                        : hasReturnValue() ? returnIntValue()
+                                           : d;
     }
     virtual unsigned int returnUnsignedIntValue()
     {
@@ -812,7 +816,9 @@ class MockActualCall
     }
     virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d)
     {
-        return hasReturnValue() ? returnUnsignedIntValue() : d;
+        return traced() ? returnUnsignedIntValue()
+                        : hasReturnValue() ? returnUnsignedIntValue()
+                                           : d;
     }
     virtual long int returnLongIntValue()
     {
@@ -820,7 +826,9 @@ class MockActualCall
     }
     virtual long int returnLongIntValueOrDefault(long int d)
     {
-        return hasReturnValue() ? returnLongIntValue() : d;
+        return traced() ? returnLongIntValue()
+                        : hasReturnValue() ? returnLongIntValue()
+                                           : d;
     }
     virtual unsigned long int returnUnsignedLongIntValue()
     {
@@ -829,7 +837,9 @@ class MockActualCall
     virtual unsigned long int
     returnUnsignedLongIntValueOrDefault(unsigned long int d)
     {
-        return hasReturnValue() ? returnUnsignedLongIntValue() : d;
+        return traced() ? returnUnsignedLongIntValue()
+                        : hasReturnValue() ? returnUnsignedLongIntValue()
+                                           : d;
     }
     virtual cpputest_longlong returnLongLongIntValue()
     {
@@ -838,7 +848,9 @@ class MockActualCall
     virtual cpputest_longlong
     returnLongLongIntValueOrDefault(cpputest_longlong d)
     {
-        return hasReturnValue() ? returnLongLongIntValue() : d;
+        return traced() ? returnLongLongIntValue()
+                        : hasReturnValue() ? returnLongLongIntValue()
+                                           : d;
     }
     virtual cpputest_ulonglong returnUnsignedLongLongIntValue()
     {
@@ -847,7 +859,9 @@ class MockActualCall
     virtual cpputest_ulonglong
     returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d)
     {
-        return hasReturnValue() ? returnUnsignedLongLongIntValue() : d;
+        return traced() ? returnUnsignedLongLongIntValue()
+                        : hasReturnValue() ? returnUnsignedLongLongIntValue()
+                                           : d;
     }
     virtual double returnDoubleValue()
     {
@@ -855,7 +869,9 @@ class MockActualCall
     }
     virtual double returnDoubleValueOrDefault(double d)
     {
-        return hasReturnValue() ? returnDoubleValue() : d;
+        return traced() ? returnDoubleValue()
+                        : hasReturnValue() ? returnDoubleValue()
+                                           : d;
     }
     virtual const char *returnStringValue()
     {
@@ -863,7 +879,9 @@ class MockActualCall
     }
     virtual const char *returnStringValueOrDefault(const char *d)
     {
-        return hasReturnValue() ? returnStringValue() : d;
+        return traced() ? returnStringValue()
+                        : hasReturnValue() ? returnStringValue()
+                                           : d;
     }
     virtual void *returnPointerValue()
     {
@@ -871,7 +889,9 @@ class MockActualCall
     }
     virtual void *returnPointerValueOrDefault(void *d)
     {
-        return hasReturnValue() ? returnPointerValue() : d;
+        return traced() ? returnPointerValue()
+                        : hasReturnValue() ? returnPointerValue()
+                                           : d;
     }
     virtual const void *returnConstPointerValue()
     {
@@ -879,7 +899,9 @@ class MockActualCall
     }
     virtual const void *returnConstPointerValueOrDefault(const void *d)
     {
-        return hasReturnValue() ? returnConstPointerValue() : d;
+        return traced() ? returnConstPointerValue()
+                        : hasReturnValue() ? returnConstPointerValue()
+                                           : d;
     }
     virtual void (*returnFunctionPointerValue())()
     {
@@ -887,15 +909,26 @@ class MockActualCall
     }
     virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))()
     {
-        return hasReturnValue() ? returnFunctionPointerValue() : d;
+        return traced() ? returnFunctionPointerValue()
+                        : hasReturnValue() ? returnFunctionPointerValue()
+                                           : d;
     }
 
   private:
-    bool ignored()
+    int retState()
     {
         cum_value v;
-        return cum_actual_return_value(handle_, &v) == CUM_RET_IGNORED;
+        return cum_actual_return_value(handle_, &v);
     }
+    /* ignored AND traced calls zero the plain typed getters */
+    bool ignored()
+    {
+        int st = retState();
+        return st == CUM_RET_IGNORED || st == CUM_RET_TRACED;
+    }
+    /* MockActualCallTrace also zeroes the OrDefault getters (the default
+     * is ignored); MockIgnoredActualCall returns the default */
+    bool traced() { return retState() == CUM_RET_TRACED; }
 
     MockActualCall &addParam(const SimpleString &name, cum_value value)
     {

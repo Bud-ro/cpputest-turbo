@@ -819,14 +819,37 @@ static void fz_sequence(unsigned long long seed)
             }
             break;
         case 8:
-            if (fz_r() % 3 == 0) {
+            switch (fz_r() % 6) {
+            case 0: {
                 MockSupport &m8 = pick_mock();
                 TR("[%s].disable\n", last_scope);
                 m8.disable();
-            } else {
+                break;
+            }
+            case 1: { /* tracing mode: actual calls append to the shared
+                         trace recorder instead of matching */
+                MockSupport &m8 = pick_mock();
+                TR("[%s].tracing(on)\n", last_scope);
+                m8.tracing(true);
+                break;
+            }
+            case 2: {
+                MockSupport &m8 = pick_mock();
+                TR("[%s].tracing(off)\n", last_scope);
+                m8.tracing(false);
+                break;
+            }
+            case 3: {
+                TR("[].getTraceOutput\n");
+                printf("V trace=[%s]\n", mock().getTraceOutput());
+                break;
+            }
+            default: {
                 MockSupport &m8 = pick_mock();
                 TR("[%s].enable\n", last_scope);
                 m8.enable();
+                break;
+            }
             }
             break;
         case 9: { /* MockSupport-level return getter */

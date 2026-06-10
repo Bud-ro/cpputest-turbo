@@ -164,10 +164,14 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name,
  * MockIgnoredActualCall, which is why three distinct no-value states exist:
  * typed getters silently return 0 for an ignored call, type-assert against
  * "int" for the other two, and hasReturnValue is true for UNMATCHED. */
-#define CUM_RET_IGNORED 0   /* no call / disabled / ignored / tracing */
+#define CUM_RET_IGNORED 0   /* no call / disabled / ignoreOtherCalls */
 #define CUM_RET_NONE 1      /* call matched, no return value queued */
 #define CUM_RET_VALUE 2     /* *out filled with the queued value */
 #define CUM_RET_UNMATCHED 3 /* call matched no expectation */
+#define CUM_RET_TRACED 4    /* tracing mode: like IGNORED, except the
+                             * OrDefault getters return 0/false/empty too
+                             * (MockActualCallTrace ignores the default;
+                             * MockIgnoredActualCall returns it) */
 void cum_expectation_and_return(cum_expectation *e, cum_value value);
 int cum_actual_return_value(cum_actual *a, cum_value *out);
 int cum_scope_return_value(cum_scope *s, cum_value *out); /* last actual call */
