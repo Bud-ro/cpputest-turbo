@@ -1,4 +1,4 @@
-# cpputest-revibed — C11 core + thin C++ shim, POSIX make + gcc only.
+# cpputest-turbo — C11 core + thin C++ shim, POSIX make + gcc only.
 
 CC       ?= gcc
 CXX      ?= g++

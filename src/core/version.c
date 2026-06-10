@@ -2,5 +2,5 @@
 
 const char *cpputest_core_version(void)
 {
-    return "cpputest-revibed 0.0.1";
+    return "cpputest-turbo 0.0.1";
 }

@@ -1,7 +1,7 @@
 #ifndef D_CommandLineTestRunner_h
 #define D_CommandLineTestRunner_h
 
-/* cpputest-revibed: runner entry points. Run logic lives in the C core;
+/* cpputest-turbo: runner entry points. Run logic lives in the C core;
  * this shim installs the standard plugins around the run like upstream
  * (SetPointerPlugin now; MemoryLeakWarningPlugin arrives in Phase 4). */
 

@@ -1,4 +1,4 @@
-/* cpputest-revibed: out-of-line SimpleString implementation. Kept out of the
+/* cpputest-turbo: out-of-line SimpleString implementation. Kept out of the
  * header so user translation units stay cheap to compile. Rendering rules
  * delegate to the C core for byte parity with the assertion engine. */
 

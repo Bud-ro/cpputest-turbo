@@ -1,7 +1,7 @@
 #ifndef D_CppUTestConfig_h
 #define D_CppUTestConfig_h
 
-/* cpputest-revibed: thin configuration shim. Source-compatible subset of
+/* cpputest-turbo: thin configuration shim. Source-compatible subset of
  * upstream CppUTestConfig.h — only what user code and the public-API tests
  * actually reference. */
 

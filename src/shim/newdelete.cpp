@@ -1,4 +1,4 @@
-/* cpputest-revibed: global operator new/delete replacements routing into the
+/* cpputest-turbo: global operator new/delete replacements routing into the
  * C core's leak tracker. This is the only C++ translation unit in the
  * library — replacement operators must be out-of-line by the standard.
  * C-only consumers can build the library without it (make CPPUTEST_C_ONLY=1);

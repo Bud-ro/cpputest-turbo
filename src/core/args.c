@@ -258,7 +258,7 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
             free(a->package_name);
             a->package_name = strdup(parameter_field(argc, argv, &i, "-k"));
         }
-        /* cpputest-revibed extension: -jN parallel workers (group granularity)
+        /* cpputest-turbo extension: -jN parallel workers (group granularity)
          */
         else if (starts_with(arg, "-j"))
             a->parallel_workers = atoi(arg + 2);

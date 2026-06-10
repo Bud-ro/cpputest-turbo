@@ -1,7 +1,7 @@
 /* Differential mock fuzzer.
  *
  * Uses ONLY the public CppUTest/CppUMock API, so the same source compiles
- * against upstream CppUTest and cpputest-revibed. A seed drives a
+ * against upstream CppUTest and cpputest-turbo. A seed drives a
  * deterministic random sequence of mock operations inside each test; both
  * binaries are run with the same FUZZ_SEED and their outputs diffed
  * (timing-normalized). Any divergence — different failure messages,
@@ -359,19 +359,20 @@ static unsigned long long base_seed;
         fz_sequence(base_seed * 50 + N);                                       \
     }
 
-FZ_TEST(0)
-FZ_TEST(1) FZ_TEST(2) FZ_TEST(3) FZ_TEST(4) FZ_TEST(5) FZ_TEST(6) FZ_TEST(7)
-    FZ_TEST(8) FZ_TEST(9) FZ_TEST(10) FZ_TEST(11) FZ_TEST(12) FZ_TEST(13)
-        FZ_TEST(14) FZ_TEST(15) FZ_TEST(16) FZ_TEST(17) FZ_TEST(18) FZ_TEST(19)
-            FZ_TEST(20) FZ_TEST(21) FZ_TEST(22) FZ_TEST(23) FZ_TEST(24)
-                FZ_TEST(25) FZ_TEST(26) FZ_TEST(27) FZ_TEST(28) FZ_TEST(29)
-                    FZ_TEST(30) FZ_TEST(31) FZ_TEST(32) FZ_TEST(33) FZ_TEST(34)
-                        FZ_TEST(35) FZ_TEST(36) FZ_TEST(37) FZ_TEST(38)
-                            FZ_TEST(39) FZ_TEST(40) FZ_TEST(41) FZ_TEST(42)
-                                FZ_TEST(43) FZ_TEST(44) FZ_TEST(45) FZ_TEST(46)
-                                    FZ_TEST(47) FZ_TEST(48) FZ_TEST(49)
+// clang-format off
+FZ_TEST(0)  FZ_TEST(1)  FZ_TEST(2)  FZ_TEST(3)  FZ_TEST(4)
+FZ_TEST(5)  FZ_TEST(6)  FZ_TEST(7)  FZ_TEST(8)  FZ_TEST(9)
+FZ_TEST(10) FZ_TEST(11) FZ_TEST(12) FZ_TEST(13) FZ_TEST(14)
+FZ_TEST(15) FZ_TEST(16) FZ_TEST(17) FZ_TEST(18) FZ_TEST(19)
+FZ_TEST(20) FZ_TEST(21) FZ_TEST(22) FZ_TEST(23) FZ_TEST(24)
+FZ_TEST(25) FZ_TEST(26) FZ_TEST(27) FZ_TEST(28) FZ_TEST(29)
+FZ_TEST(30) FZ_TEST(31) FZ_TEST(32) FZ_TEST(33) FZ_TEST(34)
+FZ_TEST(35) FZ_TEST(36) FZ_TEST(37) FZ_TEST(38) FZ_TEST(39)
+FZ_TEST(40) FZ_TEST(41) FZ_TEST(42) FZ_TEST(43) FZ_TEST(44)
+FZ_TEST(45) FZ_TEST(46) FZ_TEST(47) FZ_TEST(48) FZ_TEST(49)
+// clang-format on
 
-                                        int main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     const char *seed_env = getenv("FUZZ_SEED");
     base_seed = seed_env ? strtoull(seed_env, NULL, 10) : 0;

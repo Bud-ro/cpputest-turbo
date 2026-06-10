@@ -1,4 +1,4 @@
-# cpputest-revibed
+# cpputest-turbo
 
 A from-scratch rewrite of CppUTest: C11 core + thin C++ header shim, source-compatible
 with upstream. **PLAN.md is the single source of truth for what to do next** — read it

@@ -9,9 +9,9 @@ Machine: Linux x86_64 (WSL2), gcc 13.3. Reproduce with `sh bench/run_bench.sh`
 | run | time | vs upstream |
 |---|---|---|
 | upstream CppUTest, sequential | 29 ms | 1× |
-| **cpputest-revibed, sequential** | **5–6 ms** | **~5×** |
-| **cpputest-revibed, `-j8`** | **2 ms** | **~14×** |
-| cpputest-revibed, `-p` (fork per test) | 6 ms | ~5× |
+| **cpputest-turbo, sequential** | **5–6 ms** | **~5×** |
+| **cpputest-turbo, `-j8`** | **2 ms** | **~14×** |
+| cpputest-turbo, `-p` (fork per test) | 6 ms | ~5× |
 
 Decomposed microbenchmarks (per-operation cost):
 
@@ -43,7 +43,7 @@ Decomposed microbenchmarks (per-operation cost):
 
 ## Compile time (21 TUs / 400 TESTs, g++ -O0)
 
-| | cpputest-revibed | upstream |
+| | cpputest-turbo | upstream |
 |---|---|---|
 | total | 2411 ms | 2421 ms |
 

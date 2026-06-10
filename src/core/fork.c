@@ -21,7 +21,7 @@
  * converts abnormal exits into failures with upstream's exact messages
  * (UtestPlatform.cpp GccPlatformSpecificRunTestInASeperateProcess).
  *
- * -jN (cpputest-revibed extension): test groups are distributed round-robin
+ * -jN (cpputest-turbo extension): test groups are distributed round-robin
  * over N forked workers; each worker writes its output to a temp file and
  * its counters to a stats file, and the parent replays outputs in worker
  * order and prints one merged summary, so the run is deterministic. */

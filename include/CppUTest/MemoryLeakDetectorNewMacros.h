@@ -1,4 +1,4 @@
-/* cpputest-revibed: debug operator new declarations + the `new` macro.
+/* cpputest-turbo: debug operator new declarations + the `new` macro.
  * No include guard on the macro section, mirroring upstream: the file may be
  * re-included to re-enable the macro after an #undef. */
 

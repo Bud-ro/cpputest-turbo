@@ -2,8 +2,8 @@ prefix=@PREFIX@
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: cpputest-revibed
+Name: cpputest-turbo
 Description: CppUTest-compatible C/C++ unit test framework with a C11 core
-Version: 0.2.0
+Version: 1.0.0
 Libs: -L${libdir} -lCppUTestExt -lCppUTest
 Cflags: -I${includedir}

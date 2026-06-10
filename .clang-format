@@ -23,3 +23,5 @@ ReflowComments: true
 # include order is semantic in this codebase (POSIX feature macros,
 # TestHarness.h chains, pre-includes before the new macro) — never reorder
 SortIncludes: Never
+# macros that expand to complete declarations (test instantiation lists)
+StatementMacros: [FZ_TEST, STRESS_GROUP]

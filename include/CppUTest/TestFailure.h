@@ -1,7 +1,7 @@
 #ifndef D_TestFailure_h
 #define D_TestFailure_h
 
-/* cpputest-revibed: minimal TestFailure shim — enough for plugins and user
+/* cpputest-turbo: minimal TestFailure shim — enough for plugins and user
  * code that constructs failures and hands them to TestResult::addFailure.
  * Message formatting for the builtin assertion types lives in the C core. */
 

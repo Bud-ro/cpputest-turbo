@@ -1,7 +1,7 @@
 #ifndef D_TestRegistry_h
 #define D_TestRegistry_h
 
-/* cpputest-revibed: TestRegistry shim. Test storage lives in the C core;
+/* cpputest-turbo: TestRegistry shim. Test storage lives in the C core;
  * this class carries the plugin chain and the public registry API. */
 
 #include "CppUTest/TestPlugin.h"

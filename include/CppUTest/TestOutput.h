@@ -1,7 +1,7 @@
 #ifndef D_TestOutput_h
 #define D_TestOutput_h
 
-/* cpputest-revibed: minimal TestOutput shim. The real output engine lives in
+/* cpputest-turbo: minimal TestOutput shim. The real output engine lives in
  * the C core; these classes exist for source compatibility with code that
  * constructs outputs directly (upstream tests, custom runners). Text routed
  * into them is forwarded to the active core output sink only for the

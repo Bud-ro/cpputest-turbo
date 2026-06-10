@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compile-time and runtime benchmark: cpputest-revibed vs vendored upstream.
+# Compile-time and runtime benchmark: cpputest-turbo vs vendored upstream.
 # Requires build/libCppUTest.a (ours) and .upstream-cache/libCppUTestUpstream.a.
 set -eu
 cd "$(dirname "$0")/.."
@@ -54,7 +54,7 @@ up_rt=$((end - start))
 echo "upstream: ${up_rt} ms"
 
 echo
-echo "| metric | cpputest-revibed | upstream CppUTest |"
+echo "| metric | cpputest-turbo | upstream CppUTest |"
 echo "|---|---|---|"
 echo "| compile 21 TUs / 400 tests (-O0) | ${ours_compile} ms | ${up_compile} ms |"
 echo "| run 5M assertions + 500k new/delete (8 groups) (-O2) | ${ours_rt} ms | ${up_rt} ms |"

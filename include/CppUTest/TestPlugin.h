@@ -1,7 +1,7 @@
 #ifndef D_TestPlugin_h
 #define D_TestPlugin_h
 
-/* cpputest-revibed: TestPlugin chain, upstream-identical semantics. The
+/* cpputest-turbo: TestPlugin chain, upstream-identical semantics. The
  * chain lives entirely in the C++ shim; the C core invokes it through
  * trampolines installed by TestRegistry. */
 

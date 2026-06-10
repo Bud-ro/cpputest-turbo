@@ -1,7 +1,7 @@
 #ifndef D_MockSupportPlugin_h
 #define D_MockSupportPlugin_h
 
-/* cpputest-revibed: MockSupportPlugin — upstream semantics:
+/* cpputest-turbo: MockSupportPlugin — upstream semantics:
  *  - comparators/copiers registered on the plugin are installed into mock()
  *    before EVERY test and removed after it
  *  - postTestAction checks expectations only when the test hasn't already

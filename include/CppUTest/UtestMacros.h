@@ -6,10 +6,10 @@
  * Portions copyright (c) 2007 Michael Feathers, James Grenning and Bas
  * Vodde: several macro bodies in this file are reproduced from CppUTest's
  * UtestMacros.h to guarantee source compatibility and byte-identical
- * behavior. Remainder copyright (c) 2026 cpputest-revibed contributors.
+ * behavior. Remainder copyright (c) 2026 cpputest-turbo contributors.
  * See LICENSE at the repository root.
  *
- * cpputest-revibed: test declaration and assertion macros. Generated names
+ * cpputest-turbo: test declaration and assertion macros. Generated names
  * are identical to upstream UtestMacros.h (including its quirks — see
  * docs/INTERFACE.md section 1) so that IMPORT_TEST_GROUP and friends stay
  * source compatible. Assertions lower to C core calls. */

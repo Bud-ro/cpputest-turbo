@@ -1,7 +1,7 @@
 #ifndef D_TestResult_h
 #define D_TestResult_h
 
-/* cpputest-revibed: TestResult shim. The real counters live in the C core's
+/* cpputest-turbo: TestResult shim. The real counters live in the C core's
  * per-run result; this class is a facade so plugin signatures and user code
  * stay source compatible. */
 

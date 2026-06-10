@@ -1,7 +1,7 @@
 /* Mock torture suite — deliberately nasty usage patterns that target the
  * matching state machine's corners. Like the differential fuzzer, this file
  * uses ONLY public API and is compiled against BOTH upstream CppUTest and
- * cpputest-revibed; outputs must be byte-identical (ms-normalized).
+ * cpputest-turbo; outputs must be byte-identical (ms-normalized).
  *
  * Every pointer printed in a failure message is a fixed fake constant so
  * outputs are deterministic across builds. */

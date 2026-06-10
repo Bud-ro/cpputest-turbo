@@ -1,7 +1,7 @@
 #ifndef D_MemoryLeakWarningPlugin_h
 #define D_MemoryLeakWarningPlugin_h
 
-/* cpputest-revibed: MemoryLeakWarningPlugin shim over the C core's leak
+/* cpputest-turbo: MemoryLeakWarningPlugin shim over the C core's leak
  * detector. Behavior mirrors upstream MemoryLeakWarningPlugin.cpp. */
 
 #include "CppUTest/TestPlugin.h"

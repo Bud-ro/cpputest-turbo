@@ -1,7 +1,7 @@
 #ifndef D_MockSupport_c_h
 #define D_MockSupport_c_h
 
-/* cpputest-revibed: C interface to CppUMock, upstream-identical surface.
+/* cpputest-turbo: C interface to CppUMock, upstream-identical surface.
  * Implemented directly over the C mock core — usable from pure C. */
 
 #ifdef __cplusplus

@@ -1,7 +1,7 @@
 #ifndef D_SimpleString_h
 #define D_SimpleString_h
 
-/* cpputest-revibed: SimpleString shim. Method bodies live in the library
+/* cpputest-turbo: SimpleString shim. Method bodies live in the library
  * (src/shim/simplestring.cpp) so user translation units only parse
  * declarations — that keeps per-TU compile cost down. Only the trivial
  * accessors stay inline. */

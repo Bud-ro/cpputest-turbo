@@ -1,4 +1,4 @@
-# cpputest-revibed
+# cpputest-turbo
 
 A from-scratch rewrite of [CppUTest](https://cpputest.github.io/) with a **C11
 core** and a thin C++ header shim. Source-compatible with upstream — existing
@@ -150,7 +150,7 @@ message formats) and a small number of macro bodies follow CppUTest
 (BSD-3-Clause, see `third_party/cpputest/COPYING`); the implementation is
 new code.
 
-cpputest-revibed is an independent reimplementation and is not affiliated
+cpputest-turbo is an independent reimplementation and is not affiliated
 with or endorsed by the CppUTest project. "CppUTest" refers to the upstream
 project at cpputest.github.io, whose public interface this project
 reproduces for source compatibility.

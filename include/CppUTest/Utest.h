@@ -1,7 +1,7 @@
 #ifndef D_UTest_h
 #define D_UTest_h
 
-/* cpputest-revibed: thin C++ shim over the C core. The classes here keep
+/* cpputest-turbo: thin C++ shim over the C core. The classes here keep
  * upstream's names and shapes (user fixtures derive from Utest, the TEST
  * macros generate UtestShell subclasses) but all execution, registration,
  * counting and output happens in libCppUTest's C core. */

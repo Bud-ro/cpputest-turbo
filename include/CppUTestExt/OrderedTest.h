@@ -1,7 +1,7 @@
 #ifndef D_OrderedTest_h
 #define D_OrderedTest_h
 
-/* cpputest-revibed: OrderedTest port — TEST_ORDERED(group, name, level)
+/* cpputest-turbo: OrderedTest port — TEST_ORDERED(group, name, level)
  * runs tests in ascending level order regardless of registration order.
  * Logic mirrors upstream OrderedTest.cpp, threading an ordered chain
  * through the registry list. */

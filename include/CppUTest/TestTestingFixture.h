@@ -1,7 +1,7 @@
 #ifndef D_TestTestingFixture_H
 #define D_TestTestingFixture_H
 
-/* cpputest-revibed: TestTestingFixture shim — runs a generated test in an
+/* cpputest-turbo: TestTestingFixture shim — runs a generated test in an
  * isolated registry context and captures its output, so the framework can
  * test itself (upstream's own suite leans on this heavily). */
 

@@ -1,7 +1,7 @@
 #ifndef D_MockSupport_h
 #define D_MockSupport_h
 
-/* cpputest-revibed: CppUMock facade over the C mock core. Current slice:
+/* cpputest-turbo: CppUMock facade over the C mock core. Current slice:
  * call expectations/counting, strict order, enable/disable, clear,
  * checkExpectations, ignoreOtherCalls, crashOnFailure. Parameters, return
  * values, comparators and the C interface land in later slices (the methods

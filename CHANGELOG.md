@@ -1,11 +1,28 @@
 # Changelog
 
-All notable changes to cpputest-revibed. Format follows
+All notable changes to cpputest-turbo. Format follows
 [Keep a Changelog](https://keepachangelog.com); versions are git tags.
 
-## [Unreleased]
+## [v1.0.0] — 2026-06-10
+
+### Changed
+- Project renamed to **cpputest-turbo** (library and header names keep the
+  CppUTest-compatible spelling — that is the interface).
+- `include/cpputest_core/` headers are now explicitly internal (no
+  stability guarantee); the supported C API is `TestHarness_c.h` +
+  `MockSupport_c.h`.
+- Required build flags raised to maximum strictness: `-Wpedantic -Wshadow
+  -Wstrict-prototypes -Wmissing-prototypes -Wundef -Wwrite-strings
+  -Wconversion -Wsign-conversion` under `-Werror`.
 
 ### Added
+- clang-format style (`.clang-format`, applied repo-wide), `.editorconfig`,
+  and `scripts/check-format.sh` (style + hygiene) wired into `check.sh`
+  and CI.
+- Differential fuzzing across optimization levels (`FUZZ_OPT`); CI deep-fuzz
+  matrix runs -O0/-O1/-O2/-O3.
+- "Lean mode" documentation: 4× faster test compiles via
+  `-DCPPUTEST_MEM_LEAK_DETECTION_DISABLED -DCPPUTEST_USE_STD_CPP_LIB=0`.
 - `onObject()` on expected and actual mock calls (object-instance matching,
   with upstream's `MockUnexpectedObjectFailure` /
   `MockExpectedObjectDidntHappenFailure` messages).

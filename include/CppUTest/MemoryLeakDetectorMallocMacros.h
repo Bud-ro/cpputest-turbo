@@ -1,4 +1,4 @@
-/* cpputest-revibed: malloc-family redefinition routing through the leak
+/* cpputest-turbo: malloc-family redefinition routing through the leak
  * tracker. Opt-in like upstream: include this header (or force-include
  * MemoryLeakDetectorForceInclude.h) in C/C++ code under test. */
 

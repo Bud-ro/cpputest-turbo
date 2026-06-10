@@ -1,7 +1,7 @@
 #ifndef D_TestHarness_c_h
 #define D_TestHarness_c_h
 
-/* cpputest-revibed: the C interface, upstream-identical macro surface.
+/* cpputest-turbo: the C interface, upstream-identical macro surface.
  * Pure-C consumers can use this against the C core directly (the companion
  * C++ wrapper file pattern from upstream also works unchanged). */
 
