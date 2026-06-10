@@ -63,6 +63,13 @@ static const char *type_names[] = {
     "void*", "const void*", "void (*)()", "const unsigned char*"
 };
 
+const char *cum_value_type_name(const cum_value *v)
+{
+    if (v->type == CUM_T_OBJECT || v->type == CUM_T_CONST_OBJECT)
+        return v->v.obj.type_name ? v->v.obj.type_name : "";
+    return type_names[v->type];
+}
+
 static int type_is_integer(cum_type t)
 {
     return t == CUM_T_INT || t == CUM_T_UINT || t == CUM_T_LONG ||
@@ -133,6 +140,10 @@ static int value_equals(const cum_value *e, const cum_value *a)
     case CUM_T_MEMBUFFER:
         return e->v.mem.size == a->v.mem.size &&
                0 == memcmp(e->v.mem.buf, a->v.mem.buf, e->v.mem.size);
+    case CUM_T_OBJECT:
+    case CUM_T_CONST_OBJECT:
+        /* needs an installed comparator (later slice); never equal without */
+        return 0;
     default: return 0;
     }
 }
@@ -168,6 +179,10 @@ static char *value_to_string(const cum_value *v)
         cu_str_free(hex);
         return result;
     }
+    case CUM_T_OBJECT:
+    case CUM_T_CONST_OBJECT:
+        return cu_str_printf("No comparator found for type: \"%s\"",
+                             cum_value_type_name(v));
     default: return cu_str_printf("?");
     }
 }
@@ -193,6 +208,8 @@ struct cum_expectation {
     int out_of_order;
     int ignore_other_parameters;
     int candidate; /* potentially matching the in-progress actual call */
+    int has_return;
+    cum_value return_value;
     void *user;    /* C++ facade */
     struct cum_expectation *next;
 };
@@ -212,6 +229,13 @@ struct cum_actual {
     cum_scope *scope;
 };
 
+typedef struct cum_data {
+    char *name;
+    cum_value value;
+    char *owned_type_name; /* for object values */
+    struct cum_data *next;
+} cum_data;
+
 struct cum_scope {
     char *name;
     int enabled;
@@ -220,6 +244,7 @@ struct cum_scope {
     unsigned actual_call_order;
     unsigned expected_call_order;
     cum_expectation *expectations; /* append order preserved */
+    cum_data *data;
     cum_actual *last_actual;
     struct cum_scope *next;
 };
@@ -291,7 +316,7 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
     } else {
         for (cum_param *p = e->params; p; p = p->next) {
             char *value = value_to_string(&p->value);
-            msb_addf(b, "%s %s: <%s>", type_names[p->value.type], p->name, value);
+            msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name, value);
             cu_str_free(value);
             if (p->next)
                 msb_add(b, ", ");
@@ -314,7 +339,7 @@ static void msb_missing_params(msb *b, const cum_expectation *e)
         if (!first)
             msb_add(b, ", ");
         first = 0;
-        msb_addf(b, "%s %s", type_names[p->value.type], p->name);
+        msb_addf(b, "%s %s", cum_value_type_name(&p->value), p->name);
     }
 }
 
@@ -431,7 +456,7 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
     msb_add(&b, "\n");
     msb_history_related(&b, s, fn);
     msb_addf(&b, "\n\tACTUAL unexpected parameter passed to function: %s\n", fn);
-    msb_addf(&b, "\t\t%s %s: <%s>", type_names[value->type], param_name, value_str);
+    msb_addf(&b, "\t\t%s %s: <%s>", cum_value_type_name(value), param_name, value_str);
     cu_str_free(value_str);
     mock_fail(&b);
 }
@@ -553,6 +578,71 @@ void cum_expectation_ignore_other_parameters(cum_expectation *e)
 {
     if (e)
         e->ignore_other_parameters = 1;
+}
+
+static void actual_finalize(cum_actual *a);
+
+void cum_expectation_and_return(cum_expectation *e, cum_value value)
+{
+    if (!e)
+        return;
+    e->has_return = 1;
+    e->return_value = value;
+}
+
+/* reading the return value finalizes the call, like upstream */
+int cum_actual_return_value(cum_actual *a, cum_value *out)
+{
+    if (!a)
+        return 0;
+    actual_finalize(a);
+    if (a->matching && a->matching->has_return) {
+        *out = a->matching->return_value;
+        return 1;
+    }
+    return 0;
+}
+
+int cum_scope_return_value(cum_scope *s, cum_value *out)
+{
+    return s->last_actual ? cum_actual_return_value(s->last_actual, out) : 0;
+}
+
+void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)
+{
+    cum_data *d;
+    for (d = s->data; d; d = d->next)
+        if (0 == strcmp(d->name, name))
+            break;
+    if (!d) {
+        d = calloc(1, sizeof *d);
+        d->name = strdup(name);
+        d->next = s->data;
+        s->data = d;
+    }
+    free(d->owned_type_name);
+    d->owned_type_name = NULL;
+    if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
+        d->owned_type_name = strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+        value.v.obj.type_name = d->owned_type_name;
+    }
+    d->value = value;
+}
+
+int cum_scope_get_data(cum_scope *s, const char *name, cum_value *out)
+{
+    for (cum_data *d = s->data; d; d = d->next)
+        if (0 == strcmp(d->name, name)) {
+            *out = d->value;
+            return 1;
+        }
+    return 0;
+}
+
+int cum_scope_has_data(cum_scope *s, const char *name)
+{
+    cum_value dummy;
+    return cum_scope_get_data(s, name, &dummy);
 }
 
 void cum_expectation_with_parameter(cum_expectation *e, const char *name,
@@ -863,6 +953,15 @@ static void scope_clear(cum_scope *s)
         e = next;
     }
     s->expectations = NULL;
+    cum_data *d = s->data;
+    while (d) {
+        cum_data *dnext = d->next;
+        free(d->name);
+        free(d->owned_type_name);
+        free(d);
+        d = dnext;
+    }
+    s->data = NULL;
     s->ignore_other_calls = 0;
     s->enabled = 1;
     s->strict_ordering = 0;

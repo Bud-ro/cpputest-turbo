@@ -209,4 +209,110 @@ TEST(MockParamPass, allTypes)
         .withParameter("m", buf, sizeof buf);
 }
 
+/* --- return values & data store (run first) ------------------------------ */
+
+TEST_GROUP(MockReturn)
+{
+    TEST_TEARDOWN()
+    {
+        mock().checkExpectations();
+        mock().clear();
+    }
+};
+
+TEST(MockReturn, allReturnTypes)
+{
+    mock().expectOneCall("b").andReturnValue(true);
+    CHECK_EQUAL(true, mock().actualCall("b").returnBoolValue());
+
+    mock().expectOneCall("i").andReturnValue(-7);
+    LONGS_EQUAL(-7, mock().actualCall("i").returnIntValue());
+
+    mock().expectOneCall("u").andReturnValue(9u);
+    UNSIGNED_LONGS_EQUAL(9u, mock().actualCall("u").returnUnsignedIntValue());
+
+    mock().expectOneCall("l").andReturnValue(-10L);
+    LONGS_EQUAL(-10L, mock().actualCall("l").returnLongIntValue());
+
+    mock().expectOneCall("ul").andReturnValue(11UL);
+    UNSIGNED_LONGS_EQUAL(11UL, mock().actualCall("ul").returnUnsignedLongIntValue());
+
+    mock().expectOneCall("ll").andReturnValue(1LL << 40);
+    LONGLONGS_EQUAL(1LL << 40, mock().actualCall("ll").returnLongLongIntValue());
+
+    mock().expectOneCall("d").andReturnValue(2.5);
+    DOUBLES_EQUAL(2.5, mock().actualCall("d").returnDoubleValue(), 0.001);
+
+    mock().expectOneCall("s").andReturnValue("hello");
+    STRCMP_EQUAL("hello", mock().actualCall("s").returnStringValue());
+
+    mock().expectOneCall("p").andReturnValue((void *)0x99);
+    POINTERS_EQUAL((void *)0x99, mock().actualCall("p").returnPointerValue());
+
+    mock().expectOneCall("cp").andReturnValue((const void *)0x77);
+    POINTERS_EQUAL((const void *)0x77, mock().actualCall("cp").returnConstPointerValue());
+
+    mock().expectOneCall("fp").andReturnValue((void (*)())0x55);
+    FUNCTIONPOINTERS_EQUAL((void (*)())0x55, mock().actualCall("fp").returnFunctionPointerValue());
+}
+
+TEST(MockReturn, orDefault)
+{
+    mock().expectOneCall("noReturn");
+    LONGS_EQUAL(42, mock().actualCall("noReturn").returnIntValueOrDefault(42));
+
+    mock().expectOneCall("withReturn").andReturnValue(7);
+    LONGS_EQUAL(7, mock().actualCall("withReturn").returnIntValueOrDefault(42));
+}
+
+TEST(MockReturn, supportLevelReturnValue)
+{
+    mock().expectOneCall("f").andReturnValue(13);
+    mock().actualCall("f");
+    CHECK(mock().hasReturnValue());
+    LONGS_EQUAL(13, mock().intReturnValue());
+    LONGS_EQUAL(13, mock().returnValue().getIntValue());
+}
+
+TEST(MockReturn, hasReturnValueFalse)
+{
+    mock().expectOneCall("f");
+    mock().actualCall("f");
+    CHECK_FALSE(mock().hasReturnValue());
+    LONGS_EQUAL(5, mock().returnIntValueOrDefault(5));
+}
+
+TEST_GROUP(MockData)
+{
+    TEST_TEARDOWN()
+    {
+        mock().clear();
+    }
+};
+
+TEST(MockData, dataStore)
+{
+    CHECK_FALSE(mock().hasData("x"));
+    mock().setData("x", 5);
+    CHECK(mock().hasData("x"));
+    LONGS_EQUAL(5, mock().getData("x").getIntValue());
+
+    mock().setData("x", 9); /* overwrite */
+    LONGS_EQUAL(9, mock().getData("x").getIntValue());
+
+    mock().setData("s", "text");
+    STRCMP_EQUAL("text", mock().getData("s").getStringValue());
+
+    mock().setData("b", true);
+    CHECK(mock().getData("b").getBoolValue());
+
+    mock().setData("d", 1.25);
+    DOUBLES_EQUAL(1.25, mock().getData("d").getDoubleValue(), 0.0001);
+
+    int object = 1234;
+    mock().setDataObject("obj", "MyType", &object);
+    STRCMP_EQUAL("MyType", mock().getData("obj").getType().asCharString());
+    POINTERS_EQUAL(&object, mock().getData("obj").getObjectPointer());
+}
+
 CPPUTEST_DEFAULT_MAIN

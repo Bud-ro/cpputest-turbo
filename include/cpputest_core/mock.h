@@ -29,7 +29,9 @@ typedef enum {
     CUM_T_POINTER,
     CUM_T_CONST_POINTER,
     CUM_T_FUNCTIONPOINTER,
-    CUM_T_MEMBUFFER
+    CUM_T_MEMBUFFER,
+    CUM_T_OBJECT,
+    CUM_T_CONST_OBJECT
 } cum_type;
 
 typedef struct cum_value {
@@ -54,8 +56,15 @@ typedef struct cum_value {
             const unsigned char *buf;
             size_t size;
         } mem;
+        struct {
+            const char *type_name;
+            const void *ptr;
+        } obj;
     } v;
 } cum_value;
+
+/* "int", "const char*", ... or the custom object type name */
+const char *cum_value_type_name(const cum_value *v);
 
 /* scope registry; "" is the global scope. Creates on first use. */
 cum_scope *cum_scope_get(const char *name);
@@ -81,6 +90,18 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
 
 /* actual-call input parameter (checkInputParameter flow; may fail+longjmp) */
 void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value);
+
+/* return values: set on the expectation, read from the actual call (reading
+ * finalizes the call, like upstream's checkExpectations-in-returnValue) */
+void cum_expectation_and_return(cum_expectation *e, cum_value value);
+int cum_actual_return_value(cum_actual *a, cum_value *out); /* 1 if present */
+int cum_scope_return_value(cum_scope *s, cum_value *out);   /* last actual call */
+
+/* per-scope data store (MockSupport::setData/getData/hasData). Object type
+ * names are copied; everything else stores raw pointers like upstream. */
+void cum_scope_set_data(cum_scope *s, const char *name, cum_value value);
+int cum_scope_get_data(cum_scope *s, const char *name, cum_value *out);
+int cum_scope_has_data(cum_scope *s, const char *name);
 
 /* facade bookkeeping: shim objects attached to records, freed via callback */
 void cum_expectation_set_user(cum_expectation *e, void *user);

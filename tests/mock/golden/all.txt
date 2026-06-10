@@ -1,4 +1,4 @@
-.....
+..........
 tests/mock/mock_tests.cpp:137: error: Failure in TEST(MockParamFail, unexpectedParameterName)
 	Mock Failure: Unexpected parameter name to function "f": b
 	EXPECTED calls that WERE NOT fulfilled related to function: f
@@ -71,5 +71,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (8 failures, 20 tests, 20 ran, 24 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (8 failures, 25 tests, 25 ran, 85 checks, 0 ignored, 0 filtered out, 0 ms)
 
