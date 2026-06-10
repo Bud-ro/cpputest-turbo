@@ -16,8 +16,9 @@
  * checkExpectations/expectedCallsLeft/clear.
  *
  * Getter calls are gated on a freshness flag: upstream's static actualCall
- * pointer dangles after clear/checkExpectations (a real upstream hazard),
- * so reading it then would be UB in the oracle, not a comparison. */
+ * pointer dangles after clear (a real upstream hazard), so reading it then
+ * would be UB in the oracle, not a comparison. checkExpectations keeps the
+ * call alive on both sides and is NOT gated. */
 
 #include "CppUTestExt/MockSupport_c.h"
 
@@ -670,9 +671,11 @@ void fz_mock_c_sequence(unsigned long long seed)
                 printf("C left=%d\n", mock_c()->expectedCallsLeft());
                 break;
             default:
+                /* checkExpectations does NOT invalidate the last actual
+                 * call on either side (only clear does), so getters stay
+                 * comparable through it */
                 TR(".checkExpectations\n");
                 mock_c()->checkExpectations();
-                act_fresh = 0;
                 break;
             }
             break;

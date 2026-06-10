@@ -1638,11 +1638,15 @@ static int scope_has_out_of_order(const cum_scope *s)
 
 int cum_expected_calls_left_all(void)
 {
-    /* upstream recurses through EVERY child scope (finalizing each scope's
-     * pending actual call) before summing — no early exit */
+    /* Upstream recurses through EVERY child scope (finalizing each scope's
+     * pending actual call) before summing — no early exit. Finalize WITHOUT
+     * freeing: upstream's checkExpectationsOfLastActualCall keeps
+     * lastActualFunctionCall_ alive until the next actualCall or clear, so
+     * cached MockActualCall handles (and return getters reading the last
+     * call) stay valid — freeing here was a fuzz-caught use-after-free. */
     int left = 0;
     for (cum_scope *s = scopes; s; s = s->next) {
-        scope_finalize_last_actual(s);
+        actual_finalize(s->last_actual);
         if (scope_has_unfulfilled(s))
             left = 1;
     }
@@ -1658,7 +1662,8 @@ void cum_check_expectations_all(void)
     for (cum_scope *s = scopes; s; s = s->next) {
         if (s->last_actual && s->last_actual->state == CUM_CALL_FAILED)
             last_call_failed = 1;
-        scope_finalize_last_actual(s);
+        /* finalize, don't free: see cum_expected_calls_left_all */
+        actual_finalize(s->last_actual);
         if (scope_has_unfulfilled(s))
             unfulfilled = 1;
         if (scope_has_out_of_order(s))
@@ -1679,7 +1684,8 @@ void cum_check_expectations_scope(cum_scope *s)
 {
     int last_call_failed =
         s->last_actual && s->last_actual->state == CUM_CALL_FAILED;
-    scope_finalize_last_actual(s);
+    /* finalize, don't free: see cum_expected_calls_left_all */
+    actual_finalize(s->last_actual);
 
     if (!last_call_failed && scope_has_unfulfilled(s))
         fail_expected_calls_didnt_happen(s);
@@ -1689,7 +1695,8 @@ void cum_check_expectations_scope(cum_scope *s)
 
 int cum_expected_calls_left_scope(cum_scope *s)
 {
-    scope_finalize_last_actual(s);
+    /* finalize, don't free: see cum_expected_calls_left_all */
+    actual_finalize(s->last_actual);
     return scope_has_unfulfilled(s);
 }
 

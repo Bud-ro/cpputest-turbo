@@ -702,11 +702,10 @@ static int on_global_scope(void)
 
 static void sup_check_expectations(void)
 {
-    /* the core frees the scope's last actual call (and clear frees the
-     * expectations); drop the cached handles so a stale MockActualCall_c or
-     * MockExpectedCall_c pointer cannot dereference freed memory */
-    cur_actual = NULL;
-    cur_expectation = NULL;
+    /* checkExpectations finalizes but does NOT free the pending actual call
+     * (upstream keeps lastActualFunctionCall_ until the next actualCall or
+     * clear), so cur_actual/cur_expectation stay valid — like upstream's
+     * static actualCall/expectedCall surviving checkExpectations_c */
     if (on_global_scope())
         cum_check_expectations_all();
     else
