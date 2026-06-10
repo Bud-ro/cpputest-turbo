@@ -30,6 +30,7 @@ static void emit_str(const char *s)
     }
 }
 
+CU_FORMAT_PRINTF(1, 2)
 static void emit(const char *format, ...)
 {
     /* mock failure histories and string diffs can exceed any fixed buffer;

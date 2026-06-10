@@ -226,9 +226,19 @@ void cu_assert_compare(int comparison, const char *check_string,
 /* UT_PRINT */
 void cu_print(const char *text, const char *file, size_t line);
 
+/* printf-style format checking at call sites; also required so clang
+ * accepts forwarding the format parameter to vsnprintf under
+ * -Wformat-nonliteral (gcc exempts va_list functions, clang does not) */
+#if defined(__GNUC__)
+#define CU_FORMAT_PRINTF(fmt_idx, arg_idx)                                     \
+    __attribute__((format(printf, fmt_idx, arg_idx)))
+#else
+#define CU_FORMAT_PRINTF(fmt_idx, arg_idx)
+#endif
+
 /* String-rendering helpers shared with the C++ SimpleString shim; all return
  * malloc'd strings the caller frees (cu_str_free). */
-char *cu_str_printf(const char *format, ...);
+CU_FORMAT_PRINTF(1, 2) char *cu_str_printf(const char *format, ...);
 char *cu_str_printable(const char *s); /* upstream SimpleString::printable() */
 char *cu_str_from_double(double value, int precision);
 char *cu_str_from_binary(const unsigned char *value, size_t size);

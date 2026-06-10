@@ -199,8 +199,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
 
             snprintf(path, sizeof path, "%s/worker-%d.stats", workdir, w);
             FILE *sf = fopen(path, "wb");
-            if (!sf || 1 != fwrite(&res, sizeof res, 1, sf) ||
-                0 != fclose(sf))
+            if (!sf || 1 != fwrite(&res, sizeof res, 1, sf) || 0 != fclose(sf))
                 _exit(98); /* lost stats would silently drop failures */
             _exit(0);
         }

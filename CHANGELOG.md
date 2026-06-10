@@ -42,6 +42,10 @@ All notable changes to cpputest-turbo. Format follows
 - JUnit `<system-out>` accumulation is linear instead of O(n²) in the
   number of prints.
 
+- clang builds the library warning-clean: printf-format attributes on the
+  variadic helpers (clang's `-Wformat-nonliteral` does not exempt va_list
+  functions like gcc's) and a `void *` hop for its stricter `-Wcast-align`.
+
 ### Added
 - `make lint` / `scripts/check-analyzer.sh`: `gcc -fanalyzer` static
   analysis over the C core and mock core, wired into `check.sh` and CI

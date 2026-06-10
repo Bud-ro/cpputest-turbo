@@ -51,6 +51,7 @@ static void sb_add(sb *b, const char *s)
     sb_add_n(b, s, strlen(s));
 }
 
+CU_FORMAT_PRINTF(2, 3)
 static void sb_addf(sb *b, const char *format, ...)
 {
     va_list args;

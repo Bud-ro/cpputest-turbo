@@ -87,8 +87,8 @@ static void set_repeat_count(cu_args *a, int ac, const char *const *av, int *i)
  * wrap it to a huge unsigned and silently shuffle with it) */
 static unsigned atou(const char *s)
 {
-    while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\v' ||
-           *s == '\f' || *s == '\r')
+    while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\v' || *s == '\f' ||
+           *s == '\r')
         s++;
     unsigned result = 0;
     for (; *s >= '0' && *s <= '9'; s++)

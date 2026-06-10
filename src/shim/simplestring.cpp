@@ -448,6 +448,7 @@ SimpleString PrintableStringFromOrNull(const char *expected)
     return expected ? StringFrom(expected).printable() : StringFrom("(null)");
 }
 
+CU_FORMAT_PRINTF(1, 0)
 SimpleString VStringFromFormat(const char *format, va_list args)
 {
     va_list copy;

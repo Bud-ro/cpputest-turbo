@@ -29,6 +29,7 @@ static void msb_init(msb *b)
     b->buf[0] = '\0';
 }
 
+CU_FORMAT_PRINTF(2, 3)
 static void msb_addf(msb *b, const char *format, ...)
 {
     va_list args;

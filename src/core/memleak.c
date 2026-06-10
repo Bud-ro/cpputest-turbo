@@ -78,6 +78,7 @@ static void rb_clear(void)
     rb.write_limit = CU_MEM_BUFFER_LEN - 1;
 }
 
+CU_FORMAT_PRINTF(1, 2)
 static void rb_add(const char *format, ...)
 {
     size_t left = rb.write_limit - rb.filled;
@@ -204,7 +205,9 @@ void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line, int type)
     char *user = block + NODE_OFFSET;
     memcpy(user + size, GuardBytes, GUARD_SIZE);
 
-    mem_node *node = (mem_node *)block;
+    /* block comes straight from malloc, so it is suitably aligned; the
+     * void* hop keeps clang's stricter -Wcast-align satisfied */
+    mem_node *node = (mem_node *)(void *)block;
     node->ptr = user;
     node->size = size;
     node->file = file ? file : UNKNOWN;
