@@ -80,14 +80,26 @@ $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
     fuzz/fuzz_mock_c_diff.cpp "$OUT/mock_c_seq_up.o" \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockcdiff_upstream"
 
+# differential composition fuzzer: asserts + heap + leaks + mocks +
+# SimpleString + UT_PTR_SET interleaved in one test body
+$CXX $CXXFLAGS fuzz/fuzz_compose_diff.cpp "$OUT/libasan.a" \
+    -o "$OUT/composediff_ours"
+$CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
+    fuzz/fuzz_compose_diff.cpp \
+    .upstream-cache/libCppUTestUpstream.a -o "$OUT/composediff_upstream"
+
 norm() {
     # ms timings + library-INTERNAL failure locations (e.g. the type-check
     # assert in returnIntValue fires inside MockNamedValue.cpp upstream and
-    # inside our MockSupport.h — same behavior, unmatchable source paths)
+    # inside our MockSupport.h — same behavior, unmatchable source paths) +
+    # leak-report heap addresses and allocation ordinals (the ordinal counts
+    # INTERNAL allocations, which legitimately differ between the libs)
     sed -e 's/, [0-9]* ms)/, 0 ms)/' -e 's/ - [0-9]* ms$/ - 0 ms/' \
         -e 's|[^ ]*/MockNamedValue\.cpp:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's|include/CppUTestExt/MockSupport\.h:[0-9]*: error:|LIB_INTERNAL: error:|' \
-        -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|'
+        -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|' \
+        -e 's/Alloc num ([0-9]*)/Alloc num (N)/' \
+        -e 's/Memory: <0x[0-9a-fA-F]*>/Memory: <0xADDR>/'
 }
 
 echo "== differential torture suites (vs upstream) =="
@@ -111,7 +123,7 @@ done
 
 round=0
 while [ "$round" -lt "$ROUNDS" ]; do
-    for PAIR in mockdiff mockcdiff; do
+    for PAIR in mockdiff mockcdiff composediff; do
         rc_o=0; FUZZ_SEED=$round "$OUT/${PAIR}_ours" >"$OUT/o.txt" 2>&1 || rc_o=$?
         rc_u=0; FUZZ_SEED=$round "$OUT/${PAIR}_upstream" >"$OUT/u.txt" 2>&1 || rc_u=$?
         norm <"$OUT/o.txt" >"$OUT/o.norm"
@@ -124,5 +136,5 @@ while [ "$round" -lt "$ROUNDS" ]; do
     done
     round=$((round + 1))
 done
-echo "fuzz_mock_diff + fuzz_mock_c_diff: $ROUNDS rounds identical to upstream"
+echo "fuzz_mock_diff + fuzz_mock_c_diff + fuzz_compose_diff: $ROUNDS rounds identical to upstream"
 echo "fuzz gate green"
