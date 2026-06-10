@@ -177,8 +177,17 @@ static void c_alloc_churn(void)
     cpputest_free(p);
 }
 
+/* at most ONE deliberate leak per test: the report lists leaks in pointer-
+ * hash-table order, which is address-dependent in upstream AND here — the
+ * relative order of two leaks is legitimately unstable across binaries, so
+ * only single-leak reports are byte-comparable */
+static int leaked_this_test;
+
 static void deliberate_leak(void)
 {
+    if (leaked_this_test)
+        return;
+    leaked_this_test = 1;
     unsigned sz = 8 + fz_r() % 8;
     TR(" LEAK(%u)", sz);
     char *leak = new char[sz];
@@ -258,6 +267,7 @@ static void fz_sequence(unsigned long long seed)
 {
     fz_rng = seed * 2654435761ull + 12345;
     unsigned ops = 4 + fz_r() % 12;
+    leaked_this_test = 0;
     TR("--- compose seed %llu (%u ops)\n", seed, ops);
 
     for (unsigned i = 0; i < ops; i++) {

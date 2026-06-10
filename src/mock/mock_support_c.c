@@ -527,18 +527,18 @@ ACT_RETURN(fp, CUM_T_FUNCTIONPOINTER, fptr, cum_fp, NULL, "void (*)()")
 static double act_ret_double(void)
 {
     cum_value v;
-    if (!cur_actual)
+    int st = cum_actual_return_value(cur_actual, &v);
+    if (st == CUM_RET_IGNORED)
         return 0.0;
     act_ret_type_assert("double");
-    if (cum_actual_return_value(cur_actual, &v) && v.type == CUM_T_DOUBLE)
+    if (st == CUM_RET_VALUE && v.type == CUM_T_DOUBLE)
         return v.v.dbl.value;
     return 0.0;
 }
 
 static double act_ret_double_default(double defaultValue)
 {
-    cum_value v;
-    if (!cur_actual || !cum_actual_return_value(cur_actual, &v))
+    if (!act_has_return_value())
         return defaultValue;
     return act_ret_double();
 }
