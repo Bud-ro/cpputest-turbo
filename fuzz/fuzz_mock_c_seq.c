@@ -562,8 +562,7 @@ static void do_data_op(MockSupport_c *m)
             printf("C dcptr=%p\n", v.value.constPointerValue);
             break;
         case MOCKVALUETYPE_FUNCTIONPOINTER:
-            printf("C dfp=%p\n",
-                   (void *)(size_t)v.value.functionPointerValue);
+            printf("C dfp=%p\n", (void *)(size_t)v.value.functionPointerValue);
             break;
         default:
             printf("C dother type=%d\n", (int)v.type);

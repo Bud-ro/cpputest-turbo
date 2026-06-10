@@ -231,9 +231,11 @@ static void mock_interleave(void)
         int v = (int)(fz_r() % 10);
         TR(" mock-pair(%d)", v);
         mock().expectOneCall("compose").withParameter("x", v).andReturnValue(v +
-                                                                            1);
-        printf("V mock=%d\n",
-               mock().actualCall("compose").withParameter("x", v).returnIntValue());
+                                                                             1);
+        printf("V mock=%d\n", mock()
+                                  .actualCall("compose")
+                                  .withParameter("x", v)
+                                  .returnIntValue());
         break;
     }
     case 1:

@@ -43,7 +43,17 @@ void operator delete[](void *p, const char *file, size_t line) noexcept;
 #endif /* CPPUTEST_HAVE_ALREADY_DECLARED_NEW_DELETE_OVERLOADS */
 
 #if CPPUTEST_USE_NEW_MACROS
+/* redefining the `new` keyword is the entire point of this header; clang
+ * (incl. Apple clang) warns -Wkeyword-macro under -Wpedantic, which breaks
+ * consumers compiling with -Werror */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wkeyword-macro"
+#endif
 #define new new (__FILE__, __LINE__)
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #endif
 
 #endif /* CPPUTEST_USE_MEM_LEAK_DETECTION && __cplusplus */

@@ -65,7 +65,10 @@ static const unsigned char fz_membuf[3] = {0xAA, 0xBB, 0xCC};
 
 /* fake pointer/function-pointer values: identical literals in both binaries
  * (never dereferenced/called), so printed values cannot diverge */
-static void *fz_ptr(void) { return (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10); }
+static void *fz_ptr(void)
+{
+    return (void *)(size_t)(0x10 + (fz_r() % 3) * 0x10);
+}
 static const void *fz_cptr(void)
 {
     return (const void *)(size_t)(0x40 + (fz_r() % 3) * 0x10);
@@ -268,8 +271,7 @@ static void do_return_getter(MockActualCall &a)
         break;
     case 22:
         TR(" g-fp");
-        printf("V afp=%p\n",
-               (void *)(size_t)a.returnFunctionPointerValue());
+        printf("V afp=%p\n", (void *)(size_t)a.returnFunctionPointerValue());
         break;
     case 23:
         TR(" g-fpDflt");

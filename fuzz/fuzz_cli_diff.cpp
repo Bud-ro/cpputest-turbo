@@ -55,7 +55,8 @@ TEST_GROUP(GroupC){TEST_TEARDOWN(){mock().clear();
 TEST(GroupC, mockPass)
 {
     mock().expectOneCall("fn").withParameter("x", 4).andReturnValue(8);
-    LONGS_EQUAL(8, mock().actualCall("fn").withParameter("x", 4).returnIntValue());
+    LONGS_EQUAL(8,
+                mock().actualCall("fn").withParameter("x", 4).returnIntValue());
     mock().checkExpectations();
 }
 
