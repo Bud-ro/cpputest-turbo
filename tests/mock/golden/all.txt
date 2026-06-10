@@ -1,4 +1,14 @@
-..........
+...
+tests/mock/mock_tests.cpp:328: error: Failure in TEST(MockOutput, unexpectedOutputParameterName)
+	Mock Failure: Unexpected output parameter name to function "f": wrong
+	EXPECTED calls that WERE NOT fulfilled related to function: f
+		f -> const void* a: <output> (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled related to function: f
+		<none>
+	ACTUAL unexpected output parameter passed to function: f
+		const void* wrong
+
+...........
 tests/mock/mock_tests.cpp:137: error: Failure in TEST(MockParamFail, unexpectedParameterName)
 	Mock Failure: Unexpected parameter name to function "f": b
 	EXPECTED calls that WERE NOT fulfilled related to function: f
@@ -71,5 +81,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (8 failures, 25 tests, 25 ran, 85 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (9 failures, 29 tests, 29 ran, 92 checks, 0 ignored, 0 filtered out, 0 ms)
 

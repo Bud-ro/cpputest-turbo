@@ -141,6 +141,19 @@ public:
         return *this;
     }
 
+    virtual MockExpectedCall &withOutputParameterReturning(const SimpleString &name,
+                                                           const void *value, size_t size)
+    {
+        cum_expectation_with_output_parameter(handle_, name.asCharString(), value, size);
+        return *this;
+    }
+
+    virtual MockExpectedCall &withUnmodifiedOutputParameter(const SimpleString &name)
+    {
+        cum_expectation_with_unmodified_output_parameter(handle_, name.asCharString());
+        return *this;
+    }
+
     virtual MockExpectedCall &andReturnValue(bool value) { return setReturn(CppUMockBool(value)); }
     virtual MockExpectedCall &andReturnValue(int value) { return setReturn(CppUMockInt(value)); }
     virtual MockExpectedCall &andReturnValue(unsigned int value) { return setReturn(CppUMockUInt(value)); }
@@ -205,6 +218,12 @@ public:
     virtual MockActualCall &withConstPointerParameter(const SimpleString &name, const void *value) { return addParam(name, CppUMockConstPointer(value)); }
     virtual MockActualCall &withFunctionPointerParameter(const SimpleString &name, void (*value)()) { return addParam(name, CppUMockFunctionPointer(value)); }
     virtual MockActualCall &withMemoryBufferParameter(const SimpleString &name, const unsigned char *value, size_t size) { return addParam(name, CppUMockMemBuffer(value, size)); }
+
+    virtual MockActualCall &withOutputParameter(const SimpleString &name, void *output)
+    {
+        cum_actual_with_output_parameter(handle_, name.asCharString(), output);
+        return *this;
+    }
 
     virtual bool hasReturnValue()
     {

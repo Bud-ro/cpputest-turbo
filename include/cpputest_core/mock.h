@@ -91,6 +91,14 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
 /* actual-call input parameter (checkInputParameter flow; may fail+longjmp) */
 void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value);
 
+/* output parameters: the expected side supplies the bytes (or "unmodified");
+ * the actual side registers destinations, filled when the call matches */
+void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
+                                           const void *value, size_t size);
+void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
+                                                      const char *name);
+void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst);
+
 /* return values: set on the expectation, read from the actual call (reading
  * finalizes the call, like upstream's checkExpectations-in-returnValue) */
 void cum_expectation_and_return(cum_expectation *e, cum_value value);

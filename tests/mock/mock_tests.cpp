@@ -315,4 +315,53 @@ TEST(MockData, dataStore)
     POINTERS_EQUAL(&object, mock().getData("obj").getObjectPointer());
 }
 
+/* --- output parameters (run first) ---------------------------------------- */
+
+TEST_GROUP(MockOutput)
+{
+    TEST_TEARDOWN()
+    {
+        mock().clear();
+    }
+};
+
+TEST(MockOutput, unexpectedOutputParameterName)
+{
+    mock().expectOneCall("f").withOutputParameterReturning("a", "x", 1);
+    char sink = 0;
+    mock().actualCall("f").withOutputParameter("wrong", &sink);
+}
+
+TEST(MockOutput, copiesBytesOnMatch)
+{
+    int provided = 42;
+    int received = 0;
+    mock().expectOneCall("f").withOutputParameterReturning("out", &provided,
+                                                           sizeof provided);
+    mock().actualCall("f").withOutputParameter("out", &received);
+    LONGS_EQUAL(42, received);
+    mock().checkExpectations();
+}
+
+TEST(MockOutput, unmodifiedOutputParameter)
+{
+    int received = 7;
+    mock().expectOneCall("f").withUnmodifiedOutputParameter("out");
+    mock().actualCall("f").withOutputParameter("out", &received);
+    LONGS_EQUAL(7, received);
+    mock().checkExpectations();
+}
+
+TEST(MockOutput, mixedWithInputParameters)
+{
+    const char *text = "hi";
+    char buf[3] = { 0, 0, 0 };
+    mock().expectOneCall("f")
+        .withParameter("len", 3)
+        .withOutputParameterReturning("buf", text, 3);
+    mock().actualCall("f").withParameter("len", 3).withOutputParameter("buf", buf);
+    STRCMP_EQUAL("hi", buf);
+    mock().checkExpectations();
+}
+
 CPPUTEST_DEFAULT_MAIN

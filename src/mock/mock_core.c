@@ -198,9 +198,18 @@ typedef struct cum_param {
     struct cum_param *next;
 } cum_param;
 
+typedef struct cum_out_param {
+    char *name;
+    const void *value; /* NULL = withUnmodifiedOutputParameter */
+    size_t size;
+    int matched;
+    struct cum_out_param *next;
+} cum_out_param;
+
 struct cum_expectation {
     char *name;
     cum_param *params; /* input parameters, declaration order */
+    cum_out_param *out_params;
     unsigned expected_calls;
     unsigned actual_calls;
     unsigned order_start; /* CUM_NO_CALL_ORDER = unordered */
@@ -220,8 +229,15 @@ typedef enum {
     CUM_CALL_FAILED
 } cum_call_state;
 
+typedef struct cum_out_dst {
+    char *name;
+    void *dst;
+    struct cum_out_dst *next;
+} cum_out_dst;
+
 struct cum_actual {
     char *name;
+    cum_out_dst *out_dsts;
     unsigned call_order;
     cum_call_state state;
     int expectations_checked;
@@ -310,7 +326,7 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
             msb_addf(b, "expected calls order: <%u..%u> -> ",
                      e->order_start, e->order_end);
     }
-    if (!e->params) {
+    if (!e->params && !e->out_params) {
         msb_add(b, e->ignore_other_parameters ? "all parameters ignored"
                                               : "no parameters");
     } else {
@@ -319,6 +335,13 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
             msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name, value);
             cu_str_free(value);
             if (p->next)
+                msb_add(b, ", ");
+        }
+        if (e->params && e->out_params)
+            msb_add(b, ", ");
+        for (cum_out_param *o = e->out_params; o; o = o->next) {
+            msb_addf(b, "const void* %s: <output>", o->name);
+            if (o->next)
                 msb_add(b, ", ");
         }
         if (e->ignore_other_parameters)
@@ -340,6 +363,14 @@ static void msb_missing_params(msb *b, const cum_expectation *e)
             msb_add(b, ", ");
         first = 0;
         msb_addf(b, "%s %s", cum_value_type_name(&p->value), p->name);
+    }
+    for (cum_out_param *o = e->out_params; o; o = o->next) {
+        if (o->matched)
+            continue;
+        if (!first)
+            msb_add(b, ", ");
+        first = 0;
+        msb_addf(b, "const void* %s", o->name);
     }
 }
 
@@ -458,6 +489,24 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
     msb_addf(&b, "\n\tACTUAL unexpected parameter passed to function: %s\n", fn);
     msb_addf(&b, "\t\t%s %s: <%s>", cum_value_type_name(value), param_name, value_str);
     cu_str_free(value_str);
+    mock_fail(&b);
+}
+
+/* MockUnexpectedOutputParameterFailure (name case; the type case arrives
+ * with OfType/copier support) */
+static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
+                                             const char *param_name)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b,
+             "Mock Failure: Unexpected output parameter name to function \"%s\": %s",
+             fn, param_name);
+    msb_add(&b, "\n");
+    msb_history_related(&b, s, fn);
+    msb_addf(&b, "\n\tACTUAL unexpected output parameter passed to function: %s\n",
+             fn);
+    msb_addf(&b, "\t\tconst void* %s", param_name);
     mock_fail(&b);
 }
 
@@ -581,6 +630,92 @@ void cum_expectation_ignore_other_parameters(cum_expectation *e)
 }
 
 static void actual_finalize(cum_actual *a);
+static void complete_call_when_match_found(cum_actual *a);
+static void reset_param_match_state(cum_expectation *e);
+static int is_finalized_matching(const cum_expectation *e);
+
+void cum_expectation_with_output_parameter(cum_expectation *e, const char *name,
+                                           const void *value, size_t size)
+{
+    if (!e)
+        return;
+    cum_out_param *o = calloc(1, sizeof *o);
+    o->name = strdup(name);
+    o->value = value;
+    o->size = size;
+    cum_out_param **link = &e->out_params;
+    while (*link)
+        link = &(*link)->next;
+    *link = o;
+}
+
+void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
+                                                      const char *name)
+{
+    cum_expectation_with_output_parameter(e, name, NULL, 0);
+}
+
+static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
+                                             const char *param_name);
+
+/* MockCheckedActualCall::withOutputParameter / checkOutputParameter */
+void cum_actual_with_output_parameter(cum_actual *a, const char *name, void *dst)
+{
+    if (!a || a->state == CUM_CALL_FAILED)
+        return;
+    cum_scope *s = a->scope;
+
+    /* record the destination */
+    cum_out_dst *d = calloc(1, sizeof *d);
+    d->name = strdup(name);
+    d->dst = dst;
+    d->next = a->out_dsts;
+    a->out_dsts = d;
+
+    /* reopen + discard, like input parameters */
+    a->state = CUM_CALL_IN_PROGRESS;
+    if (a->matching) {
+        reset_param_match_state(a->matching);
+        a->matching = NULL;
+    }
+    for (cum_expectation *e = s->expectations; e; e = e->next)
+        if (is_finalized_matching(e)) {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+
+    /* keep candidates that have this output parameter (or ignore others) */
+    int any = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        int has = 0;
+        for (cum_out_param *o = e->out_params; o; o = o->next)
+            if (0 == strcmp(o->name, name))
+                has = 1;
+        if (has || e->ignore_other_parameters)
+            any = 1;
+        else {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+    }
+    if (!any) {
+        a->state = CUM_CALL_FAILED;
+        fail_unexpected_output_parameter(s, a->name, name);
+        return;
+    }
+
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        for (cum_out_param *o = e->out_params; o; o = o->next)
+            if (0 == strcmp(o->name, name))
+                o->matched = 1;
+    }
+
+    complete_call_when_match_found(a);
+}
 
 void cum_expectation_and_return(cum_expectation *e, cum_value value)
 {
@@ -663,12 +798,17 @@ static void reset_param_match_state(cum_expectation *e)
 {
     for (cum_param *p = e->params; p; p = p->next)
         p->matched = 0;
+    for (cum_out_param *o = e->out_params; o; o = o->next)
+        o->matched = 0;
 }
 
 static int all_params_matched(const cum_expectation *e)
 {
     for (cum_param *p = e->params; p; p = p->next)
         if (!p->matched)
+            return 0;
+    for (cum_out_param *o = e->out_params; o; o = o->next)
+        if (!o->matched)
             return 0;
     return 1;
 }
@@ -727,6 +867,14 @@ static void clear_candidates(cum_scope *s)
 
 /* completeCallWhenMatchIsFound: a finalized (non-ignoring) full match wins
  * immediately; ignore-others matches wait for call finalization. */
+static void copy_output_parameters(cum_actual *a, cum_expectation *e)
+{
+    for (cum_out_dst *d = a->out_dsts; d; d = d->next)
+        for (cum_out_param *o = e->out_params; o; o = o->next)
+            if (0 == strcmp(o->name, d->name) && o->value)
+                memcpy(d->dst, o->value, o->size);
+}
+
 static void complete_call_when_match_found(cum_actual *a)
 {
     for (cum_expectation *e = a->scope->expectations; e; e = e->next) {
@@ -734,6 +882,15 @@ static void complete_call_when_match_found(cum_actual *a)
             e->candidate = 0; /* removed from candidacy (claimed) */
             a->matching = e;
             a->state = CUM_CALL_SUCCEED;
+            copy_output_parameters(a, e);
+            return;
+        }
+    }
+    /* an ignore-others candidate that currently matches still gets its
+     * output parameters copied (upstream getFirstMatchingExpectation) */
+    for (cum_expectation *e = a->scope->expectations; e; e = e->next) {
+        if (e->candidate && all_params_matched(e)) {
+            copy_output_parameters(a, e);
             return;
         }
     }
@@ -761,6 +918,7 @@ static void actual_finalize(cum_actual *a)
             e->candidate = 0;
             a->matching = e;
             a->state = CUM_CALL_SUCCEED;
+            copy_output_parameters(a, e);
             expectation_call_was_made(e, a->call_order);
             clear_candidates(s);
             return;
@@ -777,6 +935,13 @@ static void scope_finalize_last_actual(cum_scope *s)
 {
     if (s->last_actual) {
         actual_finalize(s->last_actual);
+        cum_out_dst *d = s->last_actual->out_dsts;
+        while (d) {
+            cum_out_dst *next = d->next;
+            free(d->name);
+            free(d);
+            d = next;
+        }
         free(s->last_actual->name);
         free(s->last_actual);
         s->last_actual = NULL;
@@ -947,6 +1112,13 @@ static void scope_clear(cum_scope *s)
             free(p->name);
             free(p);
             p = pnext;
+        }
+        cum_out_param *o = e->out_params;
+        while (o) {
+            cum_out_param *onext = o->next;
+            free(o->name);
+            free(o);
+            o = onext;
         }
         free(e->name);
         free(e);
