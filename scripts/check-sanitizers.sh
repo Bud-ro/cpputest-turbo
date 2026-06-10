@@ -54,8 +54,12 @@ run_proc() { # binary args
     echo "ok: $*"
 }
 g++ $CXXFLAGS tests/process/process_tests.cpp "$OUT/libCppUTestAsan.a" -o "$OUT/proc.bin"
-run_proc "$OUT/proc.bin" -p
-run_proc "$OUT/proc.bin" -j2
+# the deliberate-SIGSEGV test cannot run under sanitizers (the sanitizer
+# intercepts the controlled crash: UBSan null-store on Linux, ASan
+# DEADLYSIGNAL on Darwin) — exclude it here; tests/process/run.sh covers
+# crash containment unsanitized in the normal gate
+run_proc "$OUT/proc.bin" -p -xg Hazard
+run_proc "$OUT/proc.bin" -j2 -xg Hazard
 # pure-C consumers (C ABI + mock_c)
 gcc $CFLAGS tests/c_interface/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin" -lstdc++ 2>/dev/null || \
     gcc $CFLAGS tests/c_interface/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin"

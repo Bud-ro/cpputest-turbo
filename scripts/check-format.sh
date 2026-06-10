@@ -29,11 +29,11 @@ fi
 
 # objective hygiene rules, checked everywhere (incl. tests/) with no tools
 for f in $FILES $(find tests -name '*.c' -o -name '*.cpp' | sort); do
-    if grep -qP ' +$' "$f"; then
+    if grep -q '[[:blank:]]$' "$f"; then
         echo "trailing whitespace: $f" >&2
         fail=1
     fi
-    if grep -qP '\t' "$f"; then
+    if grep -q "$(printf '\t')" "$f"; then
         echo "tab character in source: $f" >&2
         fail=1
     fi
