@@ -39,6 +39,35 @@ static const char *const kScopes[] = { "", "s1" };
 
 static unsigned char out_src[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 static unsigned char out_dst[8];
+static int fz_objs[3] = { 10, 20, 30 };
+static int fz_copy_dst;
+static const unsigned char fz_membuf[3] = { 0xAA, 0xBB, 0xCC };
+
+/* deterministic custom type "FZT": compares/prints the pointed-to int */
+class FzComparator : public MockNamedValueComparator
+{
+public:
+    bool isEqual(const void *object1, const void *object2) CPPUTEST_OVERRIDE
+    {
+        return *(const int *)object1 == *(const int *)object2;
+    }
+    SimpleString valueToString(const void *object) CPPUTEST_OVERRIDE
+    {
+        return StringFrom(*(const int *)object);
+    }
+};
+
+class FzCopier : public MockNamedValueCopier
+{
+public:
+    void copy(void *out, const void *in) CPPUTEST_OVERRIDE
+    {
+        *(int *)out = *(const int *)in;
+    }
+};
+
+static FzComparator fz_comparator;
+static FzCopier fz_copier;
 
 static const char *last_scope;
 
@@ -53,7 +82,10 @@ static void add_expect_params(MockExpectedCall &e)
     unsigned n = fz_r() % 4;
     for (unsigned i = 0; i < n; i++) {
         const char *p = kParams[fz_r() % 3];
-        switch (fz_r() % 6) {
+        switch (fz_r() % 9) {
+        case 6: { int idx = (int)(fz_r() % 3); TR(" ep-oftype(%s=obj%d)", p, idx); e.withParameterOfType("FZT", p, &fz_objs[idx]); break; }
+        case 7: { unsigned sz = 1 + fz_r() % 3; TR(" ep-membuf(%s,%u)", p, sz); e.withParameter(p, fz_membuf, sz); break; }
+        case 8: { int idx = (int)(fz_r() % 3); TR(" ep-outoftype(%s=obj%d)", p, idx); e.withOutputParameterOfTypeReturning("FZT", p, &fz_objs[idx]); break; }
         case 0: { int v = (int)(fz_r() % 3); TR(" ep-int(%s=%d)", p, v); e.withParameter(p, v); break; }
         case 1: { unsigned long v = fz_r() % 3; TR(" ep-ul(%s=%lu)", p, v); e.withParameter(p, v); break; }
         case 2: { const char *v = kStrings[fz_r() % 3]; TR(" ep-str(%s=%s)", p, v); e.withParameter(p, v); break; }
@@ -78,7 +110,10 @@ static void add_actual_params(MockActualCall &a)
     unsigned n = fz_r() % 4;
     for (unsigned i = 0; i < n; i++) {
         const char *p = kParams[fz_r() % 3];
-        switch (fz_r() % 6) {
+        switch (fz_r() % 9) {
+        case 6: { int idx = (int)(fz_r() % 3); TR(" ap-oftype(%s=obj%d)", p, idx); a.withParameterOfType("FZT", p, &fz_objs[idx]); break; }
+        case 7: { unsigned sz = 1 + fz_r() % 3; TR(" ap-membuf(%s,%u)", p, sz); a.withParameter(p, fz_membuf, sz); break; }
+        case 8: { TR(" ap-outoftype(%s)", p); a.withOutputParameterOfType("FZT", p, &fz_copy_dst); break; }
         case 0: { int v = (int)(fz_r() % 3); TR(" ap-int(%s=%d)", p, v); a.withParameter(p, v); break; }
         case 1: { unsigned long v = fz_r() % 3; TR(" ap-ul(%s=%lu)", p, v); a.withParameter(p, v); break; }
         case 2: { const char *v = kStrings[fz_r() % 3]; TR(" ap-str(%s=%s)", p, v); a.withParameter(p, v); break; }
@@ -94,6 +129,9 @@ static void fz_sequence(unsigned long long seed)
     fz_rng = seed * 2654435761ull + 12345;
     unsigned ops = 6 + fz_r() % 18;
     TR("--- seq seed %llu (%u ops)\n", seed, ops);
+
+    mock().installComparator("FZT", fz_comparator);
+    mock().installCopier("FZT", fz_copier);
 
     for (unsigned i = 0; i < ops; i++) {
         switch (fz_r() % 10) {
@@ -130,8 +168,12 @@ static void fz_sequence(unsigned long long seed)
             MockActualCall &a = m.actualCall(an);
             add_actual_params(a);
             if (fz_r() % 4 == 0) {
-                TR(" retIntOrDefault");
-                a.returnIntValueOrDefault(-1);
+                switch (fz_r() % 4) {
+                case 0: TR(" retIntOrDefault"); a.returnIntValueOrDefault(-1); break;
+                case 1: TR(" retStringOrDefault"); a.returnStringValueOrDefault("dflt"); break;
+                case 2: TR(" retDoubleOrDefault"); a.returnDoubleValueOrDefault(0.5); break;
+                default: TR(" retULongOrDefault"); a.returnUnsignedLongIntValueOrDefault(9); break;
+                }
             }
             TR("\n");
             break;
@@ -159,12 +201,23 @@ static void fz_sequence(unsigned long long seed)
             }
             break;
         default:
-            if (fz_r() % 3 == 0) {
+            switch (fz_r() % 5) {
+            case 0:
                 TR("[].clear\n");
                 mock().clear();
-            } else {
+                break;
+            case 1:
+                TR("[s1].clear\n");
+                mock("s1").clear();
+                break;
+            case 2:
+                TR("[].expectedCallsLeft\n");
+                (void)mock().expectedCallsLeft();
+                break;
+            default:
                 TR("[].checkExpectations\n");
                 mock().checkExpectations();
+                break;
             }
             break;
         }
@@ -177,6 +230,7 @@ TEST_GROUP(MockFuzz)
     TEST_TEARDOWN()
     {
         mock().clear();
+        mock().removeAllComparatorsAndCopiers();
     }
 };
 

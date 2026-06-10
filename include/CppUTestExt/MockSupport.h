@@ -99,11 +99,64 @@ public:
 
     bool getBoolValue() const { check("bool"); return value_.v.b != 0; }
     int getIntValue() const { check("int"); return value_.v.i; }
-    unsigned int getUnsignedIntValue() const { check("unsigned int"); return value_.v.ui; }
-    long int getLongIntValue() const { check("long int"); return value_.v.l; }
-    unsigned long int getUnsignedLongIntValue() const { check("unsigned long int"); return value_.v.ul; }
-    cpputest_longlong getLongLongIntValue() const { check("long long int"); return value_.v.ll; }
-    cpputest_ulonglong getUnsignedLongLongIntValue() const { check("unsigned long long int"); return value_.v.ull; }
+    /* upstream's typed getters apply integer WIDENING coercion before the
+     * type assert (MockNamedValue.cpp:204-285); coerced reads don't count
+     * a check. Coercion only applies to a real value (has_). */
+    unsigned int getUnsignedIntValue() const
+    {
+        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+            return (unsigned int)value_.v.i;
+        check("unsigned int");
+        return value_.v.ui;
+    }
+    long int getLongIntValue() const
+    {
+        if (has_ && value_.type == CUM_T_INT)
+            return value_.v.i;
+        if (has_ && value_.type == CUM_T_UINT)
+            return (long int)value_.v.ui;
+        check("long int");
+        return value_.v.l;
+    }
+    unsigned long int getUnsignedLongIntValue() const
+    {
+        if (has_ && value_.type == CUM_T_UINT)
+            return value_.v.ui;
+        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+            return (unsigned long int)value_.v.i;
+        if (has_ && value_.type == CUM_T_LONG && value_.v.l >= 0)
+            return (unsigned long int)value_.v.l;
+        check("unsigned long int");
+        return value_.v.ul;
+    }
+    cpputest_longlong getLongLongIntValue() const
+    {
+        if (has_ && value_.type == CUM_T_INT)
+            return value_.v.i;
+        if (has_ && value_.type == CUM_T_UINT)
+            return (cpputest_longlong)value_.v.ui;
+        if (has_ && value_.type == CUM_T_LONG)
+            return value_.v.l;
+        if (has_ && value_.type == CUM_T_ULONG)
+            return (cpputest_longlong)value_.v.ul;
+        check("long long int");
+        return value_.v.ll;
+    }
+    cpputest_ulonglong getUnsignedLongLongIntValue() const
+    {
+        if (has_ && value_.type == CUM_T_UINT)
+            return value_.v.ui;
+        if (has_ && value_.type == CUM_T_INT && value_.v.i >= 0)
+            return (cpputest_ulonglong)value_.v.i;
+        if (has_ && value_.type == CUM_T_LONG && value_.v.l >= 0)
+            return (cpputest_ulonglong)value_.v.l;
+        if (has_ && value_.type == CUM_T_ULONG)
+            return value_.v.ul;
+        if (has_ && value_.type == CUM_T_LONGLONG && value_.v.ll >= 0)
+            return (cpputest_ulonglong)value_.v.ll;
+        check("unsigned long long int");
+        return value_.v.ull;
+    }
     double getDoubleValue() const { check("double"); return value_.v.dbl.value; }
     const char *getStringValue() const { check("const char*"); return value_.v.str; }
     void *getPointerValue() const { check("void*"); return value_.v.ptr; }
@@ -481,7 +534,15 @@ public:
     }
 
     virtual void checkExpectations() { cum_check_expectations_all(); }
-    virtual void clear() { cum_clear_all(); }
+    virtual void clear()
+    {
+        /* upstream: the GLOBAL clear deletes all child scopes; a child's
+         * clear wipes only its own state (the child survives) */
+        if (cum_scope_name(scope_)[0] == '\0')
+            cum_clear_all();
+        else
+            cum_clear_scope(scope_);
+    }
     virtual bool expectedCallsLeft() { return cum_expected_calls_left_all() != 0; }
     virtual void ignoreOtherCalls() { cum_ignore_other_calls(scope_); }
     virtual void disable() { cum_enable(scope_, 0); }

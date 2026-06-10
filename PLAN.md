@@ -150,8 +150,21 @@ Makefile               Builds lib, tests, conformance, bench
 ## Blockers
 (none)
 
+## Publish blockers (from the 5-agent review, 2026-06-09)
+- [ ] P1 LICENSE file (BSD-3, dual copyright) + upstream attribution header in UtestMacros.h (copied macro bodies)
+- [ ] P1 Makefile: user CFLAGS must not drop -std=c11/-Iinclude (split REQ_CFLAGS)
+- [ ] P1 SimpleString operator==/\!= as free functions (reversed-literal comparisons don't compile)
+- [ ] P1 mock onObject() (expected+actual, core + facade + failure messages)
+- [ ] P1 MockSupportPlugin: installComparator/Copier, \!hasFailed gating on checkExpectations, removeAll after clear
+- [ ] P2 mock tracing()/getTraceOutput(); actual withCallOrder(); withName(); MockSupport reporter/repository hooks
+- [ ] P2 honor -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
+- [ ] P2 check.sh should gate sanitizers + bounded fuzz; add leaks+process suites to sanitizer sweep
+- [ ] P3 install target + pkg-config; CHANGELOG; README disclaimer + requirements; expectNoCall returns void
+- [ ] P3 crashOnFailure: report before crash; SimpleString utility surface (find/replace/split/VStringFromFormat/std::string)
+
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #25 (5x Opus review + widened fuzzing): widened differential alphabet (comparators/copiers/OfType/membuffer/typed-return-asks/scope-clear) caught 4 more parity bugs (OfType output rendering in dumps+MISSING list; child-scope clear must not wipe globally; known-name wrong-type output params not rescued by ignoreOtherParameters; integer return getters need upstream's widening coercion in BOTH C++ facade and C API). Review-driven safety fixes: heap corruption freeing tracked ptrs after tracking toggled off (lookup-based release), size-arithmetic overflow guard in block_alloc, mkdtemp per-run worker dirs. Review verdict logged in next section: NOT yet publish-ready — blockers: LICENSE/attribution, Makefile CFLAGS, SimpleString free operator==, mock onObject/tracing/MockSupportPlugin, CPPUTEST_MEM_LEAK_DETECTION_DISABLED.
 - 2026-06-09 #24: fuzzer found a REAL output bug — emit() truncated failure messages >1KiB (fixed-size stack buffer; long mock histories hit it). Fixed with heap spill + fixture regression test. 400-round soak (20k random mock sequences) now byte-identical to upstream; torture suite identical; sanitizers green.
 - 2026-06-09 #23 (fuzzing + mock torture): built seeded ASan/UBSan fuzzers (args parser, failure formatters, leak tracker) and a DIFFERENTIAL mock fuzzer (same public-API driver vs upstream, outputs diffed). Found and fixed 8 real divergences: duplicate-param-name first-by-name rendering/lookup quirks; actual output param type label void*; ignoreOtherCalls/disable/enable propagate global->children; lazily-created scopes clone global state; global clear DELETES children (zombie+revive model) and discards pending actual call UNCHECKED; mock(name) on existing scope counts a check (upstream internal STRCMP assert); output-param copy counts a check per param; C-API typed return getters count+fail on type mismatch like upstream getters. Also: tests/leaks/run.sh golden check had been vacuous (mangled bang) — fixed, goldens verified genuine. Our mock suite now runs byte-identical ON UPSTREAM. mock torture suite added (15 adversarial scenarios, differential).
 - 2026-06-09 #22 (post-v0.1.0 perf rounds): napkin math said 25-30% was a miss -> profiled (asserts 2.7ns, churn 14ns/pair vs floors 0.2ns/2ns). Round 1: inline assertion fast path (passing path = counter+compare in user TU, failure-only lib entries; LIFETIME TRAP: capturing char*/void* args into locals kills temporaries (getType().asCharString()) — string/mem compares must run inside the same full expression via inline check fns; caught by mock golden). Round 2: leak tracker embeds node in block (1 malloc not 2) + capped size-class freelists. Results: asserts 10x (0.3ns), churn 2.2x (6.4ns/pair), sequential ~5x upstream, -j8 ~14x. -p8 is a parse error (-p takes no N; use -jN); old single-group bench couldn't parallelize — bench now 8 groups. All gates green (check, sanitizers, macOS).

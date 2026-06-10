@@ -329,13 +329,57 @@ static void act_ret_type_assert(const char *want)
         return act_ret_##fnname(); \
     }
 
+/* integer getters mirror upstream MockNamedValue's WIDENING coercion
+ * (MockNamedValue.cpp:204-285): a compatible narrower value is returned
+ * without the counting type assert; only the fallback asserts. The accept
+ * expression sees the fetched value as `v` and assigns `coerced`. */
+#define ACT_RETURN_COERCED(fnname, field, ctype, typestr, accept) \
+    static ctype act_ret_##fnname(void) \
+    { \
+        cum_value v; \
+        if (!cur_actual) \
+            return 0; \
+        if (cum_actual_return_value(cur_actual, &v)) { \
+            ctype coerced; \
+            if (accept) \
+                return coerced; \
+        } \
+        act_ret_type_assert(typestr); \
+        cum_actual_return_value(cur_actual, &v); \
+        return (ctype)v.v.field; \
+    } \
+    static ctype act_ret_##fnname##_default(ctype defaultValue) \
+    { \
+        cum_value v; \
+        if (!cur_actual || !cum_actual_return_value(cur_actual, &v)) \
+            return defaultValue; \
+        return act_ret_##fnname(); \
+    }
+
+#define COERCE(cond, expr) ((cond) ? (coerced = (expr), 1) : 0)
+
 ACT_RETURN(bool, CUM_T_BOOL, b, int, 0, "bool")
 ACT_RETURN(int, CUM_T_INT, i, int, 0, "int")
-ACT_RETURN(uint, CUM_T_UINT, ui, unsigned int, 0, "unsigned int")
-ACT_RETURN(long, CUM_T_LONG, l, long int, 0, "long int")
-ACT_RETURN(ulong, CUM_T_ULONG, ul, unsigned long int, 0, "unsigned long int")
-ACT_RETURN(ll, CUM_T_LONGLONG, ll, cpputest_longlong, 0, "long long int")
-ACT_RETURN(ull, CUM_T_ULONGLONG, ull, cpputest_ulonglong, 0, "unsigned long long int")
+ACT_RETURN_COERCED(uint, ui, unsigned int, "unsigned int",
+    COERCE(v.type == CUM_T_INT && v.v.i >= 0, (unsigned int)v.v.i))
+ACT_RETURN_COERCED(long, l, long int, "long int",
+    COERCE(v.type == CUM_T_INT, v.v.i) ||
+    COERCE(v.type == CUM_T_UINT, (long int)v.v.ui))
+ACT_RETURN_COERCED(ulong, ul, unsigned long int, "unsigned long int",
+    COERCE(v.type == CUM_T_UINT, v.v.ui) ||
+    COERCE(v.type == CUM_T_INT && v.v.i >= 0, (unsigned long int)v.v.i) ||
+    COERCE(v.type == CUM_T_LONG && v.v.l >= 0, (unsigned long int)v.v.l))
+ACT_RETURN_COERCED(ll, ll, cpputest_longlong, "long long int",
+    COERCE(v.type == CUM_T_INT, v.v.i) ||
+    COERCE(v.type == CUM_T_UINT, (cpputest_longlong)v.v.ui) ||
+    COERCE(v.type == CUM_T_LONG, v.v.l) ||
+    COERCE(v.type == CUM_T_ULONG, (cpputest_longlong)v.v.ul))
+ACT_RETURN_COERCED(ull, ull, cpputest_ulonglong, "unsigned long long int",
+    COERCE(v.type == CUM_T_UINT, v.v.ui) ||
+    COERCE(v.type == CUM_T_INT && v.v.i >= 0, (cpputest_ulonglong)v.v.i) ||
+    COERCE(v.type == CUM_T_LONG && v.v.l >= 0, (cpputest_ulonglong)v.v.l) ||
+    COERCE(v.type == CUM_T_ULONG, v.v.ul) ||
+    COERCE(v.type == CUM_T_LONGLONG && v.v.ll >= 0, (cpputest_ulonglong)v.v.ll))
 ACT_RETURN(string, CUM_T_STRING, str, const char *, NULL, "const char*")
 ACT_RETURN(pointer, CUM_T_POINTER, ptr, void *, NULL, "void*")
 ACT_RETURN(const_pointer, CUM_T_CONST_POINTER, cptr, const void *, NULL, "const void*")

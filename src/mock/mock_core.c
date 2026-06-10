@@ -460,7 +460,8 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
         if (e->params && e->out_params)
             msb_add(b, ", ");
         for (cum_out_param *o = e->out_params; o; o = o->next) {
-            msb_addf(b, "const void* %s: <output>", o->name);
+            msb_addf(b, "%s %s: <output>",
+                     o->type_name ? o->type_name : "const void*", o->name);
             if (o->next)
                 msb_add(b, ", ");
         }
@@ -490,7 +491,8 @@ static void msb_missing_params(msb *b, const cum_expectation *e)
         if (!first)
             msb_add(b, ", ");
         first = 0;
-        msb_addf(b, "const void* %s", o->name);
+        msb_addf(b, "%s %s", o->type_name ? o->type_name : "const void*",
+                 o->name);
     }
 }
 
@@ -853,12 +855,17 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
         while (o && 0 != strcmp(o->name, name))
             o = o->next;
         if (o) {
+            /* name found: type compatibility decides — ignoreOtherParameters
+             * does NOT rescue a wrong-typed known name (upstream
+             * hasOutputParameter ternary) */
             if (out_types_match(o, type_name))
                 has = 1;
             else
                 name_seen_wrong_type = 1;
+        } else {
+            has = e->ignore_other_parameters;
         }
-        if (has || e->ignore_other_parameters)
+        if (has)
             any = 1;
         else {
             e->candidate = 0;
@@ -1382,6 +1389,18 @@ void cum_clear_all(void)
             s->zombie = 1;
     }
     crash_on_failure = 0;
+}
+
+void cum_clear_scope(cum_scope *s)
+{
+    /* upstream MockSupport::clear on a CHILD scope: clears its own state
+     * only; the child stays registered in the parent (no deletion) */
+    scope_clear(s);
+}
+
+const char *cum_scope_name(const cum_scope *s)
+{
+    return s->name;
 }
 
 /* upstream propagates ignoreOtherCalls/disable/enable from the global mock

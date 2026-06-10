@@ -126,12 +126,23 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
     if ((size_t)workers > group_count)
         workers = (int)group_count;
 
+    /* per-run private directory: avoids collisions between concurrent runs
+     * sharing $TMPDIR and symlink games with predictable names */
     const char *tmpdir = getenv("TMPDIR");
     if (!tmpdir)
         tmpdir = "/tmp";
+    char workdir[512];
+    snprintf(workdir, sizeof workdir, "%s/cpputest-par-XXXXXX", tmpdir);
+    if (!mkdtemp(workdir)) {
+        fprintf(stderr, "cpputest: mkdtemp failed: %s\n", workdir);
+        total->failure_count++; /* surface as a failing run */
+        cu_out_summary(out, total);
+        free(groups);
+        return 1;
+    }
 
     pid_t *pids = calloc((size_t)workers, sizeof *pids);
-    char path[512];
+    char path[600];
 
     total->time_started = cu_time_in_millis();
 
@@ -160,7 +171,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
             *link = NULL;
             cu_registry_set_tests(head);
 
-            snprintf(path, sizeof path, "%s/cpputest-worker-%d.out", tmpdir, w);
+            snprintf(path, sizeof path, "%s/worker-%d.out", workdir, w);
             if (!freopen(path, "w", stdout))
                 _exit(99);
 
@@ -174,7 +185,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
             cu_run_all_tests_internal(a, &res, &wout);
             fflush(NULL);
 
-            snprintf(path, sizeof path, "%s/cpputest-worker-%d.stats", tmpdir, w);
+            snprintf(path, sizeof path, "%s/worker-%d.stats", workdir, w);
             FILE *sf = fopen(path, "wb");
             if (sf) {
                 fwrite(&res, sizeof res, 1, sf);
@@ -193,7 +204,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
         while (waitpid(pids[w], &status, 0) == -1 && errno == EINTR)
             ;
 
-        snprintf(path, sizeof path, "%s/cpputest-worker-%d.out", tmpdir, w);
+        snprintf(path, sizeof path, "%s/worker-%d.out", workdir, w);
         FILE *of = fopen(path, "r");
         if (of) {
             char buf[4096];
@@ -204,7 +215,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
         }
         remove(path);
 
-        snprintf(path, sizeof path, "%s/cpputest-worker-%d.stats", tmpdir, w);
+        snprintf(path, sizeof path, "%s/worker-%d.stats", workdir, w);
         FILE *sf = fopen(path, "rb");
         cu_result res;
         memset(&res, 0, sizeof res);
@@ -232,6 +243,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
     total->total_ms = cu_time_in_millis() - total->time_started;
     cu_out_summary(out, total);
 
+    rmdir(workdir);
     free(groups);
     free(pids);
     return 0;

@@ -245,6 +245,10 @@ void cu_mem_free_tracked(void *p, const char *file, size_t line, int type);
 void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line);
 void cu_mem_tracking_set(int on);   /* turnOn/OffNewDeleteOverloads */
 int cu_mem_tracking(void);          /* areNewDeleteOverloaded */
+/* free a pointer that MAY be a tracked block even though tracking is now
+ * off (the tracked user pointer is offset into the malloc block; a raw
+ * free would corrupt the heap) */
+void cu_mem_release_if_tracked(void *p);
 void cu_mem_save_and_disable_tracking(void); /* ref-counted */
 void cu_mem_restore_tracking(void);
 void cu_mem_start_checking(void);   /* per-test checking period */

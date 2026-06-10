@@ -23,7 +23,7 @@ static void deallocate(void *p, int type)
     if (cu_mem_tracking())
         cu_mem_free_tracked(p, "<unknown>", 0, type);
     else
-        free(p);
+        cu_mem_release_if_tracked(p); /* p may still be a tracked block */
 }
 
 void *operator new(std::size_t size)

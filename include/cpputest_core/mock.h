@@ -68,6 +68,7 @@ const char *cum_value_type_name(const cum_value *v);
 
 /* scope registry; "" is the global scope. Creates on first use. */
 cum_scope *cum_scope_get(const char *name);
+const char *cum_scope_name(const cum_scope *s);
 
 /* MockSupport surface (subset — grows with the shim) */
 void cum_strict_order(cum_scope *s);
@@ -76,6 +77,8 @@ cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount,
 cum_actual *cum_actual_call(cum_scope *s, const char *name); /* NULL: disabled/ignored */
 void cum_check_expectations_all(void); /* recursive over every scope */
 void cum_clear_all(void);
+/* clear ONE scope (upstream child-scope clear: the scope itself survives) */
+void cum_clear_scope(cum_scope *s);
 int cum_expected_calls_left_all(void);
 void cum_ignore_other_calls(cum_scope *s);
 void cum_enable(cum_scope *s, int enabled);

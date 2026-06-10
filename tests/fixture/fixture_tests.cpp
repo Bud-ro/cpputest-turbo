@@ -2,6 +2,7 @@
 #include "CppUTest/TestTestingFixture.h"
 #include "CppUTest/CommandLineTestRunner.h"
 
+#include <cpputest_core/core.h>
 #include <string.h>
 
 static bool setupCalled = false;
@@ -69,6 +70,29 @@ TEST(Fixture, longFailureMessageNotTruncated)
     fixture.runTestWithMethod(failWithLongMessage);
     LONGS_EQUAL(1, fixture.getFailureCount());
     fixture.assertPrintContains("MARKER");
+}
+
+/* regression: a block allocated while tracking is ON has its user pointer
+ * offset into the malloc block — freeing it after tracking is turned OFF
+ * must not pass that interior pointer to raw free (heap corruption; found
+ * by the core review) */
+TEST(Fixture, freeTrackedPointerAfterTrackingDisabled)
+{
+    char *pm = (char *)cpputest_malloc(32);
+    char *pn = new char[32];
+    cu_mem_tracking_set(0);
+    cpputest_free(pm);
+    delete[] pn;
+    void *pr = cpputest_malloc(16); /* untracked while off */
+    cu_mem_tracking_set(1);
+    char *pt = (char *)cpputest_malloc(8);
+    cu_mem_tracking_set(0);
+    pt = (char *)cpputest_realloc(pt, 64); /* tracked ptr, tracking off */
+    CHECK(pt != NULLPTR);
+    pt[63] = 'x';
+    cpputest_free(pt);
+    cpputest_free(pr);
+    cu_mem_tracking_set(1);
 }
 
 CPPUTEST_DEFAULT_MAIN

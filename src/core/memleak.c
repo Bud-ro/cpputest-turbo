@@ -148,6 +148,10 @@ static int class_of(size_t block_size)
 
 static char *block_alloc(size_t user_size)
 {
+    if (user_size > (size_t)-1 - NODE_OFFSET - GUARD_SIZE)
+        return NULL; /* size arithmetic would wrap; the freelist size-class
+                        rounding would otherwise hide the huge request from
+                        malloc and the guard write would land out of bounds */
     size_t bs = NODE_OFFSET + user_size + GUARD_SIZE;
     int c = class_of(bs);
     if (c >= 0) {
@@ -462,11 +466,37 @@ void *cpputest_calloc(size_t count, size_t size)
     return cpputest_calloc_location(count, size, UNKNOWN, 0);
 }
 
+/* With tracking OFF, a pointer may still belong to a TRACKED block (the
+ * user pointer sits NODE_OFFSET into the malloc block). Passing it to raw
+ * free/realloc would corrupt the heap, so look it up first; tracked blocks
+ * are released silently (no checks — tracking is off), like upstream's
+ * documented "accounting is simply lost" behavior. */
+void cu_mem_release_if_tracked(void *p)
+{
+    mem_node *node = remove_node(p);
+    if (node)
+        block_free(node);
+    else
+        free(p);
+}
+
 void *cpputest_realloc_location(void *p, size_t size,
                                 const char *file, size_t line)
 {
     if (tracking_on)
         return cu_mem_realloc_tracked(p, size, file, line);
+    if (p) {
+        mem_node *node = remove_node(p);
+        if (node) {
+            void *fresh = malloc(size);
+            if (fresh) {
+                size_t keep = node->size < size ? node->size : size;
+                memcpy(fresh, p, keep);
+                block_free(node);
+            }
+            return fresh;
+        }
+    }
     return realloc(p, size);
 }
 
@@ -479,8 +509,8 @@ void cpputest_free_location(void *p, const char *file, size_t line)
 {
     if (tracking_on)
         cu_mem_free_tracked(p, file, line, CU_MEM_MALLOC);
-    else
-        free(p);
+    else if (p)
+        cu_mem_release_if_tracked(p);
 }
 
 void cpputest_free(void *p)
