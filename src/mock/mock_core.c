@@ -1302,12 +1302,15 @@ static int scope_has_out_of_order(const cum_scope *s)
 
 int cum_expected_calls_left_all(void)
 {
+    /* upstream recurses through EVERY child scope (finalizing each scope's
+     * pending actual call) before summing — no early exit */
+    int left = 0;
     for (cum_scope *s = scopes; s; s = s->next) {
         scope_finalize_last_actual(s);
         if (scope_has_unfulfilled(s))
-            return 1;
+            left = 1;
     }
-    return 0;
+    return left;
 }
 
 void cum_check_expectations_all(void)

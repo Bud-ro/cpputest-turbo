@@ -153,9 +153,9 @@ Makefile               Builds lib, tests, conformance, bench
 ## Publish blockers (from the 5-agent review, 2026-06-09)
 - [ ] P1 LICENSE file (BSD-3, dual copyright) + upstream attribution header in UtestMacros.h (copied macro bodies)
 - [ ] P1 Makefile: user CFLAGS must not drop -std=c11/-Iinclude (split REQ_CFLAGS)
-- [ ] P1 SimpleString operator==/\!= as free functions (reversed-literal comparisons don't compile)
+- [ ] P1 SimpleString operator==/!= as free functions (reversed-literal comparisons don't compile)
 - [ ] P1 mock onObject() (expected+actual, core + facade + failure messages)
-- [ ] P1 MockSupportPlugin: installComparator/Copier, \!hasFailed gating on checkExpectations, removeAll after clear
+- [ ] P1 MockSupportPlugin: installComparator/Copier, !hasFailed gating on checkExpectations, removeAll after clear
 - [ ] P2 mock tracing()/getTraceOutput(); actual withCallOrder(); withName(); MockSupport reporter/repository hooks
 - [ ] P2 honor -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
 - [ ] P2 check.sh should gate sanitizers + bounded fuzz; add leaks+process suites to sanitizer sweep
