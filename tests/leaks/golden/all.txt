@@ -1,0 +1,49 @@
+
+tests/leaks/leak_tests.cpp:54: error: Failure in TEST(Leaks, leaksNewArray)
+	Memory leak(s) found.
+Alloc num (N) Leak size: 5 Allocated at: tests/leaks/leak_tests.cpp and line: 56. Type: "new []"
+	Memory: <0xADDR> Content:
+    0000: 41 42 43 44 00                                   |ABCD.|
+Total number of leaks:  1
+
+
+.
+tests/leaks/leak_tests.cpp:48: error: Failure in TEST(Leaks, leaksMalloc)
+	Memory leak(s) found.
+Alloc num (N) Leak size: 5 Allocated at: <unknown> and line: 0. Type: "malloc"
+	Memory: <0xADDR> Content:
+    0000: 57 58 59 5a 00                                   |WXYZ.|
+Total number of leaks:  1
+NOTE:
+	Memory leak reports about malloc and free can be caused by allocating using the cpputest version of malloc,
+	but deallocate using the standard free.
+	If this is the case, check whether your malloc/free replacements are working (#define malloc cpputest_malloc etc).
+
+
+...
+tests/leaks/leak_tests.cpp:27: error: Failure in TEST(Leaks, freeUntracked)
+freeUntracked:27: error:
+	Deallocating non-allocated memory
+   allocated at file: <unknown> line: 0 size: 0 type: unknown
+   deallocated at file: <unknown> line: 0 type: free
+
+
+.
+tests/leaks/leak_tests.cpp:21: error: Failure in TEST(Leaks, mismatch)
+mismatch:21: error:
+	Allocation/deallocation type mismatch
+   allocated at file: <unknown> line: 0 size: 4 type: malloc
+   deallocated at file: <unknown> line: 0 type: delete
+
+
+.
+tests/leaks/leak_tests.cpp:14: error: Failure in TEST(Leaks, corruption)
+corruption:14: error:
+	Memory corruption (written out of bounds?)
+   allocated at file: <unknown> line: 0 size: 4 type: malloc
+   deallocated at file: <unknown> line: 0 type: free
+
+
+.
+Errors (5 failures, 7 tests, 7 ran, 0 checks, 0 ignored, 0 filtered out, 0 ms)
+

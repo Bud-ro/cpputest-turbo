@@ -1,0 +1,8 @@
+.
+OK (7 tests, 1 ran, 0 checks, 0 ignored, 6 filtered out, 0 ms)
+
+Memory leak(s) found.
+Alloc num (N) Leak size: 3 Allocated at: tests/leaks/leak_tests.cpp and line: 44. Type: "new []"
+	Memory: <0xADDR> Content:
+    0000: 69 67 00                                         |ig.|
+Total number of leaks:  1

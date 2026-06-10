@@ -123,6 +123,45 @@ size_t cu_failure_count(void);
 /* TestResult::print — routed through the active output (JUnit captures) */
 void cu_print_text(const char *text);
 
+/* ------------------------ memory leak detection -------------------------
+ * Port of upstream MemoryLeakDetector. Allocation types: */
+#define CU_MEM_NEW 0
+#define CU_MEM_NEW_ARRAY 1
+#define CU_MEM_MALLOC 2
+
+void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line, int type);
+void cu_mem_free_tracked(void *p, const char *file, size_t line, int type);
+void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line);
+void cu_mem_tracking_set(int on);   /* turnOn/OffNewDeleteOverloads */
+int cu_mem_tracking(void);          /* areNewDeleteOverloaded */
+void cu_mem_save_and_disable_tracking(void); /* ref-counted */
+void cu_mem_restore_tracking(void);
+void cu_mem_start_checking(void);   /* per-test checking period */
+void cu_mem_stop_checking(void);
+void cu_mem_mark_checking_as_global(void);
+size_t cu_mem_leak_count(int checking_only);
+const char *cu_mem_leak_report(int checking_only); /* static buffer */
+void cu_mem_destroy_all(void);
+
+/* upstream public C allocation API (TestHarness_c.h surface) */
+void *cpputest_malloc(size_t size);
+void *cpputest_calloc(size_t count, size_t size);
+void *cpputest_realloc(void *p, size_t size);
+void cpputest_free(void *p);
+char *cpputest_strdup(const char *s);
+char *cpputest_strndup(const char *s, size_t n);
+void *cpputest_malloc_location(size_t size, const char *file, size_t line);
+void *cpputest_calloc_location(size_t count, size_t size, const char *file, size_t line);
+void *cpputest_realloc_location(void *p, size_t size, const char *file, size_t line);
+void cpputest_free_location(void *p, const char *file, size_t line);
+char *cpputest_strdup_location(const char *s, const char *file, size_t line);
+char *cpputest_strndup_location(const char *s, size_t n, const char *file, size_t line);
+void cpputest_malloc_set_out_of_memory(void);
+void cpputest_malloc_set_not_out_of_memory(void);
+void cpputest_malloc_set_out_of_memory_countdown(int countdown);
+void cpputest_malloc_count_reset(void);
+int cpputest_malloc_get_count(void);
+
 /* Full runner: parses args, runs registered tests, returns exit code. */
 int cu_run_all(int argc, const char *const *argv);
 

@@ -96,15 +96,15 @@ Makefile               Builds lib, tests, conformance, bench
       `SetPointerPlugin` parity.
 
 ### Phase 4 — Memory leak detection
-- [ ] 4.1 C core allocator interposition: counting allocator wrapping
+- [x] 4.1 C core allocator interposition: counting allocator wrapping
       malloc/free/realloc with per-test balance, allocation-site recording
       (file/line via macros), leak report format parity.
-- [ ] 4.2 `MemoryLeakDetectorNewMacros.h` / `MallocMacros.h` shims: operator
+- [x] 4.2 `MemoryLeakDetectorNewMacros.h` / `MallocMacros.h` shims: operator
       new/delete overrides routing into the C core tracker; `NewMacros` on by
       default via `TestHarness.h` like upstream.
-- [ ] 4.3 `MemoryLeakWarningPlugin.h` shim: enable/disable, expected-leaks API
+- [x] 4.3 `MemoryLeakWarningPlugin.h` shim: enable/disable, expected-leaks API
       (`EXPECT_N_LEAKS`), ignore-when-debugging behaviors.
-- [ ] 4.4 `TestMemoryAllocator.h` shim subset used by public API tests
+- [ ] 4.4 (deferred to Phase 7, conformance-driven) `TestMemoryAllocator.h` shim subset used by public API tests
       (setCurrentNewAllocator etc. to the extent upstream tests require).
 
 ### Phase 5 — C interface & fixtures
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #7: 4.1-4.3 done — memleak.c (guard bytes BAS, 0xCD poison, 4096-byte report buffer w/ footer reservation, hash-table nodes, checking periods), newdelete.cpp = the ONE C++ TU in the lib (replacement operators can't be inline; make CPPUTEST_C_ONLY=1 skips it), New/Malloc macro headers (malloc macros opt-in like upstream), MemoryLeakWarningPlugin shim, runner installs leak plugin + prints FinalReport on green. Dealloc failures use test NAME as failure file (upstream quirk, golden-pinned). 4.4 deferred to conformance.
 - 2026-06-09 #6: 3.5 done — Phase 3 complete. TestPlugin chain lives in the C++ shim (verbatim upstream semantics incl. NullTestPlugin terminator, reverse post-action order, disable); C core exposes pre/post/parse hooks; TestRegistry/TestResult/TestFailure shims added; SetPointerPlugin + UT_PTR_SET with the 32-entry table; CommandLineTestRunner installs SetPointerPlugin like upstream. -pXXX args now reach plugin parseArguments.
 - 2026-06-09 #5: 3.1-3.4 done — JUnit XML (junit.c: per-group files, check-count deltas, first-failure-only, system-out accumulation never reset, filtered-group cpputest_.xml quirk), TeamCity stream (escaping incl. unescaped-test-file quirk in testFailed), -vv traces upstream-exact, output dispatch + composite junit+console under -v. JUnit drops print(number) like upstream no-ops. 3.5 plugins next.
 - 2026-06-09 #1: Phase 0 complete (Makefile, check.sh, docs/INTERFACE.md). Key parity traps from upstream: tests run in REVERSE registration order; exit code = failure count (ran-nothing counts as an error); `"expected <%s>\n\tbut was  <%s>"` has two spaces; IGNORE_TEST installer name lacks an underscore (upstream bug, must reproduce); CHECK_EQUAL double-evaluates with WARNING on mismatch.

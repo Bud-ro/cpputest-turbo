@@ -68,6 +68,12 @@ if ! sh tests/outputs/run.sh "$BUILD"; then
     fail=1
 fi
 
+# ---- memory leak detection ---------------------------------------------------
+$CXX $CXXFLAGS tests/leaks/leak_tests.cpp build/libCppUTest.a -o "$BUILD/leak_tests"
+if ! sh tests/leaks/run.sh "$BUILD/leak_tests"; then
+    fail=1
+fi
+
 # ---- plugins -----------------------------------------------------------------
 $CXX $CXXFLAGS tests/plugins/plugin_tests.cpp build/libCppUTest.a -o "$BUILD/plugin_tests"
 rc=0; "$BUILD/plugin_tests" >/dev/null 2>&1 || rc=$?
@@ -76,6 +82,15 @@ rc=0; "$BUILD/plugin_tests" -pcustom >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests -pcustom exit $rc" >&2; fail=1; else echo "ok: plugin parseArguments"; fi
 rc=0; "$BUILD/plugin_tests" -pnonsense >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 1 ]; then echo "FAILED: plugin_tests -pnonsense exit $rc, expected 1" >&2; fail=1; else echo "ok: unparsed plugin arg errors"; fi
+
+# ---- C-only library build (last: it wipes build/) ---------------------------
+if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null \
+   && make -s clean >/dev/null && make -s >/dev/null; then
+    echo "ok: C-only library builds (CPPUTEST_C_ONLY=1)"
+else
+    echo "FAILED: C-only library build" >&2
+    fail=1
+fi
 
 [ "$fail" -eq 0 ] && echo "unit tests: all green"
 exit "$fail"

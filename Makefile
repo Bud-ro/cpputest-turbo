@@ -16,6 +16,14 @@ CORE_SRC := $(wildcard src/core/*.c)
 CORE_OBJ := $(CORE_SRC:src/core/%.c=$(BUILD)/core/%.o)
 LIB      := $(BUILD)/libCppUTest.a
 
+# The single C++ TU: global operator new/delete replacements for leak
+# tracking. C-only consumers: `make CPPUTEST_C_ONLY=1` skips it (the C core
+# and TestHarness_c work fully without it).
+ifndef CPPUTEST_C_ONLY
+SHIM_SRC := $(wildcard src/shim/*.cpp)
+SHIM_OBJ := $(SHIM_SRC:src/shim/%.cpp=$(BUILD)/shim/%.o)
+endif
+
 MOCK_SRC := $(wildcard src/mock/*.c)
 MOCK_OBJ := $(MOCK_SRC:src/mock/%.c=$(BUILD)/mock/%.o)
 EXT_LIB  := $(BUILD)/libCppUTestExt.a
@@ -32,7 +40,11 @@ $(BUILD)/mock/%.o: src/mock/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(LIB): $(CORE_OBJ)
+$(BUILD)/shim/%.o: src/shim/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(LIB): $(CORE_OBJ) $(SHIM_OBJ)
 	$(AR) rcs $@ $^
 
 $(EXT_LIB): $(MOCK_OBJ)

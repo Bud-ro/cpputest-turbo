@@ -7,8 +7,12 @@
 #include "CppUTest/CppUTestConfig.h"
 #include "CppUTest/Utest.h"
 #include "CppUTest/UtestMacros.h"
-
-/* Memory leak detection macros are pulled in here by upstream too
- * (MemoryLeakDetectorNewMacros.h) — they land in Phase 4. */
+#include "CppUTest/SimpleString.h"
+#include "CppUTest/TestResult.h"
+#include "CppUTest/TestFailure.h"
+#include "CppUTest/TestPlugin.h"
+/* Last, like upstream: this one defines the `new` macro, so everything that
+ * must compile against the real operator new is already parsed above. */
+#include "CppUTest/MemoryLeakWarningPlugin.h"
 
 #endif
