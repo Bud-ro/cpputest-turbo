@@ -104,6 +104,13 @@ $CXX $CXXFLAGS tests/fixture/fixture_tests.cpp build/libCppUTest.a -o "$BUILD/fi
 rc=0; "$BUILD/fixture_tests" >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: fixture_tests exit $rc" >&2; fail=1; else echo "ok: TestTestingFixture"; fi
 
+# ---- CppUMock (basic slice) -----------------------------------------------------
+$CXX $CXXFLAGS tests/mock/mock_tests.cpp build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_tests"
+rc=0; "$BUILD/mock_tests" 2>&1 | sed 's/, [0-9]* ms)/, 0 ms)/' > "$BUILD/mock.out" || rc=$?
+rc=0; "$BUILD/mock_tests" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 5 ]; then echo "FAILED: mock_tests exit $rc, expected 5" >&2; fail=1; fi
+compare "mock failure messages" "$BUILD/mock.out" tests/mock/golden/all.txt
+
 # ---- OrderedTest ---------------------------------------------------------------
 $CXX $CXXFLAGS tests/ordered/ordered_tests.cpp build/libCppUTest.a -o "$BUILD/ordered_tests"
 rc=0; out=$("$BUILD/ordered_tests" -v 2>&1) || rc=$?

@@ -1,0 +1,44 @@
+.......
+tests/mock/mock_tests.cpp:47: error: Failure in TEST(MockFail, unexpectedCall)
+	Mock Failure: Unexpected call to function: foo
+	EXPECTED calls that WERE NOT fulfilled:
+		<none>
+	EXPECTED calls that WERE fulfilled:
+		<none>
+
+.
+tests/mock/mock_tests.cpp:40: error: Failure in TEST(MockFail, unexpectedAdditionalCall)
+	Mock Failure: Unexpected additional (2nd) call to function: bar
+	EXPECTED calls that WERE NOT fulfilled:
+		<none>
+	EXPECTED calls that WERE fulfilled:
+		bar -> no parameters (expected 1 call, called 1 time)
+
+.
+tests/mock/mock_tests.cpp:32: error: Failure in TEST(MockFail, expectedNotFulfilled)
+	Mock Failure: Expected call WAS NOT fulfilled.
+	EXPECTED calls that WERE NOT fulfilled:
+		baz -> no parameters (expected 1 call, called 0 times)
+	EXPECTED calls that WERE fulfilled:
+		baz -> no parameters (expected 1 call, called 1 time)
+
+.
+tests/mock/mock_tests.cpp:26: error: Failure in TEST(MockFail, expectNoCallViolated)
+	Mock Failure: Unexpected call to function: never
+	EXPECTED calls that WERE NOT fulfilled:
+		<none>
+	EXPECTED calls that WERE fulfilled:
+		never -> no parameters (expected 0 calls, called 0 times)
+
+.
+tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
+	Mock Failure: Out of order calls
+	EXPECTED calls that WERE NOT fulfilled:
+		<none>
+	EXPECTED calls that WERE fulfilled:
+		first -> expected call order: <1> -> no parameters (expected 1 call, called 1 time)
+		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
+
+.
+Errors (5 failures, 12 tests, 12 ran, 15 checks, 0 ignored, 0 filtered out, 0 ms)
+

@@ -115,7 +115,7 @@ Makefile               Builds lib, tests, conformance, bench
 - [x] 5.3 `OrderedTest` (CppUTestExt) support.
 
 ### Phase 6 — CppUMock
-- [ ] 6.1 C mock core: expectation store, call matching, parameter records
+- [~] 6.1 (IN PROGRESS: basic slice done — expectation store, parameterless matching, strict order, unexpected/unfulfilled/out-of-order failures w/ exact history trailers) C mock core: expectation store, call matching, parameter records
       (int/unsigned/long/longlong/double/string/pointer/funcptr/mem buffer/
       object), call order, unexpected/unfulfilled failure messages w/ upstream
       text parity.
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #10: 6.1 basic slice — mock core (src/mock/mock_core.c) + MockSupport.h facade: expectOneCall/expectNCalls/expectNoCall, parameterless actualCall matching w/ deferred finalization (callWasMade on next actualCall/checkExpectations like upstream), strictOrder + out-of-order detection, ignoreOtherCalls, enable/disable, scopes (storage level), crashOnFailure. All 5 failure messages golden-pinned (incl. ordinal "additional (2nd) call" and history trailers). mock() singletons use save/disable tracking to stay out of leak accounting. NEXT SLICE: input parameters (cum_value tagged union, withParameter overloads, MockUnexpectedInputParameterFailure + MockExpectedParameterDidntHappenFailure, ignoreOtherParameters matching).
 - 2026-06-09 #9: 5.3 done, Phase 5 complete — OrderedTest ported verbatim (ordered chain threaded through registry; needed UtestShell::addTest/getNext + TestRegistry::getFirstTest/getTestWithNext shims). Phase 6 (CppUMock) next: read INTERFACE.md lines 842+ for mock failure formats first.
 - 2026-06-09 #8: 5.1+5.2 done — TestHarness_c.h full macro surface w/ harness_c.c in the C core (upstream dispatch parity: BOOL/CHAR/UBYTE/SBYTE via CheckEqualFailure, INT via LongsEqual...); pure-C consumers WORK: c_core_tests.c registers cu_test directly and links the CPPUTEST_C_ONLY lib with plain gcc (verified in check.sh). Output now routes through a swappable sink (cu_set_output_sink) enabling TestTestingFixture (isolated registry swap, output capture, nested-run state save/restore, plugin hooks suppressed in nested runs like upstream's fresh-registry behavior). 5.3 OrderedTest next.
 - 2026-06-09 #7: 4.1-4.3 done — memleak.c (guard bytes BAS, 0xCD poison, 4096-byte report buffer w/ footer reservation, hash-table nodes, checking periods), newdelete.cpp = the ONE C++ TU in the lib (replacement operators can't be inline; make CPPUTEST_C_ONLY=1 skips it), New/Malloc macro headers (malloc macros opt-in like upstream), MemoryLeakWarningPlugin shim, runner installs leak plugin + prints FinalReport on green. Dealloc failures use test NAME as failure file (upstream quirk, golden-pinned). 4.4 deferred to conformance.
