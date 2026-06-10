@@ -1,5 +1,7 @@
 # cpputest-turbo
 
+[\![ci](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml/badge.svg)](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml)
+
 A from-scratch rewrite of [CppUTest](https://cpputest.github.io/) with a **C11
 core** and a thin C++ header shim. Source-compatible with upstream — existing
 CppUTest suites recompile unchanged — with byte-identical output, faster
@@ -20,7 +22,8 @@ src/shim/              the only C++ TUs in the library (operator new, SimpleStri
 ```sh
 make            # gcc + POSIX make: build/libCppUTest.a, build/libCppUTestExt.a
 make CPPUTEST_C_ONLY=1   # C compiler only — no C++ anywhere
-./scripts/check.sh       # full test + conformance gate
+./scripts/check.sh       # full gate: format, build, unit + conformance,
+                         # sanitizers, bounded differential fuzz
 ```
 
 No cmake, no autotools. `make install PREFIX=/usr/local` installs the
