@@ -23,8 +23,15 @@ make CPPUTEST_C_ONLY=1   # C compiler only — no C++ anywhere
 ./scripts/check.sh       # full test + conformance gate
 ```
 
-No cmake, no autotools. Linux and macOS (`scripts/check-macos.sh`
-cross-compiles for both macOS architectures with `zig cc`).
+No cmake, no autotools. `make install PREFIX=/usr/local` installs the
+libraries, headers and a pkg-config file.
+
+**Requirements:** a C11 compiler and POSIX make (developed with gcc 13;
+clang is expected to work). The C++ shim needs C++11. Linux and macOS
+(`scripts/check-macos.sh` cross-compiles for both macOS architectures with
+`zig cc` 0.16). Pre-PR gate: `./scripts/check.sh` (build, unit + conformance
+suites, ASan/UBSan sweep, bounded differential fuzz; `CHECK_FAST=1` skips
+the heavy stages).
 
 ## Drop-in migration
 
@@ -88,8 +95,9 @@ Process isolation:
 
 ## Performance
 
-See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`): on an
-assertion/allocation stress load, sequential runs are **~5× faster** than
+See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`; numbers
+from one Linux/gcc-13 machine on a synthetic stress load): sequential runs
+are **~5× faster** than
 upstream (passing assertions are an inlined compare + counter bump — ~0.3 ns;
 leak-tracked new/delete recycles through size-class freelists — 6.4 ns/pair),
 and `-j8` reaches **~14×**. C++ compile time is at parity (both pay for the
@@ -113,6 +121,12 @@ dramatically faster since they never touch the C++ standard library.
 
 ## License
 
-The interface (header names, macro shapes, message formats) follows CppUTest,
-BSD-3-Clause — see `third_party/cpputest/COPYING`. The implementation here is
+BSD-3-Clause — see `LICENSE`. The interface (header names, macro shapes,
+message formats) and a small number of macro bodies follow CppUTest
+(BSD-3-Clause, see `third_party/cpputest/COPYING`); the implementation is
 new code.
+
+cpputest-revibed is an independent reimplementation and is not affiliated
+with or endorsed by the CppUTest project. "CppUTest" refers to the upstream
+project at cpputest.github.io, whose public interface this project
+reproduces for source compatibility.

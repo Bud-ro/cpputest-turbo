@@ -67,37 +67,24 @@ norm() {
         -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|'
 }
 
-echo "== mock torture suite (differential vs upstream) =="
-g++ $CXXFLAGS tests/mock_torture/torture.cpp build/libCppUTestExt.a "$OUT/libasan.a" \
-    -o "$OUT/torture_ours"
-g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include tests/mock_torture/torture.cpp \
-    .upstream-cache/libCppUTestUpstream.a -o "$OUT/torture_upstream"
-rc_o=0; "$OUT/torture_ours" >"$OUT/to.txt" 2>&1 || rc_o=$?
-rc_u=0; "$OUT/torture_upstream" >"$OUT/tu.txt" 2>&1 || rc_u=$?
-norm <"$OUT/to.txt" >"$OUT/to.norm"
-norm <"$OUT/tu.txt" >"$OUT/tu.norm"
-if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/to.norm" "$OUT/tu.norm"; then
-    echo "TORTURE DIVERGENCE (rc ours=$rc_o upstream=$rc_u)" >&2
-    diff -u "$OUT/tu.norm" "$OUT/to.norm" | head -40 >&2
-    exit 1
-fi
-echo "mock torture: identical to upstream"
-
-echo "== MockSupportPlugin torture (differential vs upstream) =="
-g++ $CXXFLAGS tests/mock_torture/plugin_torture.cpp build/libCppUTestExt.a "$OUT/libasan.a" \
-    -o "$OUT/ptorture_ours"
-g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include tests/mock_torture/plugin_torture.cpp \
-    .upstream-cache/libCppUTestUpstream.a -o "$OUT/ptorture_upstream"
-rc_o=0; "$OUT/ptorture_ours" >"$OUT/pto.txt" 2>&1 || rc_o=$?
-rc_u=0; "$OUT/ptorture_upstream" >"$OUT/ptu.txt" 2>&1 || rc_u=$?
-norm <"$OUT/pto.txt" >"$OUT/pto.norm"
-norm <"$OUT/ptu.txt" >"$OUT/ptu.norm"
-if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/pto.norm" "$OUT/ptu.norm"; then
-    echo "PLUGIN TORTURE DIVERGENCE (rc ours=$rc_o upstream=$rc_u)" >&2
-    diff -u "$OUT/ptu.norm" "$OUT/pto.norm" | head -40 >&2
-    exit 1
-fi
-echo "plugin torture: identical to upstream"
+echo "== differential torture suites (vs upstream) =="
+for SUITE in tests/mock_torture/torture.cpp tests/mock_torture/plugin_torture.cpp \
+             tests/mock_torture/sstring_torture.cpp; do
+    g++ $CXXFLAGS "$SUITE" build/libCppUTestExt.a "$OUT/libasan.a" \
+        -o "$OUT/t_ours"
+    g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include "$SUITE" \
+        .upstream-cache/libCppUTestUpstream.a -o "$OUT/t_upstream"
+    rc_o=0; "$OUT/t_ours" >"$OUT/to.txt" 2>&1 || rc_o=$?
+    rc_u=0; "$OUT/t_upstream" >"$OUT/tu.txt" 2>&1 || rc_u=$?
+    norm <"$OUT/to.txt" >"$OUT/to.norm"
+    norm <"$OUT/tu.txt" >"$OUT/tu.norm"
+    if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/to.norm" "$OUT/tu.norm"; then
+        echo "TORTURE DIVERGENCE in $SUITE (rc ours=$rc_o upstream=$rc_u)" >&2
+        diff -u "$OUT/tu.norm" "$OUT/to.norm" | head -40 >&2
+        exit 1
+    fi
+    echo "$SUITE: identical to upstream"
+done
 
 round=0
 while [ "$round" -lt "$ROUNDS" ]; do

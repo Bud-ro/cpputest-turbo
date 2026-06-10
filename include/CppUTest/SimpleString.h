@@ -9,8 +9,19 @@
 #include "CppUTest/CppUTestConfig.h"
 #include <cpputest_core/core.h>
 
+#include <stdarg.h>
+
+#if CPPUTEST_USE_STD_CPP_LIB
+#include <string>
+#endif
+
+class SimpleStringCollection;
+
 class SimpleString
 {
+    friend bool operator==(const SimpleString &left, const SimpleString &right);
+    friend bool operator!=(const SimpleString &left, const SimpleString &right);
+
 public:
     SimpleString(const char *value = "");
     SimpleString(const char *value, size_t repeatCount);
@@ -23,19 +34,40 @@ public:
     bool isEmpty() const { return len_ == 0; }
     char at(size_t pos) const { return buffer_[pos]; }
 
+    static const size_t npos = (size_t)-1;
+
     bool contains(const SimpleString &other) const;
+    bool containsNoCase(const SimpleString &other) const;
     bool startsWith(const SimpleString &other) const;
     bool endsWith(const SimpleString &other) const;
+    bool equalsNoCase(const SimpleString &str) const;
     SimpleString subString(size_t beginPos, size_t amount) const;
     SimpleString subString(size_t beginPos) const;
+    SimpleString subStringFromTill(char startChar, char lastExcludedChar) const;
+
+    size_t find(char ch) const;
+    size_t findFrom(size_t starting_position, char ch) const;
+    size_t count(const SimpleString &str) const;
+    void split(const SimpleString &delimiter, SimpleStringCollection &col) const;
+
+    void replace(char to, char with);
+    void replace(const char *to, const char *with);
+    SimpleString lowerCase() const;
+    void copyToBuffer(char *buffer, size_t bufferSize) const;
+
+    static int AtoI(const char *str);
+    static unsigned AtoU(const char *str);
+    static int StrCmp(const char *s1, const char *s2);
+    static size_t StrLen(const char *str);
+    static int StrNCmp(const char *s1, const char *s2, size_t n);
+    static char *StrNCpy(char *s1, const char *s2, size_t n);
+    static const char *StrStr(const char *s1, const char *s2);
+    static char ToLower(char ch);
+    static int MemCmp(const void *s1, const void *s2, size_t n);
 
     SimpleString &operator+=(const SimpleString &other);
     SimpleString &operator+=(const char *other);
     SimpleString operator+(const SimpleString &other) const;
-    /* free functions like upstream, so a const char* converts on EITHER
-     * side ("literal" == str compiles) */
-    friend bool operator==(const SimpleString &left, const SimpleString &right);
-    friend bool operator!=(const SimpleString &left, const SimpleString &right);
 
     SimpleString printable() const;
 
@@ -48,6 +80,30 @@ private:
 
     char *buffer_;
     size_t len_;
+};
+
+/* free operator forms so a const char* converts on EITHER side */
+bool operator==(const SimpleString &left, const SimpleString &right);
+bool operator!=(const SimpleString &left, const SimpleString &right);
+
+class SimpleStringCollection
+{
+public:
+    SimpleStringCollection();
+    ~SimpleStringCollection();
+
+    void allocate(size_t size);
+
+    size_t size() const;
+    SimpleString &operator[](size_t index);
+
+private:
+    SimpleString *collection_;
+    SimpleString empty_;
+    size_t size_;
+
+    void operator=(SimpleStringCollection &);
+    SimpleStringCollection(SimpleStringCollection &);
 };
 
 SimpleString StringFrom(bool value);
@@ -70,11 +126,17 @@ SimpleString StringFrom(decltype(nullptr));
 SimpleString StringFromOrNull(const char *expected);
 SimpleString PrintableStringFromOrNull(const char *expected);
 
+#if CPPUTEST_USE_STD_CPP_LIB
+SimpleString StringFrom(const std::string &value);
+#endif
+
 SimpleString StringFromFormat(const char *format, ...)
 #if defined(__GNUC__)
     __attribute__((format(printf, 1, 2)))
 #endif
     ;
+SimpleString VStringFromFormat(const char *format, va_list args);
+SimpleString StringFromOrdinalNumber(unsigned int number);
 
 SimpleString HexStringFrom(unsigned long value);
 SimpleString HexStringFrom(long value);
