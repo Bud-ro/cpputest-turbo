@@ -83,10 +83,38 @@ if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests -pcustom exit $rc" >&2; fail
 rc=0; "$BUILD/plugin_tests" -pnonsense >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 1 ]; then echo "FAILED: plugin_tests -pnonsense exit $rc, expected 1" >&2; fail=1; else echo "ok: unparsed plugin arg errors"; fi
 
+# ---- C interface (TestHarness_c) ---------------------------------------------
+CC="${CC:-gcc}"
+CFLAGS_TEST="-std=c11 -Wall -Wextra -Werror -O2 -g -Iinclude"
+$CC $CFLAGS_TEST -c tests/c_interface/c_tests.c -o "$BUILD/c_tests.o"
+$CXX $CXXFLAGS tests/c_interface/c_wrappers.cpp "$BUILD/c_tests.o" build/libCppUTest.a -o "$BUILD/c_interface_tests"
+rc=0; out=$("$BUILD/c_interface_tests" 2>&1) || rc=$?
+if [ "$rc" -ne 1 ]; then echo "FAILED: c_interface_tests exit $rc, expected 1" >&2; fail=1; fi
+if printf '%s' "$out" | grep -q "expected <1 (0x1)>" \
+   && printf '%s' "$out" | grep -qE "Errors \(1 failures, 3 tests, 2 ran, 18 checks, 1 ignored, 0 filtered out, [0-9]+ ms\)"; then
+    echo "ok: C interface (TestHarness_c)"
+else
+    echo "FAILED: c_interface output unexpected:" >&2
+    printf '%s\n' "$out" >&2
+    fail=1
+fi
+
+# ---- TestTestingFixture --------------------------------------------------------
+$CXX $CXXFLAGS tests/fixture/fixture_tests.cpp build/libCppUTest.a -o "$BUILD/fixture_tests"
+rc=0; "$BUILD/fixture_tests" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "FAILED: fixture_tests exit $rc" >&2; fail=1; else echo "ok: TestTestingFixture"; fi
+
 # ---- C-only library build (last: it wipes build/) ---------------------------
-if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null \
-   && make -s clean >/dev/null && make -s >/dev/null; then
-    echo "ok: C-only library builds (CPPUTEST_C_ONLY=1)"
+if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null; then
+    mkdir -p "$BUILD"
+    if $CC $CFLAGS_TEST tests/c_interface/c_core_tests.c build/libCppUTest.a -o "$BUILD/c_core_tests" \
+       && "$BUILD/c_core_tests" >/dev/null 2>&1; then
+        echo "ok: C-only library + pure-C consumer (gcc only, no C++)"
+    else
+        echo "FAILED: pure-C consumer against C-only lib" >&2
+        fail=1
+    fi
+    make -s clean >/dev/null && make -s >/dev/null
 else
     echo "FAILED: C-only library build" >&2
     fail=1

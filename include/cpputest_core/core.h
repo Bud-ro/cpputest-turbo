@@ -162,6 +162,23 @@ void cpputest_malloc_set_out_of_memory_countdown(int countdown);
 void cpputest_malloc_count_reset(void);
 int cpputest_malloc_get_count(void);
 
+/* Console output sink. Default writes to stdout; TestTestingFixture-style
+ * harnesses install a capturing sink. Pass NULL to restore the default. */
+typedef void (*cu_output_sink_fn)(const char *text, void *arg);
+void cu_set_output_sink(cu_output_sink_fn fn, void *arg);
+
+/* Run all registered tests with default options (no CLI parsing), filling
+ * stats. Used by TestTestingFixture; runs sequentially in-process. */
+typedef struct cu_run_stats {
+    size_t test_count;
+    size_t run_count;
+    size_t check_count;
+    size_t failure_count;
+    size_t ignored_count;
+    size_t filtered_out_count;
+} cu_run_stats;
+void cu_run_registered_tests(cu_run_stats *stats_out, int verbose);
+
 /* Full runner: parses args, runs registered tests, returns exit code. */
 int cu_run_all(int argc, const char *const *argv);
 

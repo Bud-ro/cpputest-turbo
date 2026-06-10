@@ -108,9 +108,9 @@ Makefile               Builds lib, tests, conformance, bench
       (setCurrentNewAllocator etc. to the extent upstream tests require).
 
 ### Phase 5 — C interface & fixtures
-- [ ] 5.1 `TestHarness_c.h`: `TEST_C`, `TEST_GROUP_C_*`, `CHECK_*_C` macros,
+- [x] 5.1 `TestHarness_c.h`: `TEST_C`, `TEST_GROUP_C_*`, `CHECK_*_C` macros,
       `cpputest_malloc/free` — pure C consumer path, tested with `gcc -std=c11`.
-- [ ] 5.2 `TestTestingFixture.h` shim (upstream's tests use it heavily to test
+- [x] 5.2 `TestTestingFixture.h` shim (upstream's tests use it heavily to test
       the framework itself — needed for conformance).
 - [ ] 5.3 `OrderedTest` (CppUTestExt) support.
 
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #8: 5.1+5.2 done — TestHarness_c.h full macro surface w/ harness_c.c in the C core (upstream dispatch parity: BOOL/CHAR/UBYTE/SBYTE via CheckEqualFailure, INT via LongsEqual...); pure-C consumers WORK: c_core_tests.c registers cu_test directly and links the CPPUTEST_C_ONLY lib with plain gcc (verified in check.sh). Output now routes through a swappable sink (cu_set_output_sink) enabling TestTestingFixture (isolated registry swap, output capture, nested-run state save/restore, plugin hooks suppressed in nested runs like upstream's fresh-registry behavior). 5.3 OrderedTest next.
 - 2026-06-09 #7: 4.1-4.3 done — memleak.c (guard bytes BAS, 0xCD poison, 4096-byte report buffer w/ footer reservation, hash-table nodes, checking periods), newdelete.cpp = the ONE C++ TU in the lib (replacement operators can't be inline; make CPPUTEST_C_ONLY=1 skips it), New/Malloc macro headers (malloc macros opt-in like upstream), MemoryLeakWarningPlugin shim, runner installs leak plugin + prints FinalReport on green. Dealloc failures use test NAME as failure file (upstream quirk, golden-pinned). 4.4 deferred to conformance.
 - 2026-06-09 #6: 3.5 done — Phase 3 complete. TestPlugin chain lives in the C++ shim (verbatim upstream semantics incl. NullTestPlugin terminator, reverse post-action order, disable); C core exposes pre/post/parse hooks; TestRegistry/TestResult/TestFailure shims added; SetPointerPlugin + UT_PTR_SET with the 32-entry table; CommandLineTestRunner installs SetPointerPlugin like upstream. -pXXX args now reach plugin parseArguments.
 - 2026-06-09 #5: 3.1-3.4 done — JUnit XML (junit.c: per-group files, check-count deltas, first-failure-only, system-out accumulation never reset, filtered-group cpputest_.xml quirk), TeamCity stream (escaping incl. unescaped-test-file quirk in testFailed), -vv traces upstream-exact, output dispatch + composite junit+console under -v. JUnit drops print(number) like upstream no-ops. 3.5 plugins next.

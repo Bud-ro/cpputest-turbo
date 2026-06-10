@@ -266,6 +266,52 @@ static void list_locations(void)
         printf("%s.%s.%s.%d\n", t->group, t->name, t->file, (int)t->line);
 }
 
+/* TestTestingFixture-style run: no CLI, default console output, stats out.
+ * Supports NESTED runs (a fixture running tests from inside a test): all
+ * runner state is saved/restored, and plugin hooks are suppressed — the
+ * upstream fixture uses a fresh registry with its own empty plugin chain. */
+void cu_run_registered_tests(cu_run_stats *stats_out, int verbose)
+{
+    cu_args args;
+    cu_output out;
+    cu_result res;
+
+    cu_test *saved_test = current_test;
+    cu_result *saved_result = current_result;
+    cu_output *saved_output = current_output;
+    cu_plugin_action_fn saved_pre = plugin_pre;
+    cu_plugin_action_fn saved_post = plugin_post;
+    plugin_pre = NULL;
+    plugin_post = NULL;
+
+    memset(&args, 0, sizeof args);
+    args.repeat = 1;
+    args.rethrow_exceptions = 1;
+    memset(&out, 0, sizeof out);
+    out.level = verbose ? CU_OUTPUT_VERBOSE : CU_OUTPUT_NORMAL;
+    out.progress_indicator = ".";
+    memset(&res, 0, sizeof res);
+
+    current_result = &res;
+    current_output = &out;
+    cu_run_all_tests(&args, &res, &out);
+
+    current_test = saved_test;
+    current_result = saved_result;
+    current_output = saved_output;
+    plugin_pre = saved_pre;
+    plugin_post = saved_post;
+
+    if (stats_out) {
+        stats_out->test_count = res.test_count;
+        stats_out->run_count = res.run_count;
+        stats_out->check_count = res.check_count;
+        stats_out->failure_count = res.failure_count;
+        stats_out->ignored_count = res.ignored_count;
+        stats_out->filtered_out_count = res.filtered_out_count;
+    }
+}
+
 int cu_run_all(int argc, const char *const *argv)
 {
     cu_args args;
