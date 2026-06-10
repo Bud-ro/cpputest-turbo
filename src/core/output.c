@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* All console output funnels through a swappable sink so harnesses (e.g.
@@ -26,12 +27,28 @@ static void emit_str(const char *s)
 
 static void emit(const char *format, ...)
 {
+    /* mock failure histories and string diffs can exceed any fixed buffer;
+     * spill to the heap instead of truncating (found by fuzzing) */
     char buf[1024];
     va_list args;
+    va_list copy;
     va_start(args, format);
-    vsnprintf(buf, sizeof buf, format, args);
+    va_copy(copy, args);
+    int n = vsnprintf(buf, sizeof buf, format, copy);
+    va_end(copy);
+    if (n >= (int)sizeof buf) {
+        char *heap = malloc((size_t)n + 1);
+        if (heap) {
+            vsnprintf(heap, (size_t)n + 1, format, args);
+            emit_str(heap);
+            free(heap);
+        } else {
+            emit_str(buf); /* out of memory: emit the truncated prefix */
+        }
+    } else {
+        emit_str(buf);
+    }
     va_end(args);
-    emit_str(buf);
 }
 
 /* Output dispatch. Console formats are byte-identical to upstream
