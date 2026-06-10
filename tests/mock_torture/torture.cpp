@@ -212,6 +212,52 @@ TEST(Torture, expectNoCallWithOtherTraffic)
     mock().checkExpectations();
 }
 
+/* ---- onObject: instance matching, both failure shapes --------------------- */
+TEST(Torture, onObjectMatchesInstance)
+{
+    void *obj1 = (void *)0x1000;
+    void *obj2 = (void *)0x2000;
+    mock().expectOneCall("method").onObject(obj1).andReturnValue(1);
+    mock().expectOneCall("method").onObject(obj2).andReturnValue(2);
+    LONGS_EQUAL(2, mock().actualCall("method").onObject(obj2).returnIntValueOrDefault(0));
+    LONGS_EQUAL(1, mock().actualCall("method").onObject(obj1).returnIntValueOrDefault(0));
+    mock().checkExpectations();
+}
+
+TEST(Torture, onObjectUnexpectedObject)
+{
+    void *obj1 = (void *)0x1000;
+    void *obj3 = (void *)0x3000;
+    mock().expectOneCall("method").onObject(obj1);
+    mock().actualCall("method").onObject(obj3); /* fails: unexpected object */
+    mock().checkExpectations();
+}
+
+TEST(Torture, onObjectNeverPassed)
+{
+    void *obj1 = (void *)0x1000;
+    mock().expectOneCall("method").onObject(obj1);
+    mock().actualCall("method"); /* object never passed */
+    mock().checkExpectations();  /* expected-object-didnt-happen */
+}
+
+TEST(Torture, onObjectMixedWithPlainExpectation)
+{
+    void *obj1 = (void *)0x1000;
+    mock().expectOneCall("method").andReturnValue(7);
+    /* plain expectation ignores the object */
+    LONGS_EQUAL(7, mock().actualCall("method").onObject(obj1).returnIntValueOrDefault(0));
+    mock().checkExpectations();
+}
+
+TEST(Torture, onObjectWithParameters)
+{
+    void *obj1 = (void *)0x1000;
+    mock().expectOneCall("set").onObject(obj1).withParameter("v", 5);
+    mock().actualCall("set").onObject(obj1).withParameter("v", 5);
+    mock().checkExpectations();
+}
+
 /* ---- return value type punning between int widths ------------------------- */
 TEST(Torture, crossWidthReturnDefaults)
 {

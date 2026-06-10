@@ -96,6 +96,11 @@ static void add_expect_params(MockExpectedCall &e)
     }
     if (fz_r() % 4 == 0)
         e.ignoreOtherParameters();
+    if (fz_r() % 5 == 0) {
+        unsigned idx = fz_r() % 2;
+        TR(" ep-onObject(0x%x)", 0x1000u + idx * 0x1000u);
+        e.onObject((void *)(size_t)(0x1000 + idx * 0x1000));
+    }
     if (fz_r() % 3 == 0) {
         switch (fz_r() % 3) {
         case 0: e.andReturnValue((int)(fz_r() % 100)); break;
@@ -166,6 +171,11 @@ static void fz_sequence(unsigned long long seed)
             const char *an = kNames[fz_r() % 3];
             TR("[%s].actualCall(%s)", last_scope, an);
             MockActualCall &a = m.actualCall(an);
+            if (fz_r() % 5 == 0) {
+                unsigned idx = fz_r() % 3; /* 0x3000 never expected */
+                TR(" ap-onObject(0x%x)", 0x1000u + idx * 0x1000u);
+                a.onObject((const void *)(size_t)(0x1000 + idx * 0x1000));
+            }
             add_actual_params(a);
             if (fz_r() % 4 == 0) {
                 switch (fz_r() % 4) {

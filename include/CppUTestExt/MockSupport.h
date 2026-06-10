@@ -232,6 +232,18 @@ public:
         return *this;
     }
 
+    virtual MockExpectedCall &onObject(void *objectPtr)
+    {
+        cum_expectation_on_object(handle_, objectPtr);
+        return *this;
+    }
+
+    virtual MockExpectedCall &withName(const SimpleString &name)
+    {
+        cum_expectation_set_name(handle_, name.asCharString());
+        return *this;
+    }
+
     virtual MockExpectedCall &withParameterOfType(const SimpleString &type,
                                                   const SimpleString &name,
                                                   const void *value)
@@ -297,6 +309,24 @@ public:
     virtual ~MockActualCall() {}
 
     void bind(cum_actual *handle) { handle_ = handle; }
+
+    virtual MockActualCall &onObject(const void *objectPtr)
+    {
+        cum_actual_on_object(handle_, objectPtr);
+        return *this;
+    }
+
+    virtual MockActualCall &withName(const SimpleString &name)
+    {
+        cum_actual_with_name(handle_, name.asCharString());
+        return *this;
+    }
+
+    /* upstream MockCheckedActualCall::withCallOrder is a no-op */
+    virtual MockActualCall &withCallOrder(unsigned int)
+    {
+        return *this;
+    }
 
     MockActualCall &withParameter(const SimpleString &name, bool value) { return withBoolParameter(name, value); }
     MockActualCall &withParameter(const SimpleString &name, int value) { return withIntParameter(name, value); }

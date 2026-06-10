@@ -298,6 +298,9 @@ struct cum_expectation {
     unsigned order_end;
     int out_of_order;
     int ignore_other_parameters;
+    int object_specific;       /* onObject() was used */
+    const void *object_ptr;
+    int passed_to_object;      /* 1 unless object_specific and not yet passed */
     int candidate; /* potentially matching the in-progress actual call */
     int has_return;
     cum_value return_value;
@@ -431,6 +434,8 @@ static void mock_fail(msb *message)
 /* MockCheckedExpectedCall::callToString */
 static void msb_call_to_string(msb *b, const cum_expectation *e)
 {
+    if (e->object_specific)
+        msb_addf(b, "(object address: %p)::", e->object_ptr);
     msb_add(b, e->name);
     msb_add(b, " -> ");
     if (e->order_start != CUM_NO_CALL_ORDER) {
@@ -640,6 +645,32 @@ static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
     mock_fail(&b);
 }
 
+/* MockUnexpectedObjectFailure */
+static void fail_unexpected_object(cum_scope *s, const char *fn,
+                                   const void *object_ptr)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b,
+             "MockFailure: Function called on an unexpected object: %s\n"
+             "\tActual object for call has address: <%p>\n",
+             fn, object_ptr);
+    msb_history_related(&b, s, fn);
+    mock_fail(&b);
+}
+
+/* MockExpectedObjectDidntHappenFailure */
+static void fail_expected_object_didnt_happen(cum_scope *s, const char *fn)
+{
+    msb b;
+    msb_init(&b);
+    msb_addf(&b,
+             "Mock Failure: Expected call on object for function \"%s\" but it did not happen.\n",
+             fn);
+    msb_history_related(&b, s, fn);
+    mock_fail(&b);
+}
+
 static void fail_expected_parameter_didnt_happen(cum_scope *s, const char *fn)
 {
     msb b;
@@ -732,6 +763,7 @@ cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount, const char *n
     cum_expectation *e = calloc(1, sizeof *e);
     e->name = scoped_name(s, name);
     e->expected_calls = amount;
+    e->passed_to_object = 1; /* no specific object expected by default */
     if (s->strict_ordering) {
         e->order_start = s->expected_call_order + 1;
         e->order_end = s->expected_call_order + amount;
@@ -1006,6 +1038,7 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
 
 static void reset_param_match_state(cum_expectation *e)
 {
+    e->passed_to_object = e->object_specific ? 0 : 1;
     for (cum_param *p = e->params; p; p = p->next)
         p->matched = 0;
     for (cum_out_param *o = e->out_params; o; o = o->next)
@@ -1023,11 +1056,18 @@ static int all_params_matched(const cum_expectation *e)
     return 1;
 }
 
+/* isMatchingActualCall: parameters all matched AND (when onObject was used)
+ * the call was passed to the expected object */
+static int is_matching(const cum_expectation *e)
+{
+    return e->candidate && all_params_matched(e) && e->passed_to_object;
+}
+
 /* isMatchingActualCallAndFinalized: ignore-others expectations only finalize
  * explicitly (at call end) */
 static int is_finalized_matching(const cum_expectation *e)
 {
-    return e->candidate && all_params_matched(e) && !e->ignore_other_parameters;
+    return is_matching(e) && !e->ignore_other_parameters;
 }
 
 /* hasInputParameter: upstream uses getValueByName — only the FIRST
@@ -1116,11 +1156,92 @@ static void complete_call_when_match_found(cum_actual *a)
     /* an ignore-others candidate that currently matches still gets its
      * output parameters copied (upstream getFirstMatchingExpectation) */
     for (cum_expectation *e = a->scope->expectations; e; e = e->next) {
-        if (e->candidate && all_params_matched(e)) {
+        if (is_matching(e)) {
             copy_output_parameters(a, e);
             return;
         }
     }
+}
+
+void cum_expectation_on_object(cum_expectation *e, void *object_ptr)
+{
+    if (!e)
+        return; /* disabled mock */
+    e->object_specific = 1;
+    e->passed_to_object = 0;
+    e->object_ptr = object_ptr;
+}
+
+/* MockCheckedExpectedCall::withName — replaces the (already scoped) name */
+void cum_expectation_set_name(cum_expectation *e, const char *name)
+{
+    if (!e)
+        return;
+    free(e->name);
+    e->name = strdup(name);
+}
+
+/* MockCheckedActualCall::withName — rename and re-filter candidates */
+void cum_actual_with_name(cum_actual *a, const char *name)
+{
+    if (!a)
+        return;
+    cum_scope *s = a->scope;
+    free(a->name);
+    a->name = strdup(name);
+    a->state = CUM_CALL_IN_PROGRESS;
+
+    int any = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        if (0 == strcmp(e->name, name)) {
+            any = 1;
+        } else {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+    }
+    if (!any) {
+        a->state = CUM_CALL_FAILED;
+        fail_unexpected_call(s, name);
+        return;
+    }
+    complete_call_when_match_found(a);
+}
+
+/* MockCheckedActualCall::onObject */
+void cum_actual_on_object(cum_actual *a, const void *object_ptr)
+{
+    if (!a || a->state == CUM_CALL_FAILED)
+        return;
+    cum_scope *s = a->scope;
+
+    /* keep candidates relating to this object; expectations without a
+     * specific object ignore it */
+    int any = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (!e->candidate)
+            continue;
+        if (!e->object_specific || e->object_ptr == object_ptr) {
+            any = 1;
+        } else {
+            e->candidate = 0;
+            reset_param_match_state(e);
+        }
+    }
+    if (a->state != CUM_CALL_SUCCEED && !any) {
+        a->state = CUM_CALL_FAILED;
+        fail_unexpected_object(s, a->name, object_ptr);
+        return;
+    }
+
+    for (cum_expectation *e = s->expectations; e; e = e->next)
+        if (e->candidate)
+            e->passed_to_object = 1;
+
+    if (a->state != CUM_CALL_SUCCEED)
+        complete_call_when_match_found(a);
 }
 
 /* MockCheckedActualCall::checkExpectations — finalize the in-progress call */
@@ -1141,7 +1262,7 @@ static void actual_finalize(cum_actual *a)
     /* still in progress: an ignore-others (or zero-param trailing) match may
      * finalize now */
     for (cum_expectation *e = s->expectations; e; e = e->next) {
-        if (e->candidate && all_params_matched(e)) {
+        if (is_matching(e)) {
             e->candidate = 0;
             a->matching = e;
             a->state = CUM_CALL_SUCCEED;
@@ -1152,9 +1273,19 @@ static void actual_finalize(cum_actual *a)
         }
     }
 
-    /* no match: candidates have missing parameters */
+    /* no match: parameters missing on some candidate, or (params all
+     * matched) the call was never passed to the expected object */
     a->state = CUM_CALL_FAILED;
-    fail_expected_parameter_didnt_happen(s, a->name); /* longjmps in a test */
+    {
+        int params_missing = 0;
+        for (cum_expectation *e = s->expectations; e; e = e->next)
+            if (e->candidate && !all_params_matched(e))
+                params_missing = 1;
+        if (params_missing)
+            fail_expected_parameter_didnt_happen(s, a->name); /* longjmps */
+        else
+            fail_expected_object_didnt_happen(s, a->name);
+    }
     clear_candidates(s);
 }
 

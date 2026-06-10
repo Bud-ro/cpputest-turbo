@@ -88,6 +88,12 @@ void cum_crash_on_failure(int crash);
 /* expectation knobs */
 void cum_expectation_with_call_order(cum_expectation *e, unsigned start, unsigned end);
 void cum_expectation_ignore_other_parameters(cum_expectation *e);
+/* onObject (expected side): the call must later be passed to this object */
+void cum_expectation_on_object(cum_expectation *e, void *object_ptr);
+void cum_expectation_set_name(cum_expectation *e, const char *name);
+void cum_actual_with_name(cum_actual *a, const char *name);
+/* onObject (actual side): prunes to object-compatible expectations */
+void cum_actual_on_object(cum_actual *a, const void *object_ptr);
 void cum_expectation_with_parameter(cum_expectation *e, const char *name,
                                     cum_value value);
 
