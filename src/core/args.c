@@ -14,10 +14,19 @@ static int starts_with(const char *s, const char *prefix)
     return 0 == strncmp(s, prefix, strlen(prefix));
 }
 
+/* strndup with the checked allocator (callers always pass n <= strlen) */
+static char *xstrndup(const char *s, size_t n)
+{
+    char *p = cu_xmalloc(n + 1);
+    memcpy(p, s, n);
+    p[n] = '\0';
+    return p;
+}
+
 static cu_filter *filter_new(const char *text, int strict, int invert)
 {
-    cu_filter *f = malloc(sizeof *f);
-    f->text = strdup(text ? text : "");
+    cu_filter *f = cu_xmalloc(sizeof *f);
+    f->text = cu_xstrdup(text ? text : "");
     f->strict = strict;
     f->invert = invert;
     f->next = NULL;
@@ -73,6 +82,20 @@ static void set_repeat_count(cu_args *a, int ac, const char *const *av, int *i)
         a->repeat = 2;
 }
 
+/* upstream SimpleString::AtoU: skip spaces, then leading digits only — so
+ * "-s -5" parses as 0 and the "-5" is NOT consumed as a seed (strtoul would
+ * wrap it to a huge unsigned and silently shuffle with it) */
+static unsigned atou(const char *s)
+{
+    while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\v' ||
+           *s == '\f' || *s == '\r')
+        s++;
+    unsigned result = 0;
+    for (; *s >= '0' && *s <= '9'; s++)
+        result = result * 10 + (unsigned)(*s - '0');
+    return result;
+}
+
 static int set_shuffle(cu_args *a, int ac, const char *const *av, int *i)
 {
     a->shuffling = 1;
@@ -82,9 +105,9 @@ static int set_shuffle(cu_args *a, int ac, const char *const *av, int *i)
 
     if (strlen(av[*i]) > 2) {
         a->shuffling_preseeded = 1;
-        a->shuffle_seed = (unsigned)strtoul(av[*i] + 2, NULL, 10);
+        a->shuffle_seed = atou(av[*i] + 2);
     } else if (*i + 1 < ac) {
-        unsigned parsed = (unsigned)strtoul(av[*i + 1], NULL, 10);
+        unsigned parsed = atou(av[*i + 1]);
         if (parsed != 0) {
             a->shuffling_preseeded = 1;
             a->shuffle_seed = parsed;
@@ -112,7 +135,7 @@ static int add_group_dot_name(cu_args *a, int ac, const char *const *av, int *i,
     if (dot == NULL || dot != strrchr(field, '.'))
         return 0;
 
-    char *group = strndup(field, (size_t)(dot - field));
+    char *group = xstrndup(field, (size_t)(dot - field));
     add_filter(&a->group_filters, group, strict, invert);
     free(group);
     add_filter(&a->name_filters, dot + 1, strict, invert);
@@ -133,18 +156,18 @@ static void add_test_from_verbose_output(cu_args *a, int ac,
     char *name;
 
     if (comma) {
-        group = strndup(field, (size_t)(comma - field));
+        group = xstrndup(field, (size_t)(comma - field));
         const char *name_start = comma;
         size_t name_len = strlen(name_start);
         const char *close = strchr(name_start, ')');
         if (close)
             name_len = (size_t)(close - name_start);
         /* subString(2): drop ", " (or whatever two chars follow the comma) */
-        name =
-            name_len > 2 ? strndup(name_start + 2, name_len - 2) : strdup("");
+        name = name_len > 2 ? xstrndup(name_start + 2, name_len - 2)
+                            : cu_xstrdup("");
     } else {
-        group = strdup(field);
-        name = strdup("");
+        group = cu_xstrdup(field);
+        name = cu_xstrdup("");
     }
     add_filter(&a->group_filters, group, 1, 0);
     add_filter(&a->name_filters, name, 1, 0);
@@ -178,7 +201,7 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
     a->rethrow_exceptions = 1;
     a->repeat = 1;
     a->output_type = CU_OUTPUT_TYPE_CONSOLE;
-    a->package_name = strdup("");
+    a->package_name = cu_xstrdup("");
 
     int correct = 1;
     for (int i = 1; i < argc; i++) {
@@ -256,7 +279,7 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
                 cu_plugin_parse_hook ? cu_plugin_parse_hook(argc, argv, i) : 0;
         else if (starts_with(arg, "-k")) {
             free(a->package_name);
-            a->package_name = strdup(parameter_field(argc, argv, &i, "-k"));
+            a->package_name = cu_xstrdup(parameter_field(argc, argv, &i, "-k"));
         }
         /* cpputest-turbo extension: -jN parallel workers (group granularity)
          */

@@ -10,6 +10,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+CC="${CC:-gcc}"
+CXX="${CXX:-g++}"
 OUT=build/fuzz
 mkdir -p "$OUT"
 SAN="-fsanitize=address,undefined -fno-sanitize-recover=all"
@@ -19,12 +21,14 @@ CXXFLAGS="-std=c++11 $SAN $OPT -g -Iinclude"
 ROUNDS="${FUZZ_ROUNDS:-20}"
 echo "fuzz optimization level: $OPT"
 
-# sanitizer-instrumented library
+# sanitizer-instrumented library (core + mock + shim — self-contained)
+rm -f "$OUT"/*.o
 for f in src/core/*.c src/mock/*.c; do
-    gcc $CFLAGS -c "$f" -o "$OUT/$(basename "$f").o"
+    $CC $CFLAGS -c "$f" -o "$OUT/$(basename "$f").o"
 done
-g++ $CXXFLAGS -c src/shim/newdelete.cpp -o "$OUT/newdelete.o"
-g++ $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
+$CXX $CXXFLAGS -c src/shim/newdelete.cpp -o "$OUT/newdelete.o"
+$CXX $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
+rm -f "$OUT/libasan.a"
 ar rcs "$OUT/libasan.a" "$OUT"/*.o
 
 # upstream library for the differential fuzzer
@@ -38,9 +42,9 @@ if [ ! -f .upstream-cache/libCppUTestUpstream.a ]; then
       ar rcs libCppUTestUpstream.a *.o )
 fi
 
-gcc $CFLAGS fuzz/fuzz_args.c "$OUT/libasan.a" -o "$OUT/fuzz_args"
-gcc $CFLAGS fuzz/fuzz_strings.c "$OUT/libasan.a" -o "$OUT/fuzz_strings"
-gcc $CFLAGS fuzz/fuzz_memleak.c "$OUT/libasan.a" -o "$OUT/fuzz_memleak"
+$CC $CFLAGS fuzz/fuzz_args.c "$OUT/libasan.a" -o "$OUT/fuzz_args"
+$CC $CFLAGS fuzz/fuzz_strings.c "$OUT/libasan.a" -o "$OUT/fuzz_strings"
+$CC $CFLAGS fuzz/fuzz_memleak.c "$OUT/libasan.a" -o "$OUT/fuzz_memleak"
 
 # deliberate failure paths leak longjmp'd temporaries by design; memory
 # SAFETY is what these hunt
@@ -54,9 +58,13 @@ echo "== fuzz_memleak =="
 FUZZ_SEED=1 "$OUT/fuzz_memleak"
 
 echo "== fuzz_mock_diff (differential vs upstream, $ROUNDS rounds x 50 seqs) =="
-g++ $CXXFLAGS fuzz/fuzz_mock_diff.cpp build/libCppUTestExt.a "$OUT/libasan.a" \
+# NOTE: link ONLY libasan.a (it contains the mock objects too) — putting the
+# uninstrumented build/libCppUTestExt.a first would resolve all mock symbols
+# from the plain -O2 library and silently strip sanitizer coverage from the
+# primary fuzz target
+$CXX $CXXFLAGS fuzz/fuzz_mock_diff.cpp "$OUT/libasan.a" \
     -o "$OUT/mockdiff_ours"
-g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include fuzz/fuzz_mock_diff.cpp \
+$CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include fuzz/fuzz_mock_diff.cpp \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockdiff_upstream"
 
 norm() {
@@ -72,9 +80,9 @@ norm() {
 echo "== differential torture suites (vs upstream) =="
 for SUITE in tests/mock_torture/torture.cpp tests/mock_torture/plugin_torture.cpp \
              tests/mock_torture/sstring_torture.cpp; do
-    g++ $CXXFLAGS "$SUITE" build/libCppUTestExt.a "$OUT/libasan.a" \
+    $CXX $CXXFLAGS "$SUITE" "$OUT/libasan.a" \
         -o "$OUT/t_ours"
-    g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include "$SUITE" \
+    $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include "$SUITE" \
         .upstream-cache/libCppUTestUpstream.a -o "$OUT/t_upstream"
     rc_o=0; "$OUT/t_ours" >"$OUT/to.txt" 2>&1 || rc_o=$?
     rc_u=0; "$OUT/t_upstream" >"$OUT/tu.txt" 2>&1 || rc_u=$?

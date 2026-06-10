@@ -50,6 +50,9 @@ static void set_failure_by_status_code(cu_test *t, int status)
 
 void cu_fork_run_one_test(cu_test *t, cu_result *res)
 {
+    /* the child shares the stdio buffer: anything pending would be written
+     * once by the child and again by the parent */
+    fflush(stdout);
     pid_t cpid = fork();
 
     if (cpid == -1) {
@@ -116,7 +119,7 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
         return 0;
     }
 
-    group_range *groups = calloc(group_count, sizeof *groups);
+    group_range *groups = cu_xcalloc(group_count, sizeof *groups);
     size_t gi = 0;
     last_group = NULL;
     for (t = cu_registry_tests(); t; t = t->next) {
@@ -147,16 +150,19 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
         return 1;
     }
 
-    pid_t *pids = calloc((size_t)workers, sizeof *pids);
+    pid_t *pids = cu_xcalloc((size_t)workers, sizeof *pids);
     char path[600];
 
     total->time_started = cu_time_in_millis();
 
+    fflush(stdout); /* see cu_fork_run_one_test: avoid replaying the buffer */
     for (int w = 0; w < workers; w++) {
         pid_t pid = fork();
         if (pid == -1) {
             fprintf(stderr, "cpputest: fork() failed for worker %d\n", w);
             pids[w] = -1;
+            /* the worker's groups never run; don't let the run look green */
+            total->failure_count++;
             continue;
         }
         if (pid == 0) { /* worker child */
@@ -193,10 +199,9 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
 
             snprintf(path, sizeof path, "%s/worker-%d.stats", workdir, w);
             FILE *sf = fopen(path, "wb");
-            if (sf) {
-                fwrite(&res, sizeof res, 1, sf);
-                fclose(sf);
-            }
+            if (!sf || 1 != fwrite(&res, sizeof res, 1, sf) ||
+                0 != fclose(sf))
+                _exit(98); /* lost stats would silently drop failures */
             _exit(0);
         }
         pids[w] = pid;

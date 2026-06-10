@@ -18,6 +18,9 @@ echo "== conformance =="
 
 # the heavier gates run by default; CHECK_FAST=1 skips them for quick loops
 if [ "${CHECK_FAST:-0}" != "1" ]; then
+    echo "== static analyzer =="
+    ./scripts/check-analyzer.sh
+
     echo "== sanitizers =="
     ./scripts/check-sanitizers.sh
 

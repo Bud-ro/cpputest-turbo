@@ -1,6 +1,6 @@
 # cpputest-turbo
 
-[\![ci](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml/badge.svg)](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml)
+[![ci](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml/badge.svg)](https://github.com/Bud-ro/cpputest-turbo/actions/workflows/ci.yml)
 
 A from-scratch rewrite of [CppUTest](https://cpputest.github.io/) with a **C11
 core** and a thin C++ header shim. Source-compatible with upstream — existing
@@ -20,21 +20,22 @@ src/shim/              the only C++ TUs in the library (operator new, SimpleStri
 ## Building
 
 ```sh
-make            # gcc + POSIX make: build/libCppUTest.a, build/libCppUTestExt.a
+make            # gcc + GNU make: build/libCppUTest.a, build/libCppUTestExt.a
 make CPPUTEST_C_ONLY=1   # C compiler only — no C++ anywhere
 ./scripts/check.sh       # full gate: format, build, unit + conformance,
-                         # sanitizers, bounded differential fuzz
+                         # static analyzer, sanitizers, differential fuzz
 ```
 
 No cmake, no autotools. `make install PREFIX=/usr/local` installs the
 libraries, headers and a pkg-config file.
 
-**Requirements:** a C11 compiler and POSIX make (developed with gcc 13;
-clang is expected to work). The C++ shim needs C++11. Linux and macOS
-(`scripts/check-macos.sh` cross-compiles for both macOS architectures with
-`zig cc` 0.16). Pre-PR gate: `./scripts/check.sh` (build, unit + conformance
-suites, ASan/UBSan sweep, bounded differential fuzz; `CHECK_FAST=1` skips
-the heavy stages).
+**Requirements:** a C11 compiler and GNU make — the stock `make` on Linux
+and macOS both qualify (developed with gcc 13; clang works). The C++ shim
+needs C++11. Linux and macOS (`scripts/check-macos.sh` cross-compiles for
+both macOS architectures with `zig cc` 0.16). Pre-PR gate:
+`./scripts/check.sh` (build, unit + conformance suites, `gcc -fanalyzer`
+static analysis, ASan/UBSan sweep, bounded differential fuzz; `CHECK_FAST=1`
+skips the heavy stages).
 
 ## Drop-in migration
 

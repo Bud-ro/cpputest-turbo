@@ -117,7 +117,16 @@ static MockExpectedCall_c expected_table;
         return &expected_table;                                                \
     }
 
-EXP_PARAM(with_bool, CUM_T_BOOL, b, int)
+/* upstream withBoolParameters_c passes (value != 0) — store normalized so
+ * matching treats any nonzero as true (MockSupport_c.cpp) */
+static MockExpectedCall_c *exp_with_bool(const char *name, int value)
+{
+    cum_value v = make_value(CUM_T_BOOL);
+    v.v.b = (value != 0);
+    cum_expectation_with_parameter(cur_expectation, name, v);
+    return &expected_table;
+}
+
 EXP_PARAM(with_int, CUM_T_INT, i, int)
 EXP_PARAM(with_uint, CUM_T_UINT, ui, unsigned int)
 EXP_PARAM(with_long, CUM_T_LONG, l, long int)
@@ -211,7 +220,15 @@ static MockExpectedCall_c *exp_ignore_other_parameters(void)
         return &expected_table;                                                \
     }
 
-EXP_RETURN(bool, CUM_T_BOOL, b, int)
+/* upstream andReturnBoolValue_c normalizes: andReturnValue(value != 0) */
+static MockExpectedCall_c *exp_ret_bool(int value)
+{
+    cum_value v = make_value(CUM_T_BOOL);
+    v.v.b = (value != 0);
+    cum_expectation_and_return(cur_expectation, v);
+    return &expected_table;
+}
+
 EXP_RETURN(int, CUM_T_INT, i, int)
 EXP_RETURN(uint, CUM_T_UINT, ui, unsigned int)
 EXP_RETURN(long, CUM_T_LONG, l, long int)
@@ -277,7 +294,15 @@ static MockActualCall_c actual_table;
         return &actual_table;                                                  \
     }
 
-ACT_PARAM(with_bool, CUM_T_BOOL, b, int)
+/* see exp_with_bool: upstream normalizes the actual side too */
+static MockActualCall_c *act_with_bool(const char *name, int value)
+{
+    cum_value v = make_value(CUM_T_BOOL);
+    v.v.b = (value != 0);
+    cum_actual_with_parameter(cur_actual, name, v);
+    return &actual_table;
+}
+
 ACT_PARAM(with_int, CUM_T_INT, i, int)
 ACT_PARAM(with_uint, CUM_T_UINT, ui, unsigned int)
 ACT_PARAM(with_long, CUM_T_LONG, l, long int)
@@ -419,7 +444,26 @@ static void act_ret_type_assert(const char *want)
 
 #define COERCE(cond, expr) ((cond) ? (coerced = (expr), 1) : 0)
 
-ACT_RETURN(bool, CUM_T_BOOL, b, int, 0, "bool")
+/* stored bools are normalized, but upstream also normalizes the caller's
+ * DEFAULT (boolReturnValue_c-style: bool in C++, then ? 1 : 0) */
+static int act_ret_bool(void)
+{
+    cum_value v;
+    if (!cur_actual)
+        return 0;
+    act_ret_type_assert("bool");
+    if (cum_actual_return_value(cur_actual, &v) && v.type == CUM_T_BOOL)
+        return v.v.b;
+    return 0;
+}
+static int act_ret_bool_default(int defaultValue)
+{
+    cum_value v;
+    if (!cur_actual || !cum_actual_return_value(cur_actual, &v))
+        return defaultValue != 0;
+    return act_ret_bool();
+}
+
 ACT_RETURN(int, CUM_T_INT, i, int, 0, "int")
 ACT_RETURN_COERCED(uint, ui, unsigned int, "unsigned int",
                    COERCE(v.type == CUM_T_INT && v.v.i >= 0,
@@ -577,7 +621,22 @@ static MockValue_c sup_return_value(void)
         return defaultValue;                                                   \
     }
 
-SUP_RETURN(bool, CUM_T_BOOL, b, int, 0)
+/* see act_ret_bool_default: the user-supplied default is normalized too */
+static int sup_ret_bool(void)
+{
+    cum_value v;
+    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_BOOL)
+        return v.v.b;
+    return 0;
+}
+static int sup_ret_bool_default(int defaultValue)
+{
+    cum_value v;
+    if (cum_scope_return_value(scope(), &v) && v.type == CUM_T_BOOL)
+        return v.v.b;
+    return defaultValue != 0;
+}
+
 SUP_RETURN(int, CUM_T_INT, i, int, 0)
 SUP_RETURN(uint, CUM_T_UINT, ui, unsigned int, 0)
 SUP_RETURN(long, CUM_T_LONG, l, long int, 0)
@@ -613,7 +672,14 @@ static double sup_ret_double_default(double defaultValue)
         cum_scope_set_data(scope(), name, v);                                  \
     }
 
-SUP_SET_DATA(bool_data, CUM_T_BOOL, b, int)
+/* upstream setBoolData normalizes (MockSupport_c.cpp) */
+static void sup_set_bool_data(const char *name, int value)
+{
+    cum_value v = make_value(CUM_T_BOOL);
+    v.v.b = (value != 0);
+    cum_scope_set_data(scope(), name, v);
+}
+
 SUP_SET_DATA(int_data, CUM_T_INT, i, int)
 SUP_SET_DATA(uint_data, CUM_T_UINT, ui, unsigned int)
 SUP_SET_DATA(long_data, CUM_T_LONG, l, long int)
@@ -669,6 +735,11 @@ static void sup_ignore_other_calls(void)
 }
 static void sup_check_expectations(void)
 {
+    /* the core frees every scope's last actual call (and clear frees the
+     * expectations); drop the cached handles so a stale MockActualCall_c or
+     * MockExpectedCall_c pointer cannot dereference freed memory */
+    cur_actual = NULL;
+    cur_expectation = NULL;
     cum_check_expectations_all();
 }
 static int sup_expected_calls_left(void)
@@ -677,6 +748,8 @@ static int sup_expected_calls_left(void)
 }
 static void sup_clear(void)
 {
+    cur_actual = NULL;
+    cur_expectation = NULL;
     cum_clear_all();
 }
 static void sup_crash_on_failure(unsigned shouldCrash)

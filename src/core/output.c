@@ -19,10 +19,15 @@ void cu_set_output_sink(cu_output_sink_fn fn, void *arg)
 
 static void emit_str(const char *s)
 {
-    if (sink_fn)
+    if (sink_fn) {
         sink_fn(s, sink_arg);
-    else
+    } else {
         fputs(s, stdout);
+        /* upstream ConsoleTestOutput::flush()es after every print; beyond
+         * parity, an empty stdio buffer is what keeps fork() (-p/-jN) from
+         * duplicating buffered bytes into the children */
+        fflush(stdout);
+    }
 }
 
 static void emit(const char *format, ...)
@@ -227,6 +232,9 @@ static int result_is_failure(const cu_result *res)
 
 void cu_out_summary(cu_output *out, const cu_result *res)
 {
+    /* upstream printTestsEnded resets dotCount_, so -r repeats restart the
+     * 50-dots-per-line count */
+    out->dot_count = 0;
     if (out->suppress_summary)
         return;
     if (!console_active(out))

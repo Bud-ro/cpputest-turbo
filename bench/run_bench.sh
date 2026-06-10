@@ -11,18 +11,25 @@ mkdir -p "$SCRATCH/src" "$SCRATCH/ours" "$SCRATCH/upstream"
 
 sh bench/gen_bench.sh "$SCRATCH/src" 20 20
 
-# build the upstream library once (cached across runs, wiped by make clean)
-if [ \! -f .upstream-cache/libCppUTestUpstream.a ]; then
+# build the upstream library once (cached across runs in .upstream-cache/,
+# which `make clean` does NOT wipe — rm -rf .upstream-cache to rebuild).
+# Includes CppUTestExt so the same cache satisfies scripts/check-fuzz.sh.
+if [ ! -f .upstream-cache/libCppUTestUpstream.a ]; then
     mkdir -p .upstream-cache
     ( cd .upstream-cache && \
       g++ -std=c++11 -w -O2 -c ../third_party/cpputest/src/CppUTest/*.cpp \
+          ../third_party/cpputest/src/CppUTestExt/*.cpp \
           ../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
           -I../third_party/cpputest/include && \
       ar rcs libCppUTestUpstream.a *.o )
 fi
 
 now_ms() {
-    date +%s%N | cut -c1-13
+    # BSD/macOS date has no %N (prints a literal N); fall back to python3
+    case "$(date +%s%N)" in
+        *N*) python3 -c 'import time; print(int(time.time() * 1000))' ;;
+        *)   date +%s%N | cut -c1-13 ;;
+    esac
 }
 
 compile_all() { # include-dir out-dir

@@ -37,7 +37,7 @@ static size_t registry_to_array(cu_test ***out)
         *out = NULL;
         return 0;
     }
-    cu_test **array = malloc(count * sizeof *array);
+    cu_test **array = cu_xmalloc(count * sizeof *array);
     size_t i = 0;
     for (cu_test *t = tests_head; t; t = t->next)
         array[i++] = t;

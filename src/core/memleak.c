@@ -232,6 +232,15 @@ static mem_node *remove_node(void *p)
     return NULL;
 }
 
+/* put a removed node back (realloc failure: the old block must stay both
+ * valid and tracked, or a later free of it corrupts the heap) */
+static void reinsert_node(mem_node *node)
+{
+    size_t b = bucket_of(node->ptr);
+    node->next = buckets[b];
+    buckets[b] = node;
+}
+
 /* MemoryLeakFailure::fail — fails the current test using the test NAME as
  * the failure "file" and the TEST() line (upstream quirk), then longjmps.
  * Outside a test the message goes to stderr. */
@@ -315,10 +324,13 @@ void *cu_mem_realloc_tracked(void *p, size_t size, const char *file,
 
     /* node is the block header — the user bytes die with it, so copy first */
     void *fresh = cu_mem_alloc_tracked(size, file, line, CU_MEM_MALLOC);
-    if (fresh) {
-        memcpy(fresh, p, old_size < size ? old_size : size);
-        memset(p, 0xCD, old_size);
+    if (!fresh) {
+        /* realloc contract: the original block stays valid on failure */
+        reinsert_node(node);
+        return NULL;
     }
+    memcpy(fresh, p, old_size < size ? old_size : size);
+    memset(p, 0xCD, old_size);
     block_free(node);
     return fresh;
 }
@@ -496,11 +508,13 @@ void *cpputest_realloc_location(void *p, size_t size, const char *file,
         mem_node *node = remove_node(p);
         if (node) {
             void *fresh = malloc(size);
-            if (fresh) {
-                size_t keep = node->size < size ? node->size : size;
-                memcpy(fresh, p, keep);
-                block_free(node);
+            if (!fresh) {
+                reinsert_node(node);
+                return NULL;
             }
+            size_t keep = node->size < size ? node->size : size;
+            memcpy(fresh, p, keep);
+            block_free(node);
             return fresh;
         }
     }

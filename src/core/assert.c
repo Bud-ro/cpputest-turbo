@@ -25,7 +25,7 @@ static void sb_init(sb *b)
 {
     b->cap = 256;
     b->len = 0;
-    b->buf = malloc(b->cap);
+    b->buf = cu_xmalloc(b->cap);
     b->buf[0] = '\0';
 }
 
@@ -34,7 +34,7 @@ static void sb_reserve(sb *b, size_t extra)
     if (b->len + extra + 1 > b->cap) {
         while (b->len + extra + 1 > b->cap)
             b->cap *= 2;
-        b->buf = realloc(b->buf, b->cap);
+        b->buf = cu_xrealloc(b->buf, b->cap);
     }
 }
 
@@ -83,7 +83,7 @@ char *cu_str_printf(const char *format, ...)
     va_copy(copy, args);
     int n = vsnprintf(NULL, 0, format, copy);
     va_end(copy);
-    char *s = malloc(n > 0 ? (size_t)n + 1 : 1);
+    char *s = cu_xmalloc(n > 0 ? (size_t)n + 1 : 1);
     if (n > 0)
         vsnprintf(s, (size_t)n + 1, format, args);
     else
@@ -287,8 +287,17 @@ static char *printable_or_null(const char *s)
  * cu_fail_with_message longjmps, so free first. */
 static void sb_raise(sb *b, const char *file, size_t line)
 {
-    static char message[8192];
-    snprintf(message, sizeof message, "%s", b->buf);
+    /* parked in a static buffer (grown to fit) because the message must
+     * outlive the longjmp; upstream messages are unbounded — STRCMP_EQUAL
+     * embeds both full strings — so truncating would break byte-parity */
+    static char *message;
+    static size_t message_cap;
+    if (b->len + 1 > message_cap) {
+        free(message);
+        message_cap = b->len + 1 < 8192 ? 8192 : b->len + 1;
+        message = cu_xmalloc(message_cap);
+    }
+    memcpy(message, b->buf, b->len + 1);
     free(b->buf);
     cu_fail_with_message(file, line, message);
 }

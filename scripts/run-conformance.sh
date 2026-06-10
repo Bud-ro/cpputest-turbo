@@ -5,8 +5,8 @@ set -eu
 cd "$(dirname "$0")/.."
 
 if [ ! -f conformance/manifest.txt ]; then
-    echo "(no conformance manifest yet — Phase 7)"
-    exit 0
+    echo "FAILED: conformance/manifest.txt is missing (bad checkout?)" >&2
+    exit 1
 fi
 
 CXX="${CXX:-g++}"

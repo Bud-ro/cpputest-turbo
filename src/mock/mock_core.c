@@ -25,7 +25,7 @@ static void msb_init(msb *b)
 {
     b->cap = 512;
     b->len = 0;
-    b->buf = malloc(b->cap);
+    b->buf = cu_xmalloc(b->cap);
     b->buf[0] = '\0';
 }
 
@@ -41,7 +41,7 @@ static void msb_addf(msb *b, const char *format, ...)
         if (b->len + (size_t)n + 1 > b->cap) {
             while (b->len + (size_t)n + 1 > b->cap)
                 b->cap *= 2;
-            b->buf = realloc(b->buf, b->cap);
+            b->buf = cu_xrealloc(b->buf, b->cap);
         }
         vsnprintf(b->buf + b->len, (size_t)n + 1, format, args);
         b->len += (size_t)n;
@@ -149,8 +149,8 @@ void cum_install_comparator(const char *type_name, void *ctx,
                             cum_comparator_equal_fn equal,
                             cum_comparator_string_fn to_string)
 {
-    cum_comparator *c = calloc(1, sizeof *c);
-    c->type_name = strdup(type_name);
+    cum_comparator *c = cu_xcalloc(1, sizeof *c);
+    c->type_name = cu_xstrdup(type_name);
     c->ctx = ctx;
     c->equal = equal;
     c->to_string = to_string;
@@ -160,8 +160,8 @@ void cum_install_comparator(const char *type_name, void *ctx,
 
 void cum_install_copier(const char *type_name, void *ctx, cum_copier_fn copy)
 {
-    cum_comparator *c = calloc(1, sizeof *c);
-    c->type_name = strdup(type_name);
+    cum_comparator *c = cu_xcalloc(1, sizeof *c);
+    c->type_name = cu_xstrdup(type_name);
     c->ctx = ctx;
     c->copy = copy;
     c->next = copiers;
@@ -408,7 +408,7 @@ static void trace_add(const char *s)
         trace_cap = trace_cap ? trace_cap : 256;
         while (trace_len + n + 1 > trace_cap)
             trace_cap *= 2;
-        trace_buf = realloc(trace_buf, trace_cap);
+        trace_buf = cu_xrealloc(trace_buf, trace_cap);
     }
     memcpy(trace_buf + trace_len, s, n + 1);
     trace_len += n;
@@ -451,8 +451,8 @@ cum_scope *cum_scope_get(const char *name)
                 cu_count_check();
             return s;
         }
-    cum_scope *s = calloc(1, sizeof *s);
-    s->name = strdup(name);
+    cum_scope *s = cu_xcalloc(1, sizeof *s);
+    s->name = cu_xstrdup(name);
     s->enabled = 1;
     if (name[0] != '\0') {
         /* upstream clone(): a lazily-created scope inherits the global
@@ -477,7 +477,7 @@ static char *scoped_name(const cum_scope *s, const char *name)
 {
     if (s->name[0])
         return cu_str_printf("%s::%s", s->name, name);
-    return strdup(name);
+    return cu_xstrdup(name);
 }
 
 /* --------------------------- failure plumbing --------------------------- */
@@ -869,7 +869,7 @@ cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount,
         return NULL;
     cu_count_check();
 
-    cum_expectation *e = calloc(1, sizeof *e);
+    cum_expectation *e = cu_xcalloc(1, sizeof *e);
     e->name = scoped_name(s, name);
     e->expected_calls = amount;
     e->passed_to_object = 1; /* no specific object expected by default */
@@ -912,9 +912,9 @@ static void expectation_add_out_param(cum_expectation *e, const char *type_name,
 {
     if (!e)
         return;
-    cum_out_param *o = calloc(1, sizeof *o);
-    o->name = strdup(name);
-    o->type_name = type_name ? strdup(type_name) : NULL;
+    cum_out_param *o = cu_xcalloc(1, sizeof *o);
+    o->name = cu_xstrdup(name);
+    o->type_name = type_name ? cu_xstrdup(type_name) : NULL;
     o->value = value;
     o->size = size;
     cum_out_param **link = &e->out_params;
@@ -964,9 +964,9 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
     cum_scope *s = a->scope;
 
     /* record the destination */
-    cum_out_dst *d = calloc(1, sizeof *d);
-    d->name = strdup(name);
-    d->type_name = type_name ? strdup(type_name) : NULL;
+    cum_out_dst *d = cu_xcalloc(1, sizeof *d);
+    d->name = cu_xstrdup(name);
+    d->type_name = type_name ? cu_xstrdup(type_name) : NULL;
     d->dst = dst;
     d->next = a->out_dsts;
     a->out_dsts = d;
@@ -1142,8 +1142,8 @@ void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)
         if (0 == strcmp(d->name, name))
             break;
     if (!d) {
-        d = calloc(1, sizeof *d);
-        d->name = strdup(name);
+        d = cu_xcalloc(1, sizeof *d);
+        d->name = cu_xstrdup(name);
         d->next = s->data;
         s->data = d;
     }
@@ -1151,7 +1151,7 @@ void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)
     d->owned_type_name = NULL;
     if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
         d->owned_type_name =
-            strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+            cu_xstrdup(value.v.obj.type_name ? value.v.obj.type_name : "");
         value.v.obj.type_name = d->owned_type_name;
     }
     d->value = value;
@@ -1178,11 +1178,11 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
 {
     if (!e)
         return;
-    cum_param *p = calloc(1, sizeof *p);
-    p->name = strdup(name);
+    cum_param *p = cu_xcalloc(1, sizeof *p);
+    p->name = cu_xstrdup(name);
     if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
         p->owned_type =
-            strdup(value.v.obj.type_name ? value.v.obj.type_name : "");
+            cu_xstrdup(value.v.obj.type_name ? value.v.obj.type_name : "");
         value.v.obj.type_name = p->owned_type;
     }
     p->value = value;
@@ -1334,7 +1334,7 @@ void cum_expectation_set_name(cum_expectation *e, const char *name)
     if (!e)
         return;
     free(e->name);
-    e->name = strdup(name);
+    e->name = cu_xstrdup(name);
 }
 
 /* MockCheckedActualCall::withName — rename and re-filter candidates */
@@ -1359,7 +1359,7 @@ void cum_actual_with_name(cum_actual *a, const char *name)
     }
     cum_scope *s = a->scope;
     free(a->name);
-    a->name = strdup(name);
+    a->name = cu_xstrdup(name);
     a->state = CUM_CALL_IN_PROGRESS;
 
     int any = 0;
@@ -1524,7 +1524,7 @@ cum_actual *cum_actual_call(cum_scope *s, const char *name)
         }
     }
 
-    cum_actual *a = calloc(1, sizeof *a);
+    cum_actual *a = cu_xcalloc(1, sizeof *a);
     a->name = full_name;
     a->call_order = ++s->actual_call_order;
     a->state = CUM_CALL_IN_PROGRESS;

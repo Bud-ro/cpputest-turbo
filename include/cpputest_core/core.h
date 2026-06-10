@@ -237,6 +237,16 @@ char *cu_str_from_masked_bits(unsigned long value, unsigned long mask,
 char *cu_str_hex_from_signed_char(signed char value);
 void cu_str_free(char *s);
 
+/* Checked allocators for the framework's OWN bookkeeping (filters, failure
+ * messages, JUnit records, ...): out-of-memory there is unrecoverable
+ * mid-run, so fail loudly instead of dereferencing NULL. Test-visible
+ * allocations (the tracked malloc/new paths in memleak.c) do NOT use these —
+ * they must keep returning NULL for the OOM-simulation API. */
+void *cu_xmalloc(size_t size);
+void *cu_xcalloc(size_t count, size_t size);
+void *cu_xrealloc(void *ptr, size_t size);
+char *cu_xstrdup(const char *s);
+
 /* Plugin hook points. The C++ shim's TestRegistry installs trampolines here
  * that walk its TestPlugin chain. parse is consulted for unrecognized
  * "-pXXX" arguments (upstream forwards those to plugin->parseAllArguments;

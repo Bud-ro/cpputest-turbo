@@ -3,6 +3,55 @@
 All notable changes to cpputest-turbo. Format follows
 [Keep a Changelog](https://keepachangelog.com); versions are git tags.
 
+## [Unreleased]
+
+### Fixed
+- `-p` and `-jN` no longer duplicate previously-buffered output when stdout
+  is piped/redirected: the console output now flushes after every print
+  (upstream `ConsoleTestOutput` parity), and both fork sites flush first.
+- The 50-dots-per-line counter resets at each run summary, so `-r` repeats
+  break lines at the same positions as upstream.
+- Failure messages are no longer truncated at 8 KB (long `STRCMP_EQUAL`
+  operands now render in full, like upstream's unbounded messages).
+- C mock interface normalizes bool values at every boundary
+  (`withBoolParameters("b", 2)` now matches `1`, as upstream does).
+- `SIGNED_BYTES_EQUAL_LOCATION` now has upstream's 4-parameter signature and
+  `SIGNED_BYTES_EQUAL_TEXT_LOCATION` exists (source-compat fix).
+- `-s <negative>` is rejected like upstream instead of being wrapped to a
+  huge unsigned seed (`SimpleString::AtoU` digit parsing).
+- `cpputest_realloc` keeps the original block valid and tracked when the new
+  allocation fails (per the realloc contract); previously a later free of it
+  could corrupt the heap.
+- `-jN` no longer reports success when a worker `fork()` fails or a worker
+  cannot write its stats file.
+- A stale `MockActualCall_c`/`MockExpectedCall_c` handle can no longer
+  dereference freed memory after `checkExpectations()`/`clear()`.
+- Incremental builds now rebuild objects when headers change (`-MMD` deps);
+  archives are recreated instead of updated in place.
+- The sanitizer sweep now catches standalone UBSan reports (`runtime
+  error:` without the `ERROR:` marker) and sanitizer aborts.
+- The differential fuzzer links the mock core from the instrumented archive
+  (it was silently resolving from the uninstrumented library).
+- Sanitizer/fuzz scripts honor `CC`/`CXX`, so the clang CI legs actually
+  test clang.
+- `bench/run_bench.sh` works on macOS (`date +%s%N` fallback) and builds an
+  upstream cache that also satisfies the fuzz gate (cache poisoning fix).
+- Framework-internal allocations are checked (`cu_x*` helpers): OOM aborts
+  loudly instead of dereferencing NULL. Tracked test allocations still
+  return NULL for the OOM-simulation API.
+- JUnit `<system-out>` accumulation is linear instead of O(n²) in the
+  number of prints.
+
+### Added
+- `make lint` / `scripts/check-analyzer.sh`: `gcc -fanalyzer` static
+  analysis over the C core and mock core, wired into `check.sh` and CI
+  (skips gracefully on compilers without the analyzer).
+- More warnings: `-Wpointer-arith -Wvla -Wformat=2 -Wcast-align
+  -Wnull-dereference -Wdouble-promotion` (+ `-Wnon-virtual-dtor` for C++),
+  plus compiler-probed gcc-only diagnostics (`-Wlogical-op
+  -Wduplicated-cond -Wduplicated-branches -Wjump-misses-init
+  -Wuseless-cast -Wzero-as-null-pointer-constant`).
+
 ## [v1.0.0] — 2026-06-10
 
 ### Changed

@@ -349,9 +349,14 @@
     LONGS_EQUAL_TEXT((expected) & 0xff, (actual) & 0xff, text)
 
 #define SIGNED_BYTES_EQUAL(expected, actual)                                   \
-    SIGNED_BYTES_EQUAL_LOCATION(expected, actual, NULLPTR, __FILE__, __LINE__)
+    SIGNED_BYTES_EQUAL_LOCATION(expected, actual, __FILE__, __LINE__)
 
-#define SIGNED_BYTES_EQUAL_LOCATION(expected, actual, text, file, line)        \
+/* upstream's _LOCATION form has no text parameter; the _TEXT_LOCATION
+ * variant carries it (both are public API used by wrapper code) */
+#define SIGNED_BYTES_EQUAL_LOCATION(expected, actual, file, line)              \
+    SIGNED_BYTES_EQUAL_TEXT_LOCATION(expected, actual, NULLPTR, file, line)
+
+#define SIGNED_BYTES_EQUAL_TEXT_LOCATION(expected, actual, text, file, line)   \
     do {                                                                       \
         signed char cu_fp_e = (signed char)(expected);                         \
         signed char cu_fp_a = (signed char)(actual);                           \
@@ -362,7 +367,7 @@
     } while (0)
 
 #define SIGNED_BYTES_EQUAL_TEXT(expected, actual, text)                        \
-    SIGNED_BYTES_EQUAL_LOCATION(expected, actual, text, __FILE__, __LINE__)
+    SIGNED_BYTES_EQUAL_TEXT_LOCATION(expected, actual, text, __FILE__, __LINE__)
 
 #define POINTERS_EQUAL(expected, actual)                                       \
     POINTERS_EQUAL_LOCATION((expected), (actual), NULLPTR, __FILE__, __LINE__)

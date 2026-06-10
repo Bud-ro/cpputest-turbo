@@ -14,7 +14,7 @@ and commit.
 - Output/format parity matters: failure messages, summary lines, exit codes must match
   upstream byte-for-byte (upstream sources are the spec, not its docs).
 - Every iteration must end with `scripts/check.sh` green and a commit. Never commit red.
-- No cmake. POSIX make + gcc only for consumers. Zig 0.16 (`~/bin/zig`) is available for
+- No cmake. GNU make + gcc only for consumers. Zig 0.16 (`~/bin/zig`) is available for
   cross-compile smoke checks (`zig cc -target aarch64-macos` etc.), not as a requirement.
 
 ## Build & test

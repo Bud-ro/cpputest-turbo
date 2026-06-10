@@ -37,20 +37,21 @@ struct cu_junit_state {
     junit_case *head;
     junit_case *tail;
     char *std_output; /* accumulated print() text, never reset */
+    size_t std_output_len;
 };
 
 cu_junit_state *cu_junit_create(void)
 {
-    cu_junit_state *j = calloc(1, sizeof *j);
-    j->group = strdup("");
-    j->std_output = strdup("");
+    cu_junit_state *j = cu_xcalloc(1, sizeof *j);
+    j->group = cu_xstrdup("");
+    j->std_output = cu_xstrdup("");
     return j;
 }
 
 static void reset_group(cu_junit_state *j)
 {
     free(j->group);
-    j->group = strdup("");
+    j->group = cu_xstrdup("");
     j->test_count = 0;
     j->failure_count = 0;
     junit_case *cur = j->head;
@@ -81,11 +82,11 @@ void cu_junit_test_started(cu_output *out, const cu_test *t)
     cu_junit_state *j = out->junit;
     j->test_count++;
     free(j->group);
-    j->group = strdup(t->group);
+    j->group = cu_xstrdup(t->group);
 
-    junit_case *node = calloc(1, sizeof *node);
-    node->name = strdup(t->name);
-    node->file = strdup(t->file);
+    junit_case *node = cu_xcalloc(1, sizeof *node);
+    node->name = cu_xstrdup(t->name);
+    node->file = cu_xstrdup(t->file);
     node->line = t->line;
     node->ignored = t->is_ignored && !t->run_ignored;
     if (j->tail)
@@ -113,18 +114,19 @@ void cu_junit_failure(cu_output *out, const cu_test *t, const char *fail_file,
         return;
     j->failure_count++;
     j->tail->has_failure = 1;
-    j->tail->failure_file = strdup(fail_file);
+    j->tail->failure_file = cu_xstrdup(fail_file);
     j->tail->failure_line = fail_line;
-    j->tail->failure_message = strdup(message);
+    j->tail->failure_message = cu_xstrdup(message);
 }
 
 void cu_junit_print(cu_output *out, const char *s)
 {
     cu_junit_state *j = out->junit;
-    size_t old = strlen(j->std_output);
     size_t add = strlen(s);
-    j->std_output = realloc(j->std_output, old + add + 1);
-    memcpy(j->std_output + old, s, add + 1);
+    /* the cached length keeps chatty suites (UT_PRINT in loops) linear */
+    j->std_output = cu_xrealloc(j->std_output, j->std_output_len + add + 1);
+    memcpy(j->std_output + j->std_output_len, s, add + 1);
+    j->std_output_len += add;
 }
 
 /* encodeXmlText, replacements applied in upstream order */
@@ -136,7 +138,7 @@ static char *encode_xml(const char *text)
         {"&", "&amp;"}, {"\"", "&quot;"}, {"<", "&lt;"},
         {">", "&gt;"},  {"\r", "&#13;"},  {"\n", "&#10;"},
     };
-    char *buf = strdup(text);
+    char *buf = cu_xstrdup(text);
     for (size_t r = 0; r < sizeof reps / sizeof reps[0]; r++) {
         size_t flen = strlen(reps[r].from);
         size_t tlen = strlen(reps[r].to);
@@ -146,7 +148,7 @@ static char *encode_xml(const char *text)
             count++;
         if (!count)
             continue;
-        char *next = malloc(strlen(buf) + count * (tlen - flen) + 1);
+        char *next = cu_xmalloc(strlen(buf) + count * (tlen - flen) + 1);
         const char *src = buf;
         char *dst = next;
         const char *hit;
