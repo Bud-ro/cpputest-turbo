@@ -127,25 +127,87 @@ static void rb_add_memory_dump(const void *memory, size_t memory_size)
 
 /* ----------------------------- tracking --------------------------------- */
 
+/* The tracking node lives at the head of the same allocation:
+ * [mem_node | user bytes | guard]. One malloc/free per tracked allocation,
+ * and small blocks recycle through capped per-size-class freelists so
+ * steady-state new/delete churn skips malloc entirely. */
+#define NODE_OFFSET ((sizeof(mem_node) + 15u) & ~(size_t)15u)
+
+#define FL_GRAIN 64u
+#define FL_CLASSES 16
+#define FL_MAX_DEPTH 64u
+
+static mem_node *freelists[FL_CLASSES];
+static unsigned freelist_depth[FL_CLASSES];
+
+static int class_of(size_t block_size)
+{
+    size_t c = (block_size + FL_GRAIN - 1) / FL_GRAIN;
+    return c < FL_CLASSES ? (int)c : -1;
+}
+
+static char *block_alloc(size_t user_size)
+{
+    size_t bs = NODE_OFFSET + user_size + GUARD_SIZE;
+    int c = class_of(bs);
+    if (c >= 0) {
+        if (freelists[c]) {
+            mem_node *node = freelists[c];
+            freelists[c] = node->next;
+            freelist_depth[c]--;
+            return (char *)node;
+        }
+        return malloc((size_t)c * FL_GRAIN);
+    }
+    return malloc(bs);
+}
+
+static void block_free(mem_node *node)
+{
+    int c = class_of(NODE_OFFSET + node->size + GUARD_SIZE);
+    if (c >= 0 && freelist_depth[c] < FL_MAX_DEPTH) {
+        node->next = freelists[c];
+        freelists[c] = node;
+        freelist_depth[c]++;
+        return;
+    }
+    free(node);
+}
+
+static void freelists_drain(void)
+{
+    for (int c = 0; c < FL_CLASSES; c++) {
+        mem_node *n = freelists[c];
+        while (n) {
+            mem_node *next = n->next;
+            free(n);
+            n = next;
+        }
+        freelists[c] = NULL;
+        freelist_depth[c] = 0;
+    }
+}
+
 void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line, int type)
 {
-    char *raw = malloc(size + GUARD_SIZE);
-    if (!raw)
+    char *block = block_alloc(size);
+    if (!block)
         return NULL;
-    memcpy(raw + size, GuardBytes, GUARD_SIZE);
+    char *user = block + NODE_OFFSET;
+    memcpy(user + size, GuardBytes, GUARD_SIZE);
 
-    mem_node *node = malloc(sizeof *node);
-    node->ptr = raw;
+    mem_node *node = (mem_node *)block;
+    node->ptr = user;
     node->size = size;
     node->file = file ? file : UNKNOWN;
     node->line = line;
     node->number = ++alloc_counter;
     node->type = type;
     node->checking = checking_now;
-    size_t b = bucket_of(raw);
+    size_t b = bucket_of(user);
     node->next = buckets[b];
     buckets[b] = node;
-    return raw;
+    return user;
 }
 
 static mem_node *remove_node(void *p)
@@ -207,7 +269,7 @@ void cu_mem_free_tracked(void *p, const char *file, size_t line, int type)
     if (node->type != type) {
         report_dealloc_failure("Allocation/deallocation type mismatch\n",
                                node, file, line, type);
-        free(node);
+        free(node); /* node == block start */
         return;
     }
     if (0 != memcmp((char *)p + node->size, GuardBytes, GUARD_SIZE)) {
@@ -217,8 +279,7 @@ void cu_mem_free_tracked(void *p, const char *file, size_t line, int type)
         return;
     }
     memset(p, 0xCD, node->size);
-    free(p);
-    free(node);
+    block_free(node); /* recycles or frees the whole block */
 }
 
 void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line)
@@ -242,14 +303,14 @@ void *cu_mem_realloc_tracked(void *p, size_t size, const char *file, size_t line
         free(node);
         return NULL;
     }
-    free(node);
 
+    /* node is the block header — the user bytes die with it, so copy first */
     void *fresh = cu_mem_alloc_tracked(size, file, line, CU_MEM_MALLOC);
     if (fresh) {
         memcpy(fresh, p, old_size < size ? old_size : size);
         memset(p, 0xCD, old_size);
-        free(p);
     }
+    block_free(node);
     return fresh;
 }
 
@@ -358,6 +419,7 @@ void cu_mem_destroy_all(void)
         }
         buckets[b] = NULL;
     }
+    freelists_drain();
 }
 
 /* --------------------- public C allocation API -------------------------- */

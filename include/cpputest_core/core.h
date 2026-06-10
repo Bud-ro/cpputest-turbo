@@ -47,6 +47,117 @@ cu_test *cu_current_test(void);
  * failure count and longjmps out of the current protected section. The
  * `text` parameter is the user message (NULL when none). */
 void cu_count_check(void);
+
+/* ---------------- fast-path assertion support (inline) -------------------
+ * The hot, PASSING path of every assertion macro is inlined into the user's
+ * translation unit: bump the active check counter, compare, done. Only a
+ * mismatch calls into the library (cu_fail_* below), where the
+ * byte-identical failure messages are built. */
+
+/* points at the running result's check counter; NULL outside a test run */
+extern size_t *cu_check_count_ptr;
+
+static inline void cu_fast_count_check(void)
+{
+    if (cu_check_count_ptr)
+        ++*cu_check_count_ptr;
+}
+
+/* upstream null semantics: both NULL pass, exactly one NULL fails */
+static inline int cu_cstr_eq(const char *e, const char *a)
+{
+    return e == a || (e && a && 0 == __builtin_strcmp(e, a));
+}
+
+static inline int cu_cstrn_eq(const char *e, const char *a, size_t n)
+{
+    return e == a || (e && a && 0 == __builtin_strncmp(e, a, n));
+}
+
+/* upstream doubles_equal: any NaN (incl. threshold) unequal; two infinities
+ * compare equal regardless of sign */
+static inline int cu_doubles_eq(double e, double a, double t)
+{
+    double d;
+    if (__builtin_isnan(e) || __builtin_isnan(a) || __builtin_isnan(t))
+        return 0;
+    if (__builtin_isinf(e) && __builtin_isinf(a))
+        return 1;
+    d = e - a;
+    if (d < 0)
+        d = -d;
+    return d <= t;
+}
+
+/* upstream assertBinaryEqual: zero length passes, both NULL pass */
+static inline int cu_mem_eq(const void *e, const void *a, size_t n)
+{
+    if (n == 0 || e == a)
+        return 1;
+    if (!e || !a)
+        return 0;
+    return 0 == __builtin_memcmp(e, a, n);
+}
+
+/* String/memory assertions must compare within the SAME full expression
+ * that evaluated the arguments (they may point into temporaries); these
+ * inline helpers compare and dispatch the failure in one call. */
+void cu_fail_cstr_equal(const char *e, const char *a, const char *text,
+                        const char *file, size_t line);
+void cu_fail_memcmp(const void *e, const void *a, size_t n, const char *text,
+                    const char *file, size_t line);
+
+static inline void cu_strcmp_check(const char *e, const char *a,
+                                   const char *text, const char *file,
+                                   size_t line)
+{
+    if (cu_cstr_eq(e, a))
+        return;
+    cu_fail_cstr_equal(e, a, text, file, line);
+}
+
+static inline void cu_strncmp_check(const char *e, const char *a, size_t n,
+                                    const char *text, const char *file,
+                                    size_t line)
+{
+    if (cu_cstrn_eq(e, a, n))
+        return;
+    cu_fail_cstr_equal(e, a, text, file, line);
+}
+
+static inline void cu_memcmp_check(const void *e, const void *a, size_t n,
+                                   const char *text, const char *file,
+                                   size_t line)
+{
+    if (cu_mem_eq(e, a, n))
+        return;
+    cu_fail_memcmp(e, a, n, text, file, line);
+}
+
+/* failure-only entry points (check already counted by the inline path);
+ * all longjmp out of the test */
+void cu_fail_check(const char *check_string, const char *condition_string,
+                   const char *text, const char *file, size_t line);
+void cu_fail_longs(long e, long a, const char *text, const char *file, size_t line);
+void cu_fail_unsigned_longs(unsigned long e, unsigned long a, const char *text,
+                            const char *file, size_t line);
+void cu_fail_longlongs(long long e, long long a, const char *text,
+                       const char *file, size_t line);
+void cu_fail_unsigned_longlongs(unsigned long long e, unsigned long long a,
+                                const char *text, const char *file, size_t line);
+void cu_fail_signed_bytes(signed char e, signed char a, const char *text,
+                          const char *file, size_t line);
+void cu_fail_pointers(const void *e, const void *a, const char *text,
+                      const char *file, size_t line);
+void cu_fail_functionpointers(void (*e)(void), void (*a)(void), const char *text,
+                              const char *file, size_t line);
+void cu_fail_doubles(double e, double a, double t, const char *text,
+                     const char *file, size_t line);
+void cu_fail_bits(unsigned long e, unsigned long a, unsigned long mask,
+                  size_t byte_count, const char *text,
+                  const char *file, size_t line);
+void cu_fail_equals_strings(const char *e, const char *a, const char *text,
+                            const char *file, size_t line);
 void cu_fail_with_message(const char *file, size_t line, const char *message);
 void cu_exit_current_test(void); /* TEST_EXIT: leave test without failing */
 

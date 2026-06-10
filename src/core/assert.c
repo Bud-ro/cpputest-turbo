@@ -315,6 +315,16 @@ static void sb_padded_decimal_hex(sb *b, const char *e_dec, const char *e_hex,
 
 /* ------------------------------ asserts --------------------------------- */
 
+void cu_fail_check(const char *check_string, const char *condition_string,
+                   const char *text, const char *file, size_t line)
+{
+    sb b;
+    sb_init(&b);
+    sb_user_text(&b, text);
+    sb_addf(&b, "%s(%s) failed", check_string, condition_string);
+    sb_raise(&b, file, line);
+}
+
 void cu_assert_true(int condition, const char *check_string,
                     const char *condition_string, const char *text,
                     const char *file, size_t line)
@@ -322,11 +332,7 @@ void cu_assert_true(int condition, const char *check_string,
     cu_count_check();
     if (condition)
         return;
-    sb b;
-    sb_init(&b);
-    sb_user_text(&b, text);
-    sb_addf(&b, "%s(%s) failed", check_string, condition_string);
-    sb_raise(&b, file, line);
+    cu_fail_check(check_string, condition_string, text, file, line);
 }
 
 void cu_fail(const char *text, const char *file, size_t line)
@@ -369,6 +375,12 @@ static void raise_string_equal(const char *expected, const char *actual,
     free(pe);
     free(pa);
     sb_raise(&b, file, line);
+}
+
+void cu_fail_cstr_equal(const char *expected, const char *actual,
+                        const char *text, const char *file, size_t line)
+{
+    raise_string_equal(expected, actual, 0, text, file, line);
 }
 
 void cu_assert_cstr_equal(const char *expected, const char *actual,
@@ -445,6 +457,12 @@ void cu_assert_longs_equal(long expected, long actual, const char *text,
     cu_count_check();
     if (expected == actual)
         return;
+    cu_fail_longs(expected, actual, text, file, line);
+}
+
+void cu_fail_longs(long expected, long actual, const char *text,
+                   const char *file, size_t line)
+{
     char *ed = cu_str_printf("%ld", expected);
     char *ad = cu_str_printf("%ld", actual);
     char *eh = cu_str_printf("%lx", (unsigned long)expected);
@@ -462,6 +480,12 @@ void cu_assert_unsigned_longs_equal(unsigned long expected, unsigned long actual
     cu_count_check();
     if (expected == actual)
         return;
+    cu_fail_unsigned_longs(expected, actual, text, file, line);
+}
+
+void cu_fail_unsigned_longs(unsigned long expected, unsigned long actual,
+                            const char *text, const char *file, size_t line)
+{
     char *ed = cu_str_printf("%lu", expected);
     char *ad = cu_str_printf("%lu", actual);
     char *eh = cu_str_printf("%lx", expected);
@@ -479,6 +503,12 @@ void cu_assert_longlongs_equal(long long expected, long long actual,
     cu_count_check();
     if (expected == actual)
         return;
+    cu_fail_longlongs(expected, actual, text, file, line);
+}
+
+void cu_fail_longlongs(long long expected, long long actual,
+                       const char *text, const char *file, size_t line)
+{
     char *ed = cu_str_printf("%lld", expected);
     char *ad = cu_str_printf("%lld", actual);
     char *eh = cu_str_printf("%llx", (unsigned long long)expected);
@@ -497,6 +527,13 @@ void cu_assert_unsigned_longlongs_equal(unsigned long long expected,
     cu_count_check();
     if (expected == actual)
         return;
+    cu_fail_unsigned_longlongs(expected, actual, text, file, line);
+}
+
+void cu_fail_unsigned_longlongs(unsigned long long expected,
+                                unsigned long long actual,
+                                const char *text, const char *file, size_t line)
+{
     char *ed = cu_str_printf("%llu", expected);
     char *ad = cu_str_printf("%llu", actual);
     char *eh = cu_str_printf("%llx", expected);
@@ -514,6 +551,12 @@ void cu_assert_signed_bytes_equal(signed char expected, signed char actual,
     cu_count_check();
     if (expected == actual)
         return;
+    cu_fail_signed_bytes(expected, actual, text, file, line);
+}
+
+void cu_fail_signed_bytes(signed char expected, signed char actual,
+                          const char *text, const char *file, size_t line)
+{
     char *ed = cu_str_printf("%d", (int)expected);
     char *ad = cu_str_printf("%d", (int)actual);
     char *eh = cu_str_hex_from_signed_char(expected);
@@ -547,6 +590,20 @@ void cu_assert_pointers_equal(const void *expected, const void *actual,
                              text, file, line);
 }
 
+void cu_fail_pointers(const void *expected, const void *actual,
+                      const char *text, const char *file, size_t line)
+{
+    raise_pointers_equal((unsigned long long)(size_t)expected,
+                         (unsigned long long)(size_t)actual, text, file, line);
+}
+
+void cu_fail_functionpointers(void (*expected)(void), void (*actual)(void),
+                              const char *text, const char *file, size_t line)
+{
+    raise_pointers_equal((unsigned long long)(size_t)expected,
+                         (unsigned long long)(size_t)actual, text, file, line);
+}
+
 void cu_assert_functionpointers_equal(void (*expected)(void), void (*actual)(void),
                                       const char *text, const char *file, size_t line)
 {
@@ -574,6 +631,12 @@ void cu_assert_doubles_equal(double expected, double actual, double threshold,
     cu_count_check();
     if (doubles_equal(expected, actual, threshold))
         return;
+    cu_fail_doubles(expected, actual, threshold, text, file, line);
+}
+
+void cu_fail_doubles(double expected, double actual, double threshold,
+                     const char *text, const char *file, size_t line)
+{
     char *e = cu_str_from_double(expected, 7);
     char *a = cu_str_from_double(actual, 7);
     char *t = cu_str_from_double(threshold, 7);
@@ -599,7 +662,12 @@ void cu_assert_binary_equal(const void *expected, const void *actual, size_t len
     if (actual != NULL && expected != NULL &&
         0 == memcmp(expected, actual, length))
         return;
+    cu_fail_memcmp(expected, actual, length, text, file, line);
+}
 
+void cu_fail_memcmp(const void *expected, const void *actual, size_t length,
+                    const char *text, const char *file, size_t line)
+{
     const unsigned char *e = expected;
     const unsigned char *a = actual;
     char *ehex = e ? cu_str_from_binary(e, length) : cu_str_printf("(null)");
@@ -626,6 +694,13 @@ void cu_assert_bits_equal(unsigned long expected, unsigned long actual,
     cu_count_check();
     if ((expected & mask) == (actual & mask))
         return;
+    cu_fail_bits(expected, actual, mask, byte_count, text, file, line);
+}
+
+void cu_fail_bits(unsigned long expected, unsigned long actual,
+                  unsigned long mask, size_t byte_count,
+                  const char *text, const char *file, size_t line)
+{
     char *e = cu_str_from_masked_bits(expected, mask, byte_count);
     char *a = cu_str_from_masked_bits(actual, mask, byte_count);
     sb b;
@@ -644,6 +719,12 @@ void cu_assert_equals(int failed, const char *expected, const char *actual,
     cu_count_check();
     if (!failed)
         return;
+    cu_fail_equals_strings(expected, actual, text, file, line);
+}
+
+void cu_fail_equals_strings(const char *expected, const char *actual,
+                            const char *text, const char *file, size_t line)
+{
     char *pe = printable_or_null(expected);
     char *pa = printable_or_null(actual);
     sb b;

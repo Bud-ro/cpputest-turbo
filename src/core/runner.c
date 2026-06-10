@@ -18,6 +18,13 @@ static int jmp_index;
 static cu_test *current_test;
 static cu_result *current_result;
 static cu_output *current_output;
+size_t *cu_check_count_ptr; /* fast-path counter; see core.h */
+
+static void bind_result(cu_result *res)
+{
+    current_result = res;
+    cu_check_count_ptr = res ? &res->check_count : NULL;
+}
 static int crash_on_fail;
 
 static cu_plugin_action_fn plugin_pre;
@@ -26,7 +33,7 @@ cu_plugin_parse_fn cu_plugin_parse_hook; /* read by args.c */
 
 void cu_set_current_result_output(cu_result *res, cu_output *out)
 {
-    current_result = res;
+    bind_result(res);
     current_output = out;
 }
 
@@ -96,8 +103,7 @@ static void cu_longjmp_out(void)
 
 void cu_count_check(void)
 {
-    if (current_result)
-        current_result->check_count++;
+    cu_fast_count_check();
 }
 
 void cu_fail_with_message(const char *file, size_t line, const char *message)
@@ -317,12 +323,12 @@ void cu_run_registered_tests_ex(cu_run_stats *stats_out, int verbose,
     out.progress_indicator = ".";
     memset(&res, 0, sizeof res);
 
-    current_result = &res;
+    bind_result(&res);
     current_output = &out;
     cu_run_all_tests_internal(&args, &res, &out);
 
     current_test = saved_test;
-    current_result = saved_result;
+    bind_result(saved_result);
     current_output = saved_output;
     plugin_pre = saved_pre;
     plugin_post = saved_post;
@@ -401,13 +407,13 @@ int cu_run_all(int argc, const char *const *argv)
 
         cu_result res;
         memset(&res, 0, sizeof res);
-        current_result = &res;
+        bind_result(&res);
         current_output = &out;
         if (args.parallel_workers > 1)
             cu_run_parallel(&args, &out, &res);
         else
             cu_run_all_tests_internal(&args, &res, &out);
-        current_result = NULL;
+        bind_result(NULL);
         current_output = NULL;
 
         failed_test_count += res.failure_count;

@@ -40,7 +40,7 @@ start=$(now_ms); compile_all third_party/cpputest/include "$SCRATCH/upstream"; e
 up_compile=$((end - start))
 echo "upstream: ${up_compile} ms"
 
-echo "== runtime: 2.5M assertions + 250k new/delete (O2) =="
+echo "== runtime: 5M assertions + 500k new/delete, 8 groups (O2) =="
 $CXX -std=c++11 -w -O2 -Iinclude "$SCRATCH/src/bench_runtime.cpp" \
     "$SCRATCH/src/bench_main.cpp" build/libCppUTest.a -o "$SCRATCH/rt_ours"
 $CXX -std=c++11 -w -O2 -Ithird_party/cpputest/include "$SCRATCH/src/bench_runtime.cpp" \
@@ -57,4 +57,4 @@ echo
 echo "| metric | cpputest-revibed | upstream CppUTest |"
 echo "|---|---|---|"
 echo "| compile 21 TUs / 400 tests (-O0) | ${ours_compile} ms | ${up_compile} ms |"
-echo "| run 2.5M assertions + 250k new/delete (-O2) | ${ours_rt} ms | ${up_rt} ms |"
+echo "| run 5M assertions + 500k new/delete (8 groups) (-O2) | ${ours_rt} ms | ${up_rt} ms |"

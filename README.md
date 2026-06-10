@@ -88,11 +88,13 @@ Process isolation:
 
 ## Performance
 
-See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`): runtime is
-~25–30% faster than upstream on an assertion/allocation stress load; C++
-compile time is at parity (both pay for the std headers the `new` macro must
-pre-include); pure-C test files compile dramatically faster since they never
-touch the C++ standard library.
+See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`): on an
+assertion/allocation stress load, sequential runs are **~5× faster** than
+upstream (passing assertions are an inlined compare + counter bump — ~0.3 ns;
+leak-tracked new/delete recycles through size-class freelists — 6.4 ns/pair),
+and `-j8` reaches **~14×**. C++ compile time is at parity (both pay for the
+std headers the `new` macro must pre-include); pure-C test files compile
+dramatically faster since they never touch the C++ standard library.
 
 ## Known divergences from upstream
 
