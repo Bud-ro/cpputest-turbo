@@ -111,6 +111,12 @@ rc=0; "$BUILD/mock_tests" >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 12 ]; then echo "FAILED: mock_tests exit $rc, expected 12" >&2; fail=1; fi
 compare "mock failure messages" "$BUILD/mock.out" tests/mock/golden/all.txt
 
+# ---- C mock interface (MockSupport_c) -------------------------------------------
+$CC $CFLAGS_TEST -c tests/mock_c/mock_c_tests.c -o "$BUILD/mock_c_tests.o"
+$CXX $CXXFLAGS tests/mock_c/mock_c_wrappers.cpp "$BUILD/mock_c_tests.o" build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_c_tests"
+rc=0; "$BUILD/mock_c_tests" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "FAILED: mock_c_tests exit $rc" >&2; fail=1; else echo "ok: MockSupport_c (pure C mocks)"; fi
+
 # ---- OrderedTest ---------------------------------------------------------------
 $CXX $CXXFLAGS tests/ordered/ordered_tests.cpp build/libCppUTest.a -o "$BUILD/ordered_tests"
 rc=0; out=$("$BUILD/ordered_tests" -v 2>&1) || rc=$?

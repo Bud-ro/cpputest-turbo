@@ -115,18 +115,18 @@ Makefile               Builds lib, tests, conformance, bench
 - [x] 5.3 `OrderedTest` (CppUTestExt) support.
 
 ### Phase 6 — CppUMock
-- [~] 6.1 (IN PROGRESS: basic slice done — expectation store, parameterless matching, strict order, unexpected/unfulfilled/out-of-order failures w/ exact history trailers) C mock core: expectation store, call matching, parameter records
+- [x] 6.1 C mock core: expectation store, call matching, parameter records
       (int/unsigned/long/longlong/double/string/pointer/funcptr/mem buffer/
       object), call order, unexpected/unfulfilled failure messages w/ upstream
       text parity.
-- [ ] 6.2 `MockSupport.h` C++ shim: `mock()`, `expectOneCall`, `expectNCalls`,
+- [x] 6.2 (onObject/tracing deferred to conformance) `MockSupport.h` C++ shim: `mock()`, `expectOneCall`, `expectNCalls`,
       `actualCall`, `withParameter` overload set, `andReturnValue` set,
       `returnValue()` accessors, scopes (`mock("scope")`), `checkExpectations`,
       `clear`, `ignoreOtherCalls`, `disable/enable`, `crashOnFailure`.
 - [x] 6.3 Comparators & copiers: `installComparator/Copier`,
       `withParameterOfType`, `withOutputParameter[OfType]`.
-- [ ] 6.4 `MockSupport_c.h` C interface for mocks.
-- [ ] 6.5 MockSupportPlugin parity (auto checkExpectations/clear per test).
+- [x] 6.4 `MockSupport_c.h` C interface for mocks (pure C impl over the mock core).
+- [x] 6.5 MockSupportPlugin parity (auto checkExpectations/clear per test; comparator repository install deferred).
 
 ### Phase 7 — Conformance against upstream suite
 - [ ] 7.1 `conformance/` harness: build selected upstream `tests/CppUTest/*.cpp`
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #15: 6.4 done, Phase 6 COMPLETE — MockSupport_c.h upstream-identical struct surface implemented in pure C over the mock core (function-pointer tables on current-scope/expectation/actual globals like upstream; fn-ptr types need typedefs to pass through macros); 6 pure-C mock tests green. Deferred to conformance: mock tracing, onObject, MockSupportPlugin comparator repository, mock failure-reporter injection. NEXT: Phase 7 conformance harness.
 - 2026-06-09 #14: mock slice 5 / 6.3 done — comparator/copier registry in C core (C++ virtuals adapted via extern-C trampolines), withParameterOfType (object equality via comparator, custom valueToString in messages), withOutputParameterOfType[Returning] (copier-based), output-param TYPE matching incl. the "Unexpected parameter type" failure case, MockNoWayToCompare/Copy failures (note upstream "MockFailure:" without space), expectation-side type-name copies. REMAINING Phase 6: MockSupport_c (6.4), then mark 6.1/6.2/6.5 done (plugin exists; tracing/onObject deferred to conformance-driven work).
 - 2026-06-09 #13: mock slice 4 — output parameters (withOutputParameterReturning/withUnmodifiedOutputParameter/withOutputParameter, copy-on-match incl. the ignore-others first-matching copy path, MockUnexpectedOutputParameterFailure name-case golden-pinned, <output> rendering in callToString + missing-params) + MockSupportPlugin (post-test checkExpectations+clear). LESSON: bash heredoc mangles bang chars in python scripts — three replaces silently no-opd; use the Edit tool for code with exclamation marks. REMAINING in Phase 6: comparators/copiers (installComparator/withParameterOfType + OfType output params), MockSupport_c, tracing; 6.1/6.2 mostly done otherwise.
 - 2026-06-09 #12: mock slice 3 — andReturnValue overloads (12 types), returnXValue/OrDefault on actual call + MockSupport-level XReturnValue accessors (reading finalizes the call like upstream checkExpectations-in-returnValue), MockNamedValue facade w/ STRCMP-checked getters, per-scope data store (setData overloads, setDataObject w/ copied type name, getData/hasData). NEXT SLICE: output parameters (withOutputParameterReturning + copy-on-match), MockSupportPlugin, MockSupport_c C interface; then comparators/copiers; tracing if conformance needs it.
