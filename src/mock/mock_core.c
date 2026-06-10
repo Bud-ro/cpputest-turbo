@@ -668,15 +668,25 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
 
 /* MockUnexpectedOutputParameterFailure. actual_type is the ACTUAL-side
  * parameter type ("void*" for plain withOutputParameter, the custom type
- * for OfType); type_case selects the wrong-type headline. */
+ * for OfType). Upstream picks the headline by scanning ALL expectations
+ * related to the function (not just current candidates) for any output
+ * parameter with this NAME: found -> wrong-type case, else unknown-name. */
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
                                              const char *param_name,
-                                             const char *actual_type,
-                                             int type_case)
+                                             const char *actual_type)
 {
+    int name_known = 0;
+    for (cum_expectation *e = s->expectations; e; e = e->next) {
+        if (0 != strcmp(e->name, fn))
+            continue;
+        for (cum_out_param *o = e->out_params; o; o = o->next)
+            if (0 == strcmp(o->name, param_name))
+                name_known = 1;
+    }
+
     msb b;
     msb_init(&b);
-    if (type_case)
+    if (name_known)
         msb_addf(&b,
                  "Mock Failure: Unexpected parameter type \"%s\" to output parameter \"%s\" to function \"%s\"",
                  actual_type, param_name, fn);
@@ -882,8 +892,7 @@ void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
 
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
                                              const char *param_name,
-                                             const char *actual_type,
-                                             int type_case);
+                                             const char *actual_type);
 
 static int out_types_match(const cum_out_param *o, const char *type_name)
 {
@@ -925,7 +934,6 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
      * the FIRST entry with the name (getValueByName) and matches its type
      * with compatibleForCopying */
     int any = 0;
-    int name_seen_wrong_type = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (!e->candidate)
             continue;
@@ -939,8 +947,6 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
              * hasOutputParameter ternary) */
             if (out_types_match(o, type_name))
                 has = 1;
-            else
-                name_seen_wrong_type = 1;
         } else {
             has = e->ignore_other_parameters;
         }
@@ -954,8 +960,7 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
     if (!any) {
         a->state = CUM_CALL_FAILED;
         fail_unexpected_output_parameter(s, a->name, name,
-                                         type_name ? type_name : "void*",
-                                         name_seen_wrong_type);
+                                         type_name ? type_name : "void*");
         return;
     }
 
