@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compile-time and runtime benchmark: cpputest-revibed vs vendored upstream.
-# Requires build/libCppUTest.a (ours) and build/upstream/libCppUTestUpstream.a.
+# Requires build/libCppUTest.a (ours) and .upstream-cache/libCppUTestUpstream.a.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -12,9 +12,9 @@ mkdir -p "$SCRATCH/src" "$SCRATCH/ours" "$SCRATCH/upstream"
 sh bench/gen_bench.sh "$SCRATCH/src" 20 20
 
 # build the upstream library once (cached across runs, wiped by make clean)
-if [ \! -f build/upstream/libCppUTestUpstream.a ]; then
-    mkdir -p build/upstream
-    ( cd build/upstream && \
+if [ \! -f .upstream-cache/libCppUTestUpstream.a ]; then
+    mkdir -p .upstream-cache
+    ( cd .upstream-cache && \
       g++ -std=c++11 -w -O2 -c ../../third_party/cpputest/src/CppUTest/*.cpp \
           ../../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
           -I../../third_party/cpputest/include && \
@@ -44,7 +44,7 @@ echo "== runtime: 5M assertions + 500k new/delete, 8 groups (O2) =="
 $CXX -std=c++11 -w -O2 -Iinclude "$SCRATCH/src/bench_runtime.cpp" \
     "$SCRATCH/src/bench_main.cpp" build/libCppUTest.a -o "$SCRATCH/rt_ours"
 $CXX -std=c++11 -w -O2 -Ithird_party/cpputest/include "$SCRATCH/src/bench_runtime.cpp" \
-    "$SCRATCH/src/bench_main.cpp" build/upstream/libCppUTestUpstream.a -o "$SCRATCH/rt_upstream"
+    "$SCRATCH/src/bench_main.cpp" .upstream-cache/libCppUTestUpstream.a -o "$SCRATCH/rt_upstream"
 
 start=$(now_ms); "$SCRATCH/rt_ours" >/dev/null; end=$(now_ms)
 ours_rt=$((end - start))

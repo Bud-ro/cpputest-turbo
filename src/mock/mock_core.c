@@ -338,6 +338,8 @@ typedef struct cum_data {
 struct cum_scope {
     char *name;
     int enabled;
+    int zombie; /* upstream's global clear DELETES child scopes; a zombie is
+                   re-initialized (re-cloned) on next access */
     int strict_ordering;
     int ignore_other_calls;
     unsigned actual_call_order;
@@ -359,13 +361,42 @@ cum_scope *cum_scope_get(const char *name)
     if (!name)
         name = "";
     for (cum_scope *s = scopes; s; s = s->next)
-        if (0 == strcmp(s->name, name))
+        if (0 == strcmp(s->name, name)) {
+            if (s->zombie && name[0] != '\0') {
+                /* deleted by a global clear: next access re-creates it
+                 * upstream (clone) — re-inherit, and no existence check */
+                cum_scope *global = cum_scope_get("");
+                s->zombie = 0;
+                s->enabled = global->enabled;
+                s->ignore_other_calls = global->ignore_other_calls;
+                s->strict_ordering = global->strict_ordering;
+                return s;
+            }
+            /* upstream getMockSupportScope runs an internal STRCMP_EQUAL
+             * sanity assert when fetching an EXISTING scope — which counts
+             * one user-visible check per access (quirk preserved) */
+            if (name[0] != '\0')
+                cu_count_check();
             return s;
+        }
     cum_scope *s = calloc(1, sizeof *s);
     s->name = strdup(name);
     s->enabled = 1;
-    s->next = scopes;
-    scopes = s;
+    if (name[0] != '\0') {
+        /* upstream clone(): a lazily-created scope inherits the global
+         * mock's enabled/ignoreOtherCalls/strictOrdering state */
+        cum_scope *global = cum_scope_get("");
+        s->enabled = global->enabled;
+        s->ignore_other_calls = global->ignore_other_calls;
+        s->strict_ordering = global->strict_ordering;
+    }
+    /* append: failure dumps walk the global mock first, then child scopes
+     * in creation order, like upstream's data_ list */
+    s->next = NULL;
+    cum_scope **link = &scopes;
+    while (*link)
+        link = &(*link)->next;
+    *link = s;
     return s;
 }
 
@@ -414,7 +445,13 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
                                               : "no parameters");
     } else {
         for (cum_param *p = e->params; p; p = p->next) {
-            char *value = value_to_string(&p->value);
+            /* upstream renders the value via getInputParameterValueString,
+             * a first-by-name lookup: duplicate names all show the first
+             * entry's value (quirk preserved) */
+            const cum_param *named = e->params;
+            while (named && 0 != strcmp(named->name, p->name))
+                named = named->next;
+            char *value = value_to_string(&(named ? named : p)->value);
             msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name, value);
             cu_str_free(value);
             if (p->next)
@@ -575,18 +612,20 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
     mock_fail(&b);
 }
 
-/* MockUnexpectedOutputParameterFailure. bad_type non-NULL = the type case
- * (parameter name exists on an expectation but with a different type). */
+/* MockUnexpectedOutputParameterFailure. actual_type is the ACTUAL-side
+ * parameter type ("void*" for plain withOutputParameter, the custom type
+ * for OfType); type_case selects the wrong-type headline. */
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
                                              const char *param_name,
-                                             const char *bad_type)
+                                             const char *actual_type,
+                                             int type_case)
 {
     msb b;
     msb_init(&b);
-    if (bad_type)
+    if (type_case)
         msb_addf(&b,
                  "Mock Failure: Unexpected parameter type \"%s\" to output parameter \"%s\" to function \"%s\"",
-                 bad_type, param_name, fn);
+                 actual_type, param_name, fn);
     else
         msb_addf(&b,
                  "Mock Failure: Unexpected output parameter name to function \"%s\": %s",
@@ -595,7 +634,7 @@ static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
     msb_history_related(&b, s, fn);
     msb_addf(&b, "\n\tACTUAL unexpected output parameter passed to function: %s\n",
              fn);
-    msb_addf(&b, "\t\t%s %s", bad_type ? bad_type : "const void*", param_name);
+    msb_addf(&b, "\t\t%s %s", actual_type, param_name);
     mock_fail(&b);
 }
 
@@ -762,7 +801,8 @@ void cum_expectation_with_unmodified_output_parameter(cum_expectation *e,
 
 static void fail_unexpected_output_parameter(cum_scope *s, const char *fn,
                                              const char *param_name,
-                                             const char *bad_type);
+                                             const char *actual_type,
+                                             int type_case);
 
 static int out_types_match(const cum_out_param *o, const char *type_name)
 {
@@ -800,20 +840,24 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
             reset_param_match_state(e);
         }
 
-    /* keep candidates with this output parameter, matching name AND type */
+    /* keep candidates with this output parameter; upstream consults only
+     * the FIRST entry with the name (getValueByName) and matches its type
+     * with compatibleForCopying */
     int any = 0;
     int name_seen_wrong_type = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (!e->candidate)
             continue;
         int has = 0;
-        for (cum_out_param *o = e->out_params; o; o = o->next)
-            if (0 == strcmp(o->name, name)) {
-                if (out_types_match(o, type_name))
-                    has = 1;
-                else
-                    name_seen_wrong_type = 1;
-            }
+        cum_out_param *o = e->out_params;
+        while (o && 0 != strcmp(o->name, name))
+            o = o->next;
+        if (o) {
+            if (out_types_match(o, type_name))
+                has = 1;
+            else
+                name_seen_wrong_type = 1;
+        }
         if (has || e->ignore_other_parameters)
             any = 1;
         else {
@@ -824,9 +868,8 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
     if (!any) {
         a->state = CUM_CALL_FAILED;
         fail_unexpected_output_parameter(s, a->name, name,
-                                         name_seen_wrong_type
-                                             ? (type_name ? type_name : "const void*")
-                                             : NULL);
+                                         type_name ? type_name : "void*",
+                                         name_seen_wrong_type);
         return;
     }
 
@@ -980,7 +1023,8 @@ static int is_finalized_matching(const cum_expectation *e)
     return e->candidate && all_params_matched(e) && !e->ignore_other_parameters;
 }
 
-/* hasInputParameter: named param equal, or absent + ignoreOtherParameters */
+/* hasInputParameter: upstream uses getValueByName — only the FIRST
+ * parameter with the name is consulted, even when duplicates exist */
 static int expectation_accepts_param(const cum_expectation *e, const char *name,
                                      const cum_value *value)
 {
@@ -1030,17 +1074,23 @@ static void clear_candidates(cum_scope *s)
 static void copy_output_parameters(cum_actual *a, cum_expectation *e)
 {
     for (cum_out_dst *d = a->out_dsts; d; d = d->next) {
-        for (cum_out_param *o = e->out_params; o; o = o->next) {
-            if (0 != strcmp(o->name, d->name) || !out_types_match(o, d->type_name)
-                || !o->value)
-                continue;
-            if (o->type_name) {
-                cum_comparator *c = find_in(copiers, o->type_name);
-                if (c && c->copy)
-                    c->copy(c->ctx, d->dst, o->value);
-            } else {
+        /* upstream getOutputParameter(name): first-by-name lookup */
+        cum_out_param *o = e->out_params;
+        while (o && 0 != strcmp(o->name, d->name))
+            o = o->next;
+        if (!o || !out_types_match(o, d->type_name))
+            continue;
+        if (o->type_name) {
+            cum_comparator *c = find_in(copiers, o->type_name);
+            if (c && c->copy && o->value)
+                c->copy(c->ctx, d->dst, o->value);
+        } else {
+            /* upstream's plain copy path reads the source via
+             * getConstPointerValue(), whose type assert counts one check —
+             * including for unmodified (NULL source, size 0) parameters */
+            cu_count_check();
+            if (o->value)
                 memcpy(d->dst, o->value, o->size);
-            }
         }
     }
 }
@@ -1101,10 +1151,9 @@ static void actual_finalize(cum_actual *a)
     clear_candidates(s);
 }
 
-static void scope_finalize_last_actual(cum_scope *s)
+static void scope_free_last_actual(cum_scope *s)
 {
     if (s->last_actual) {
-        actual_finalize(s->last_actual);
         cum_out_dst *d = s->last_actual->out_dsts;
         while (d) {
             cum_out_dst *next = d->next;
@@ -1116,6 +1165,14 @@ static void scope_finalize_last_actual(cum_scope *s)
         free(s->last_actual->name);
         free(s->last_actual);
         s->last_actual = NULL;
+    }
+}
+
+static void scope_finalize_last_actual(cum_scope *s)
+{
+    if (s->last_actual) {
+        actual_finalize(s->last_actual);
+        scope_free_last_actual(s);
     }
 }
 
@@ -1271,7 +1328,9 @@ void cum_check_expectations_all(void)
 
 static void scope_clear(cum_scope *s)
 {
-    scope_finalize_last_actual(s);
+    /* upstream clear() DELETES the pending actual call without checking it
+     * (no finalization, no missing-parameters failure) */
+    scope_free_last_actual(s);
     cum_expectation *e = s->expectations;
     while (e) {
         cum_expectation *next = e->next;
@@ -1316,19 +1375,37 @@ static void scope_clear(cum_scope *s)
 
 void cum_clear_all(void)
 {
-    for (cum_scope *s = scopes; s; s = s->next)
+    for (cum_scope *s = scopes; s; s = s->next) {
         scope_clear(s);
+        /* the global clear deletes child scopes upstream */
+        if (s->name[0] != '\0')
+            s->zombie = 1;
+    }
     crash_on_failure = 0;
+}
+
+/* upstream propagates ignoreOtherCalls/disable/enable from the global mock
+ * to all existing child scopes (MockSupport.cpp:218-240); named scopes have
+ * no children, so they only affect themselves */
+static int scope_is_global(const cum_scope *s)
+{
+    return s->name[0] == '\0';
 }
 
 void cum_ignore_other_calls(cum_scope *s)
 {
     s->ignore_other_calls = 1;
+    if (scope_is_global(s))
+        for (cum_scope *c = scopes; c; c = c->next)
+            c->ignore_other_calls = 1;
 }
 
 void cum_enable(cum_scope *s, int enabled)
 {
     s->enabled = enabled;
+    if (scope_is_global(s))
+        for (cum_scope *c = scopes; c; c = c->next)
+            c->enabled = enabled;
 }
 
 int cum_is_enabled(const cum_scope *s)

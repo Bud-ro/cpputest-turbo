@@ -130,7 +130,7 @@ fi
 
 # ---- fork isolation and parallel workers (Phase 8) ----------------------------
 $CXX $CXXFLAGS tests/process/process_tests.cpp build/libCppUTest.a -o "$BUILD/process_tests"
-if \! sh tests/process/run.sh "$BUILD/process_tests"; then
+if ! sh tests/process/run.sh "$BUILD/process_tests"; then
     fail=1
 fi
 

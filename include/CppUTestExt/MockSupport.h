@@ -524,6 +524,11 @@ inline MockSupport &mock(const SimpleString &mockName = "",
     };
     static ScopeNode *head = NULLPTR;
 
+    /* every access goes through the core scope lookup: it revives scopes
+     * deleted by a global clear (upstream re-clones them) and reproduces
+     * upstream's existing-scope sanity check counting */
+    cum_scope *scope = cum_scope_get(mockName.asCharString());
+
     for (ScopeNode *n = head; n; n = n->next)
         if (n->name == mockName)
             return *n->support;
@@ -533,7 +538,7 @@ inline MockSupport &mock(const SimpleString &mockName = "",
     cu_mem_save_and_disable_tracking();
     ScopeNode *n = new ScopeNode;
     n->name = mockName;
-    n->support = new MockSupport(cum_scope_get(mockName.asCharString()));
+    n->support = new MockSupport(scope);
     n->next = head;
     head = n;
     cu_mem_restore_tracking();

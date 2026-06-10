@@ -45,7 +45,7 @@ out=$("$BIN_DIR/cli_tests" -ojunit -v 2>&1 | grep -c 'TEST(') || true
 cd "$ROOT"
 
 # --- TeamCity ----------------------------------------------------------------
-"$BIN_DIR/cli_tests" -oteamcity 2>&1 | sed "s/duration='[0-9]*'/duration='0'/g" >"$SCRATCH/tc.out"
+"$BIN_DIR/cli_tests" -oteamcity 2>&1 | sed "s/duration='[0-9]*'/duration='0'/g; s/, [0-9]* ms)/, 0 ms)/" >"$SCRATCH/tc.out"
 compare "teamcity output" "$SCRATCH/tc.out" teamcity.txt
 "$BIN_DIR/cli_tests" -oteamcity -ri 2>&1 | sed "s/duration='[0-9]*'/duration='0'/g; s/, [0-9]* ms)/, 0 ms)/" >"$SCRATCH/tc_ri.out" || true
 compare "teamcity failure output" "$SCRATCH/tc_ri.out" teamcity_ri.txt

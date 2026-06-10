@@ -298,10 +298,25 @@ static MockValue_c act_return_value(void)
     return to_mock_value(&v, has);
 }
 
-#define ACT_RETURN(fnname, cumtype, field, ctype, zero) \
+/* Upstream's typed return getters go through MockNamedValue::get*Value,
+ * whose STRCMP_EQUAL type assert counts one check and FAILS the test on a
+ * type mismatch. An ignored call (disabled mock, cur_actual NULL) skips the
+ * assert and returns the default, like MockIgnoredActualCall. */
+static void act_ret_type_assert(const char *want)
+{
+    cum_value v;
+    int has = cum_actual_return_value(cur_actual, &v);
+    cu_assert_cstr_equal(want, has ? cum_value_type_name(&v) : "", NULL,
+                         __FILE__, (size_t)__LINE__);
+}
+
+#define ACT_RETURN(fnname, cumtype, field, ctype, zero, typestr) \
     static ctype act_ret_##fnname(void) \
     { \
         cum_value v; \
+        if (!cur_actual) \
+            return zero; \
+        act_ret_type_assert(typestr); \
         if (cum_actual_return_value(cur_actual, &v) && v.type == cumtype) \
             return v.v.field; \
         return zero; \
@@ -309,26 +324,29 @@ static MockValue_c act_return_value(void)
     static ctype act_ret_##fnname##_default(ctype defaultValue) \
     { \
         cum_value v; \
-        if (cum_actual_return_value(cur_actual, &v) && v.type == cumtype) \
-            return v.v.field; \
-        return defaultValue; \
+        if (!cur_actual || !cum_actual_return_value(cur_actual, &v)) \
+            return defaultValue; \
+        return act_ret_##fnname(); \
     }
 
-ACT_RETURN(bool, CUM_T_BOOL, b, int, 0)
-ACT_RETURN(int, CUM_T_INT, i, int, 0)
-ACT_RETURN(uint, CUM_T_UINT, ui, unsigned int, 0)
-ACT_RETURN(long, CUM_T_LONG, l, long int, 0)
-ACT_RETURN(ulong, CUM_T_ULONG, ul, unsigned long int, 0)
-ACT_RETURN(ll, CUM_T_LONGLONG, ll, cpputest_longlong, 0)
-ACT_RETURN(ull, CUM_T_ULONGLONG, ull, cpputest_ulonglong, 0)
-ACT_RETURN(string, CUM_T_STRING, str, const char *, NULL)
-ACT_RETURN(pointer, CUM_T_POINTER, ptr, void *, NULL)
-ACT_RETURN(const_pointer, CUM_T_CONST_POINTER, cptr, const void *, NULL)
-ACT_RETURN(fp, CUM_T_FUNCTIONPOINTER, fptr, cum_fp, NULL)
+ACT_RETURN(bool, CUM_T_BOOL, b, int, 0, "bool")
+ACT_RETURN(int, CUM_T_INT, i, int, 0, "int")
+ACT_RETURN(uint, CUM_T_UINT, ui, unsigned int, 0, "unsigned int")
+ACT_RETURN(long, CUM_T_LONG, l, long int, 0, "long int")
+ACT_RETURN(ulong, CUM_T_ULONG, ul, unsigned long int, 0, "unsigned long int")
+ACT_RETURN(ll, CUM_T_LONGLONG, ll, cpputest_longlong, 0, "long long int")
+ACT_RETURN(ull, CUM_T_ULONGLONG, ull, cpputest_ulonglong, 0, "unsigned long long int")
+ACT_RETURN(string, CUM_T_STRING, str, const char *, NULL, "const char*")
+ACT_RETURN(pointer, CUM_T_POINTER, ptr, void *, NULL, "void*")
+ACT_RETURN(const_pointer, CUM_T_CONST_POINTER, cptr, const void *, NULL, "const void*")
+ACT_RETURN(fp, CUM_T_FUNCTIONPOINTER, fptr, cum_fp, NULL, "void (*)()")
 
 static double act_ret_double(void)
 {
     cum_value v;
+    if (!cur_actual)
+        return 0.0;
+    act_ret_type_assert("double");
     if (cum_actual_return_value(cur_actual, &v) && v.type == CUM_T_DOUBLE)
         return v.v.dbl.value;
     return 0.0;
@@ -337,9 +355,9 @@ static double act_ret_double(void)
 static double act_ret_double_default(double defaultValue)
 {
     cum_value v;
-    if (cum_actual_return_value(cur_actual, &v) && v.type == CUM_T_DOUBLE)
-        return v.v.dbl.value;
-    return defaultValue;
+    if (!cur_actual || !cum_actual_return_value(cur_actual, &v))
+        return defaultValue;
+    return act_ret_double();
 }
 
 static MockActualCall_c actual_table = {

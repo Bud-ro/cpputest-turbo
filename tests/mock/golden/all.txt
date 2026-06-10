@@ -24,7 +24,7 @@ tests/mock/mock_tests.cpp:328: error: Failure in TEST(MockOutput, unexpectedOutp
 	EXPECTED calls that WERE fulfilled related to function: f
 		<none>
 	ACTUAL unexpected output parameter passed to function: f
-		const void* wrong
+		void* wrong
 
 ...........
 tests/mock/mock_tests.cpp:137: error: Failure in TEST(MockParamFail, unexpectedParameterName)
@@ -99,5 +99,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (12 failures, 34 tests, 34 ran, 99 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (12 failures, 34 tests, 34 ran, 103 checks, 0 ignored, 0 filtered out, 0 ms)
 
