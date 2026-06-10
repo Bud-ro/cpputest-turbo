@@ -13,9 +13,11 @@ cd "$(dirname "$0")/.."
 OUT=build/fuzz
 mkdir -p "$OUT"
 SAN="-fsanitize=address,undefined -fno-sanitize-recover=all"
-CFLAGS="-std=c11 $SAN -O1 -g -Iinclude"
-CXXFLAGS="-std=c++11 $SAN -O1 -g -Iinclude"
+OPT="${FUZZ_OPT:--O1}"
+CFLAGS="-std=c11 $SAN $OPT -g -Iinclude"
+CXXFLAGS="-std=c++11 $SAN $OPT -g -Iinclude"
 ROUNDS="${FUZZ_ROUNDS:-20}"
+echo "fuzz optimization level: $OPT"
 
 # sanitizer-instrumented library
 for f in src/core/*.c src/mock/*.c; do

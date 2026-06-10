@@ -1,6 +1,16 @@
 #ifndef CPPUTEST_CORE_MOCK_H
 #define CPPUTEST_CORE_MOCK_H
 
+/* INTERNAL INTERFACE — NO STABILITY GUARANTEE.
+ *
+ * This header is the implementation boundary between the C core and the
+ * C++ shim. It must be installed (the public headers include it), but the
+ * cu_ / cum_ symbols and types are NOT a supported API: they may change in
+ * any release without notice. The supported interfaces are:
+ *   C++ : the CppUTest/ and CppUTestExt/ headers (CppUTest-compatible)
+ *   C   : CppUTest/TestHarness_c.h and CppUTestExt/MockSupport_c.h
+ */
+
 /* C core of CppUMock. The C++ MockSupport/MockExpectedCall/MockActualCall
  * classes in CppUTestExt/ are thin facades over these calls. */
 

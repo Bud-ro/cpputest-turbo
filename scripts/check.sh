@@ -4,6 +4,9 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+echo "== format/lint =="
+./scripts/check-format.sh
+
 echo "== build =="
 make all
 

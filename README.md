@@ -9,7 +9,7 @@ that only have a C compiler.
 ```
 include/CppUTest/      C++ shim headers (upstream-identical names & macros)
 include/CppUTestExt/   CppUMock shim + OrderedTest
-include/cpputest_core/ the C ABI (pure-C consumers use this directly)
+include/cpputest_core/ internal C core interface (not a supported API)
 src/core/              C11 core: runner, assertions, output, leak detection
 src/mock/              C11 mock core + MockSupport_c
 src/shim/              the only C++ TUs in the library (operator new, SimpleString)
@@ -73,9 +73,10 @@ C projects can use the framework with no C++ toolchain at all:
 #include "CppUTestExt/MockSupport_c.h" /* mock_c()->expectOneCall(...) */
 ```
 
-Either pair C test files with the upstream-compatible C++ wrapper pattern, or
-go 100% C: register `cu_test` records with `cpputest_core/core.h` and call
-`cu_run_all(argc, argv)` (see `tests/c_interface/c_core_tests.c`).
+Pair C test files with the upstream-compatible C++ wrapper pattern, or use
+the C macros end to end. These two headers are the **supported C API**; the
+`cpputest_core/` headers they sit on are internal and carry no stability
+guarantee.
 
 ## Runner flags
 

@@ -13,9 +13,9 @@ CFLAGS       ?= -O2 -g
 CXXFLAGS     ?= -O2 -g
 REQ_CFLAGS   := -std=c11 -Wall -Wextra -Werror -Wpedantic -Wshadow \
                 -Wstrict-prototypes -Wmissing-prototypes -Wundef \
-                -Wwrite-strings $(INCLUDES)
+                -Wwrite-strings -Wconversion -Wsign-conversion $(INCLUDES)
 REQ_CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -Wpedantic -Wshadow \
-                -Wundef $(INCLUDES)
+                -Wundef -Wconversion -Wsign-conversion $(INCLUDES)
 
 PREFIX   ?= /usr/local
 DESTDIR  ?=

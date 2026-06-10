@@ -27,11 +27,24 @@ jobs:
       - name: full gate (unit + conformance + sanitizers + bounded fuzz)
         run: ./scripts/check.sh
 
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: format + hygiene check
+        run: ./scripts/check-format.sh
+
   deep-fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        opt: ["-O0", "-O1", "-O2", "-O3"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: build
         run: make
-      - name: differential fuzz soak
-        run: FUZZ_ROUNDS=100 ./scripts/check-fuzz.sh
+      - name: differential fuzz soak at ${{ matrix.opt }}
+        run: FUZZ_OPT="${{ matrix.opt }}" FUZZ_ROUNDS=100 ./scripts/check-fuzz.sh
