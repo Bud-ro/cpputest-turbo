@@ -31,10 +31,10 @@ ar rcs "$OUT/libasan.a" "$OUT"/*.o
 if [ ! -f .upstream-cache/libCppUTestUpstream.a ]; then
     mkdir -p .upstream-cache
     ( cd .upstream-cache && \
-      g++ -std=c++11 -w -O2 -c ../../third_party/cpputest/src/CppUTest/*.cpp \
-          ../../third_party/cpputest/src/CppUTestExt/*.cpp \
-          ../../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
-          -I../../third_party/cpputest/include && \
+      g++ -std=c++11 -w -O2 -c ../third_party/cpputest/src/CppUTest/*.cpp \
+          ../third_party/cpputest/src/CppUTestExt/*.cpp \
+          ../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
+          -I../third_party/cpputest/include && \
       ar rcs libCppUTestUpstream.a *.o )
 fi
 
