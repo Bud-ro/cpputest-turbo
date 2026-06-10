@@ -108,4 +108,48 @@ make -C "$VEND" BUILD="$HOST/obj/cpputest" all >/dev/null
 test -f "$HOST/obj/cpputest/libCppUTest.a"
 echo "ok: BUILD= override places artifacts outside the vendored tree"
 
+# --- header hygiene: hosts compile our public headers under THEIR flags;
+# every public header must survive strict warnings at every C++ standard
+# the toolchain offers ---
+cat > "$HOST/all_headers.cpp" <<'EOF'
+#include "CppUTest/TestHarness.h"
+#include "CppUTest/TestHarness_c.h"
+#include "CppUTest/CommandLineTestRunner.h"
+#include "CppUTest/MemoryLeakWarningPlugin.h"
+#include "CppUTest/MemoryLeakDetectorNewMacros.h"
+#include "CppUTest/PlatformSpecificFunctions.h"
+#include "CppUTest/SimpleString.h"
+#include "CppUTest/TestFailure.h"
+#include "CppUTest/TestOutput.h"
+#include "CppUTest/TestPlugin.h"
+#include "CppUTest/TestRegistry.h"
+#include "CppUTest/TestResult.h"
+#include "CppUTest/TestTestingFixture.h"
+#include "CppUTest/Utest.h"
+#include "CppUTest/UtestMacros.h"
+#include "CppUTest/CppUTestConfig.h"
+#include "CppUTestExt/MockSupport.h"
+#include "CppUTestExt/MockSupport_c.h"
+#include "CppUTestExt/MockSupportPlugin.h"
+#include "CppUTestExt/OrderedTest.h"
+
+int consumer_translation_unit_is_not_empty;
+EOF
+# headers are thin C-ABI shims: C-style casts are the idiom (upstream's
+# headers don't pass -Wold-style-cast either), so that flag is exercised
+# only through -isystem — how real consumers include third-party headers
+for STD in c++11 c++14 c++17 c++20; do
+    if "${CXX:-g++}" -std=$STD -x c++ -c /dev/null -o /dev/null 2>/dev/null; then
+        "${CXX:-g++}" -std=$STD -Wall -Wextra -Werror -Wpedantic -Wshadow \
+            -Wconversion -Wsign-conversion -Wcast-align -Wundef \
+            -I"$VEND/include" -c "$HOST/all_headers.cpp" \
+            -o "$HOST/all_headers.o"
+        "${CXX:-g++}" -std=$STD -Wall -Wextra -Werror -Wpedantic \
+            -Wold-style-cast \
+            -isystem "$VEND/include" -c "$HOST/all_headers.cpp" \
+            -o "$HOST/all_headers.o"
+        echo "ok: public headers clean under -std=$STD -Werror (+isystem)"
+    fi
+done
+
 echo "vendor smoke green"

@@ -41,9 +41,11 @@ class ExecFunctionTest : public Utest
     void (*teardown_)();
     ExecFunction *testFunction_;
 
-    ExecFunctionTest(void (*setup)(), void (*teardown)(),
+    /* parameter names must not shadow the setup()/teardown() members:
+     * consumers compile this header under -Wshadow -Werror */
+    ExecFunctionTest(void (*setupFn)(), void (*teardownFn)(),
                      ExecFunction *testFunction)
-        : setup_(setup), teardown_(teardown), testFunction_(testFunction)
+        : setup_(setupFn), teardown_(teardownFn), testFunction_(testFunction)
     {
     }
     virtual void setup() CPPUTEST_OVERRIDE
