@@ -83,6 +83,22 @@ if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/to.norm" "$OUT/tu.norm"; then
 fi
 echo "mock torture: identical to upstream"
 
+echo "== MockSupportPlugin torture (differential vs upstream) =="
+g++ $CXXFLAGS tests/mock_torture/plugin_torture.cpp build/libCppUTestExt.a "$OUT/libasan.a" \
+    -o "$OUT/ptorture_ours"
+g++ -std=c++11 -w -O1 -g -Ithird_party/cpputest/include tests/mock_torture/plugin_torture.cpp \
+    .upstream-cache/libCppUTestUpstream.a -o "$OUT/ptorture_upstream"
+rc_o=0; "$OUT/ptorture_ours" >"$OUT/pto.txt" 2>&1 || rc_o=$?
+rc_u=0; "$OUT/ptorture_upstream" >"$OUT/ptu.txt" 2>&1 || rc_u=$?
+norm <"$OUT/pto.txt" >"$OUT/pto.norm"
+norm <"$OUT/ptu.txt" >"$OUT/ptu.norm"
+if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/pto.norm" "$OUT/ptu.norm"; then
+    echo "PLUGIN TORTURE DIVERGENCE (rc ours=$rc_o upstream=$rc_u)" >&2
+    diff -u "$OUT/ptu.norm" "$OUT/pto.norm" | head -40 >&2
+    exit 1
+fi
+echo "plugin torture: identical to upstream"
+
 round=0
 while [ "$round" -lt "$ROUNDS" ]; do
     rc_o=0; FUZZ_SEED=$round "$OUT/mockdiff_ours" >"$OUT/o.txt" 2>&1 || rc_o=$?

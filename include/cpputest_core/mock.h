@@ -92,6 +92,10 @@ void cum_expectation_ignore_other_parameters(cum_expectation *e);
 void cum_expectation_on_object(cum_expectation *e, void *object_ptr);
 void cum_expectation_set_name(cum_expectation *e, const char *name);
 void cum_actual_with_name(cum_actual *a, const char *name);
+void cum_actual_with_call_order(cum_actual *a, unsigned order);
+/* MockSupport::tracing — actual calls are recorded, not matched */
+void cum_set_tracing(cum_scope *s, int enabled);
+const char *cum_trace_output(void);
 /* onObject (actual side): prunes to object-compatible expectations */
 void cum_actual_on_object(cum_actual *a, const void *object_ptr);
 void cum_expectation_with_parameter(cum_expectation *e, const char *name,

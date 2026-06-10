@@ -322,9 +322,10 @@ public:
         return *this;
     }
 
-    /* upstream MockCheckedActualCall::withCallOrder is a no-op */
-    virtual MockActualCall &withCallOrder(unsigned int)
+    /* no-op on a checked call; recorded when tracing */
+    virtual MockActualCall &withCallOrder(unsigned int order)
     {
+        cum_actual_with_call_order(handle_, order);
         return *this;
     }
 
@@ -575,6 +576,8 @@ public:
     }
     virtual bool expectedCallsLeft() { return cum_expected_calls_left_all() != 0; }
     virtual void ignoreOtherCalls() { cum_ignore_other_calls(scope_); }
+    virtual void tracing(bool enabled) { cum_set_tracing(scope_, enabled ? 1 : 0); }
+    virtual const char *getTraceOutput() { return cum_trace_output(); }
     virtual void disable() { cum_enable(scope_, 0); }
     virtual void enable() { cum_enable(scope_, 1); }
     virtual void crashOnFailure(bool shouldCrash = true)
