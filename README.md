@@ -8,6 +8,8 @@ CppUTest suites recompile unchanged — with byte-identical output, faster
 runtime, process-level test isolation, and first-class support for projects
 that only have a C compiler.
 
+*Entirely AI-generated — see [Provenance](#provenance).*
+
 ```
 include/CppUTest/      C++ shim headers (upstream-identical names & macros)
 include/CppUTestExt/   CppUMock shim + OrderedTest
@@ -30,12 +32,11 @@ No cmake, no autotools. `make install PREFIX=/usr/local` installs the
 libraries, headers and a pkg-config file.
 
 **Requirements:** a C11 compiler and GNU make — the stock `make` on Linux
-and macOS both qualify (developed with gcc 13; clang works). The C++ shim
-needs C++11. Linux and macOS (`scripts/check-macos.sh` cross-compiles for
-both macOS architectures with `zig cc` 0.16). Pre-PR gate:
-`./scripts/check.sh` (build, unit + conformance suites, `gcc -fanalyzer`
-static analysis, ASan/UBSan sweep, bounded differential fuzz; `CHECK_FAST=1`
-skips the heavy stages).
+and macOS both qualify. The C++ shim needs C++11. Linux and macOS are the
+supported platforms; CI exercises gcc and clang on both, and
+`scripts/check-macos.sh` cross-compiles for both macOS architectures with
+`zig cc`. The pre-PR gate is `./scripts/check.sh` (`CHECK_FAST=1` skips the
+heavy stages).
 
 ## Drop-in migration
 
@@ -101,31 +102,34 @@ Process isolation:
 ## Lean mode (fast compiles)
 
 `TestHarness.h` must pre-include `<new>`/`<memory>`/`<string>` before
-defining the leak-detection `new` macro — that is ~30k preprocessed lines
-per test file, the dominant compile cost (same as upstream). If you don't
-use the leak detector or SimpleString's `std::string` interop, compile your
-test files with:
+defining the leak-detection `new` macro — those standard headers dominate the
+compile cost of every test file (same as upstream). If you don't use the
+leak detector or SimpleString's `std::string` interop, compile your test
+files with:
 
 ```sh
 -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED -DCPPUTEST_USE_STD_CPP_LIB=0
 ```
 
-which shrinks a test TU from ~30,700 to ~1,100 preprocessed lines — about
-**4× faster compilation** (106 ms → 27 ms per TU at -O0 on the benchmark
-machine). Building the library with `CPPUTEST_C_ONLY=1` additionally drops
-the global `operator new` replacement, so `new`/`delete` in tests run at
-plain libc speed.
+which cuts the preprocessed size of a test TU by more than an order of
+magnitude and speeds compilation accordingly (current measurements:
+`bench/RESULTS.md`). Building the library with `CPPUTEST_C_ONLY=1`
+additionally drops the global `operator new` replacement, so `new`/`delete`
+in tests run at plain libc speed.
 
 ## Performance
 
-See `bench/RESULTS.md` (reproduce with `sh bench/run_bench.sh`; numbers
-from one Linux/gcc-13 machine on a synthetic stress load): sequential runs
-are **~5× faster** than
-upstream (passing assertions are an inlined compare + counter bump — ~0.3 ns;
-leak-tracked new/delete recycles through size-class freelists — 6.4 ns/pair),
-and `-j8` reaches **~14×**. C++ compile time is at parity (both pay for the
-std headers the `new` macro must pre-include); pure-C test files compile
-dramatically faster since they never touch the C++ standard library.
+The design goals: a passing assertion is an inlined compare plus a counter
+bump (no function call, no allocation); leak-tracked `new`/`delete` recycles
+blocks through size-class freelists instead of hitting malloc; failure paths
+may allocate, passing paths never do; and `-jN` spreads groups across forked
+workers. Current numbers, and the harness to reproduce them on your machine,
+live in [`bench/RESULTS.md`](bench/RESULTS.md) (`sh bench/run_bench.sh`) —
+both sequential and parallel runs are substantially faster than upstream on
+the synthetic stress load measured there. C++ compile time is at parity
+(both pay for the std headers the `new` macro must pre-include); pure-C test
+files compile dramatically faster since they never touch the C++ standard
+library.
 
 ## Known divergences from upstream
 
@@ -146,6 +150,34 @@ dramatically faster since they never touch the C++ standard library.
 - Failing assertions longjmp out of the test (upstream's no-exceptions mode);
   C++ temporaries alive at that moment are not destructed. Bounded to failure
   paths; the sanitizer sweep (`scripts/check-sanitizers.sh`) accounts for it.
+
+## Provenance
+
+This project is **entirely AI-generated** (Claude, via Claude Code) — core,
+headers, tests, fuzzers, build system, and docs, including this README. It
+was built in a plan-driven loop: do the next unchecked item in
+[`PLAN.md`](PLAN.md), verify, log, commit — the full history of iterations
+(bugs, dead ends, lessons) is in PLAN.md's iteration log, under the standing
+rules in [`CLAUDE.md`](CLAUDE.md). Correctness never rested on the model's
+self-assessment: the gates are golden-output tests, upstream's own suites
+compiled unmodified, differential fuzzing against the real upstream build,
+sanitizers, and static analysis.
+
+The human contribution was a handful of prompts. The initial one, roughly:
+
+> *Rewrite CppUTest from scratch: a C11 core with a thin C++ header shim,
+> source-compatible with upstream — existing test suites must recompile
+> unchanged with byte-identical output. Plain gcc + make, no cmake. Vendor
+> upstream as a read-only oracle and prove conformance by running its own
+> tests against the new library. Keep PLAN.md as durable state and work in
+> small iterations that each end with the check script green and a commit.*
+
+Steering after that amounted to incantations like: *fuzz test* · *test
+against the original implementation* · *rewrite in C, keep C++ headers* ·
+*rewrite for performance, minimal virtualization, minimal allocations* ·
+*allow multi-threading via fork or another mechanism with memory isolation*.
+Everything else — design, debugging, verification, and the decision of what
+to do next — was Claude-driven.
 
 ## License
 
