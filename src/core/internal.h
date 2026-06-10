@@ -34,6 +34,7 @@ typedef struct cu_junit_state cu_junit_state;
 
 typedef struct cu_output {
     cu_output_level level;
+    int suppress_summary; /* parallel workers: parent prints the merged one */
     int color;
     size_t dot_count;
     const char *progress_indicator; /* "." or "!" for the test in flight */
@@ -53,6 +54,7 @@ typedef struct cu_filter {
 } cu_filter;
 
 typedef struct cu_args {
+    int parallel_workers; /* -jN extension (0/1 = sequential) */
     int need_help;
     int verbose;
     int very_verbose;
@@ -91,6 +93,15 @@ int cu_filters_match(const cu_filter *filters, const char *s);
 cu_result *cu_result_current(void);
 cu_output *cu_output_current(void);
 extern cu_plugin_parse_fn cu_plugin_parse_hook;
+
+/* fork.c — POSIX process isolation (-p) and parallel workers (-jN) */
+void cu_fork_run_one_test(cu_test *t, cu_result *res);
+int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total);
+
+/* runner.c internals shared with fork.c */
+void cu_run_test_actions(cu_test *t);
+void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out);
+void cu_set_current_result_output(cu_result *res, cu_output *out);
 
 /* registry list reordering (UtestShellPointerArray) */
 void cu_registry_reverse(void);

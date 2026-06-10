@@ -24,6 +24,12 @@ static cu_plugin_action_fn plugin_pre;
 static cu_plugin_action_fn plugin_post;
 cu_plugin_parse_fn cu_plugin_parse_hook; /* read by args.c */
 
+void cu_set_current_result_output(cu_result *res, cu_output *out)
+{
+    current_result = res;
+    current_output = out;
+}
+
 void cu_set_plugin_hooks(cu_plugin_action_fn pre, cu_plugin_action_fn post,
                          cu_plugin_parse_fn parse)
 {
@@ -152,15 +158,10 @@ static void cu_run_fixture(cu_test *t)
     vv("\n---- after destroyTest: ");
 }
 
-/* UtestShell::runOneTest / IgnoredUtestShell::runOneTest */
-static void cu_run_one_test(cu_test *t, cu_result *res)
+/* the pre/fixture/post sequence (UtestShell::runOneTestInCurrentProcess);
+ * also runs inside the forked child for -p */
+void cu_run_test_actions(cu_test *t)
 {
-    if (t->is_ignored && !t->run_ignored) {
-        res->ignored_count++;
-        return;
-    }
-    t->has_failed = 0;
-    res->run_count++;
     vv("\n-- before runAllPreTestAction: ");
     if (plugin_pre)
         plugin_pre(t);
@@ -170,6 +171,22 @@ static void cu_run_one_test(cu_test *t, cu_result *res)
     if (plugin_post)
         plugin_post(t);
     vv("\n-- after runAllPostTestAction: ");
+}
+
+/* UtestShell::runOneTest / IgnoredUtestShell::runOneTest */
+static void cu_run_one_test(cu_test *t, cu_result *res, int separate_process)
+{
+    if (t->is_ignored && !t->run_ignored) {
+        res->ignored_count++;
+        return;
+    }
+    t->has_failed = 0;
+    res->run_count++;
+    if (separate_process) {
+        cu_fork_run_one_test(t, res);
+        return;
+    }
+    cu_run_test_actions(t);
 }
 
 static int group_changes(const cu_test *t)
@@ -187,7 +204,7 @@ static int test_should_run(const cu_args *a, const cu_test *t, cu_result *res)
 }
 
 /* TestRegistry::runAllTests */
-static void cu_run_all_tests(const cu_args *a, cu_result *res, cu_output *out)
+void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out)
 {
     int group_start = 1;
 
@@ -205,7 +222,7 @@ static void cu_run_all_tests(const cu_args *a, cu_result *res, cu_output *out)
             cu_out_test_started(out, t);
             res->current_test_time_started = cu_time_in_millis();
             current_test = t;
-            cu_run_one_test(t, res);
+            cu_run_one_test(t, res, a->run_separate_process);
             current_test = NULL;
             res->current_test_ms = cu_time_in_millis() - res->current_test_time_started;
             cu_out_test_ended(out, res);
@@ -302,7 +319,7 @@ void cu_run_registered_tests_ex(cu_run_stats *stats_out, int verbose,
 
     current_result = &res;
     current_output = &out;
-    cu_run_all_tests(&args, &res, &out);
+    cu_run_all_tests_internal(&args, &res, &out);
 
     current_test = saved_test;
     current_result = saved_result;
@@ -386,7 +403,10 @@ int cu_run_all(int argc, const char *const *argv)
         memset(&res, 0, sizeof res);
         current_result = &res;
         current_output = &out;
-        cu_run_all_tests(&args, &res, &out);
+        if (args.parallel_workers > 1)
+            cu_run_parallel(&args, &out, &res);
+        else
+            cu_run_all_tests_internal(&args, &res, &out);
         current_result = NULL;
         current_output = NULL;
 

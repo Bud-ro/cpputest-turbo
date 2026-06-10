@@ -128,6 +128,12 @@ else
     fail=1
 fi
 
+# ---- fork isolation and parallel workers (Phase 8) ----------------------------
+$CXX $CXXFLAGS tests/process/process_tests.cpp build/libCppUTest.a -o "$BUILD/process_tests"
+if \! sh tests/process/run.sh "$BUILD/process_tests"; then
+    fail=1
+fi
+
 # ---- C-only library build (last: it wipes build/) ---------------------------
 if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null; then
     mkdir -p "$BUILD"

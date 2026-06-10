@@ -209,6 +209,8 @@ static int result_is_failure(const cu_result *res)
 
 void cu_out_summary(cu_output *out, const cu_result *res)
 {
+    if (out->suppress_summary)
+        return;
     if (!console_active(out))
         return;
     int ran_nothing = result_is_failure(res) && res->failure_count == 0;

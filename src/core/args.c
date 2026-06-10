@@ -214,6 +214,8 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
         else if (starts_with(arg, "-o")) correct = set_output_type(a, argc, argv, &i);
         else if (starts_with(arg, "-p")) correct = cu_plugin_parse_hook ? cu_plugin_parse_hook(argc, argv, i) : 0;
         else if (starts_with(arg, "-k")) { free(a->package_name); a->package_name = strdup(parameter_field(argc, argv, &i, "-k")); }
+        /* cpputest-revibed extension: -jN parallel workers (group granularity) */
+        else if (starts_with(arg, "-j")) a->parallel_workers = atoi(arg + 2);
         else correct = 0;
 
         if (!correct)
