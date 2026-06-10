@@ -461,14 +461,19 @@ static void mock_fail(msb *message)
     cu_test *t = cu_current_test();
     char *msg = message->buf;
     if (t && !t->has_failed) {
+        /* the message must survive the longjmp out of cu_fail_with_message;
+         * park it in a static slot (released on the next failure) instead
+         * of a fixed-size copy that would truncate large histories */
+        static char *parked;
+        free(parked);
+        parked = msg;
         if (crash_on_failure) {
-            free(msg);
+            /* upstream reports the failure FIRST, then crashes so a
+             * debugger lands after the message is out */
+            cu_add_failure(t->file, t->line, parked);
             __builtin_trap();
         }
-        static char copy[8192];
-        snprintf(copy, sizeof copy, "%s", msg);
-        free(msg);
-        cu_fail_with_message(t->file, t->line, copy); /* longjmps */
+        cu_fail_with_message(t->file, t->line, parked); /* longjmps */
     }
     free(msg);
 }

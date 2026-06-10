@@ -13,4 +13,13 @@ echo "== unit tests =="
 echo "== conformance =="
 ./scripts/run-conformance.sh
 
+# the heavier gates run by default; CHECK_FAST=1 skips them for quick loops
+if [ "${CHECK_FAST:-0}" != "1" ]; then
+    echo "== sanitizers =="
+    ./scripts/check-sanitizers.sh
+
+    echo "== fuzz (bounded; FUZZ_ROUNDS env to deepen) =="
+    FUZZ_ROUNDS="${FUZZ_ROUNDS:-3}" FUZZ_ITERS="${FUZZ_ITERS:-5000}" ./scripts/check-fuzz.sh
+fi
+
 echo "== check.sh: ALL GREEN =="
