@@ -41,10 +41,12 @@ All notable changes to cpputest-turbo. Format follows
   return NULL for the OOM-simulation API.
 - JUnit `<system-out>` accumulation is linear instead of O(n²) in the
   number of prints.
-
 - clang builds the library warning-clean: printf-format attributes on the
   variadic helpers (clang's `-Wformat-nonliteral` does not exempt va_list
   functions like gcc's) and a `void *` hop for its stricter `-Wcast-align`.
+- Sanitizer gates run on macOS (LeakSanitizer is Linux-only; `detect_leaks`
+  is now forced off on Darwin) and under clang's ASan (`poison_array_cookie=0`
+  — the leak tracker legitimately 0xCD-fills the new[] cookie on delete[]).
 
 ### Added
 - `make lint` / `scripts/check-analyzer.sh`: `gcc -fanalyzer` static

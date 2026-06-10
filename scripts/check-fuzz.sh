@@ -47,8 +47,10 @@ $CC $CFLAGS fuzz/fuzz_strings.c "$OUT/libasan.a" -o "$OUT/fuzz_strings"
 $CC $CFLAGS fuzz/fuzz_memleak.c "$OUT/libasan.a" -o "$OUT/fuzz_memleak"
 
 # deliberate failure paths leak longjmp'd temporaries by design; memory
-# SAFETY is what these hunt
-export ASAN_OPTIONS=detect_leaks=0
+# SAFETY is what these hunt. poison_array_cookie=0: the leak tracker
+# 0xCD-fills the whole tracked block (new[] cookie included) inside
+# operator delete[], which clang's array-cookie poisoning would flag.
+export ASAN_OPTIONS="detect_leaks=0:poison_array_cookie=0"
 
 echo "== fuzz_args =="
 FUZZ_SEED=1 "$OUT/fuzz_args"

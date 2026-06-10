@@ -29,13 +29,25 @@ sanitizer_report_in() {
     grep -q -e "ERROR" -e "runtime error:" "$1"
 }
 
+# LeakSanitizer is Linux-only: Darwin's ASan abort()s on detect_leaks=1
+LEAKS_OK=1
+[ "$(uname)" = "Darwin" ] && LEAKS_OK=0
+
+# poison_array_cookie=0: clang's ASan poisons the new[] array cookie; the
+# leak tracker legitimately 0xCD-fills the whole tracked block (cookie
+# included) inside operator delete[], which would trip that check
+ASAN_COMMON="poison_array_cookie=0"
+
 # suites with deliberate failures exit with their failure count, so the rc
 # check only rejects signal deaths (a non-recovering sanitizer abort()s,
 # rc >= 128); report text is the primary detector
 run_one() { # source leaks(0/1)
     $CXX $CXXFLAGS "$1" "$OUT/libCppUTestAsan.a" -o "$OUT/t.bin"
+    leaks=$2
+    [ "$LEAKS_OK" = 1 ] || leaks=0
     rc=0
-    ASAN_OPTIONS="detect_leaks=$2" "$OUT/t.bin" >/dev/null 2>"$OUT/err.txt" || rc=$?
+    ASAN_OPTIONS="detect_leaks=$leaks:$ASAN_COMMON" "$OUT/t.bin" \
+        >/dev/null 2>"$OUT/err.txt" || rc=$?
     if sanitizer_report_in "$OUT/err.txt" || [ "$rc" -ge 128 ]; then
         echo "SANITIZER ISSUES in $1 (rc=$rc):" >&2
         cat "$OUT/err.txt" >&2
@@ -58,7 +70,8 @@ run_one tests/leaks/leak_tests.cpp 0
 # fork/parallel runner (deliberate SIGSEGV child + workers)
 run_proc() { # binary args
     rc=0
-    ASAN_OPTIONS=detect_leaks=0 "$@" >/dev/null 2>"$OUT/err.txt" || rc=$?
+    ASAN_OPTIONS="detect_leaks=0:$ASAN_COMMON" "$@" \
+        >/dev/null 2>"$OUT/err.txt" || rc=$?
     if sanitizer_report_in "$OUT/err.txt" || [ "$rc" -ge 128 ]; then
         echo "SANITIZER ISSUES running $* (rc=$rc):" >&2
         cat "$OUT/err.txt" >&2
