@@ -844,7 +844,7 @@ static void fz_sequence(unsigned long long seed)
             break;
         }
         default:
-            switch (fz_r() % 5) {
+            switch (fz_r() % 7) {
             case 0:
                 TR("[].clear\n");
                 mock().clear();
@@ -855,7 +855,15 @@ static void fz_sequence(unsigned long long seed)
                 break;
             case 2:
                 TR("[].expectedCallsLeft\n");
-                (void)mock().expectedCallsLeft();
+                printf("V left=%d\n", (int)mock().expectedCallsLeft());
+                break;
+            case 3:
+                TR("[s1].expectedCallsLeft\n");
+                printf("V s1left=%d\n", (int)mock("s1").expectedCallsLeft());
+                break;
+            case 4:
+                TR("[s1].checkExpectations\n");
+                mock("s1").checkExpectations();
                 break;
             default:
                 TR("[].checkExpectations\n");

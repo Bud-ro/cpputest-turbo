@@ -1150,7 +1150,16 @@ class MockSupport
         cum_remove_all_comparators_and_copiers();
     }
 
-    virtual void checkExpectations() { cum_check_expectations_all(); }
+    /* like clear: the global mock recurses over children, a named scope
+     * checks/counts only itself (upstream children live in the global's
+     * data store; named scopes have none) */
+    virtual void checkExpectations()
+    {
+        if (cum_scope_name(scope_)[0] == '\0')
+            cum_check_expectations_all();
+        else
+            cum_check_expectations_scope(scope_);
+    }
     virtual void clear()
     {
         /* upstream: the GLOBAL clear deletes all child scopes; a child's
@@ -1162,7 +1171,9 @@ class MockSupport
     }
     virtual bool expectedCallsLeft()
     {
-        return cum_expected_calls_left_all() != 0;
+        if (cum_scope_name(scope_)[0] == '\0')
+            return cum_expected_calls_left_all() != 0;
+        return cum_expected_calls_left_scope(scope_) != 0;
     }
     virtual void ignoreOtherCalls() { cum_ignore_other_calls(scope_); }
     virtual void tracing(bool enabled)

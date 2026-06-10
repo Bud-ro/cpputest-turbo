@@ -26,14 +26,21 @@ static cum_scope *scope(void)
 
 /* ------------------------- value conversion ----------------------------- */
 
+/* Mirrors upstream getMockValueCFromNamedValue (MockSupport_c.cpp:607):
+ * every branch reads through a type-asserted MockNamedValue getter, so the
+ * conversion COUNTS one user-visible check — except the object fallback,
+ * whose getObjectPointer has no assert. The empty value is int 0. */
 static MockValue_c to_mock_value(const cum_value *v, int has)
 {
     MockValue_c m;
     memset(&m, 0, sizeof m);
     if (!has) {
         m.type = MOCKVALUETYPE_INTEGER;
+        cu_count_check();
         return m;
     }
+    if (v->type != CUM_T_OBJECT && v->type != CUM_T_CONST_OBJECT)
+        cu_count_check();
     switch (v->type) {
     case CUM_T_BOOL:
         m.type = MOCKVALUETYPE_BOOL;
@@ -509,7 +516,9 @@ ACT_RETURN_COERCED(ull, ull, cpputest_ulonglong, "unsigned long long int",
                        COERCE(v.type == CUM_T_ULONG, v.v.ul) ||
                        COERCE(v.type == CUM_T_LONGLONG && v.v.ll >= 0,
                               (cpputest_ulonglong)v.v.ll))
-ACT_RETURN(string, CUM_T_STRING, str, const char *, NULL, "const char*")
+/* string's ignored-call zero is "" — MockIgnoredActualCall::returnStringValue
+ * returns "", not NULL (the pointer getters do return NULL) */
+ACT_RETURN(string, CUM_T_STRING, str, const char *, "", "const char*")
 ACT_RETURN(pointer, CUM_T_POINTER, ptr, void *, NULL, "void*")
 ACT_RETURN(const_pointer, CUM_T_CONST_POINTER, cptr, const void *, NULL,
            "const void*")
@@ -683,24 +692,40 @@ static void sup_ignore_other_calls(void)
 {
     cum_ignore_other_calls(scope());
 }
+/* upstream's checkExpectations_c/expectedCallsLeft_c/clear_c act on
+ * currentMockSupport: the global mock recurses over children, a named
+ * scope (mock_scope_c) touches only itself */
+static int on_global_scope(void)
+{
+    return cum_scope_name(scope())[0] == '\0';
+}
+
 static void sup_check_expectations(void)
 {
-    /* the core frees every scope's last actual call (and clear frees the
+    /* the core frees the scope's last actual call (and clear frees the
      * expectations); drop the cached handles so a stale MockActualCall_c or
      * MockExpectedCall_c pointer cannot dereference freed memory */
     cur_actual = NULL;
     cur_expectation = NULL;
-    cum_check_expectations_all();
+    if (on_global_scope())
+        cum_check_expectations_all();
+    else
+        cum_check_expectations_scope(scope());
 }
 static int sup_expected_calls_left(void)
 {
-    return cum_expected_calls_left_all();
+    if (on_global_scope())
+        return cum_expected_calls_left_all();
+    return cum_expected_calls_left_scope(scope());
 }
 static void sup_clear(void)
 {
     cur_actual = NULL;
     cur_expectation = NULL;
-    cum_clear_all();
+    if (on_global_scope())
+        cum_clear_all();
+    else
+        cum_clear_scope(scope());
 }
 static void sup_crash_on_failure(unsigned shouldCrash)
 {

@@ -87,6 +87,8 @@ cum_expectation *cum_expect_n_calls(cum_scope *s, unsigned amount,
 cum_actual *cum_actual_call(cum_scope *s,
                             const char *name); /* NULL: disabled/ignored */
 void cum_check_expectations_all(void);         /* recursive over every scope */
+void cum_check_expectations_scope(cum_scope *s); /* one child scope only */
+int cum_expected_calls_left_scope(cum_scope *s);
 void cum_clear_all(void);
 /* clear ONE scope (upstream child-scope clear: the scope itself survives) */
 void cum_clear_scope(cum_scope *s);

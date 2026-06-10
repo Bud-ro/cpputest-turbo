@@ -69,6 +69,17 @@ $CXX $CXXFLAGS fuzz/fuzz_mock_diff.cpp "$OUT/libasan.a" \
 $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include fuzz/fuzz_mock_diff.cpp \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockdiff_upstream"
 
+# differential mock_c fuzzer: C11 driver TU + C++ runner TU (the C-code-
+# under-test / C++-test-binding split), same diff harness
+$CC $CFLAGS -c fuzz/fuzz_mock_c_seq.c -o "$OUT/mock_c_seq_ours.o"
+$CXX $CXXFLAGS fuzz/fuzz_mock_c_diff.cpp "$OUT/mock_c_seq_ours.o" \
+    "$OUT/libasan.a" -o "$OUT/mockcdiff_ours"
+$CC -std=c11 -w -O1 -g -Ithird_party/cpputest/include -c fuzz/fuzz_mock_c_seq.c \
+    -o "$OUT/mock_c_seq_up.o"
+$CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
+    fuzz/fuzz_mock_c_diff.cpp "$OUT/mock_c_seq_up.o" \
+    .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockcdiff_upstream"
+
 norm() {
     # ms timings + library-INTERNAL failure locations (e.g. the type-check
     # assert in returnIntValue fires inside MockNamedValue.cpp upstream and
@@ -100,16 +111,18 @@ done
 
 round=0
 while [ "$round" -lt "$ROUNDS" ]; do
-    rc_o=0; FUZZ_SEED=$round "$OUT/mockdiff_ours" >"$OUT/o.txt" 2>&1 || rc_o=$?
-    rc_u=0; FUZZ_SEED=$round "$OUT/mockdiff_upstream" >"$OUT/u.txt" 2>&1 || rc_u=$?
-    norm <"$OUT/o.txt" >"$OUT/o.norm"
-    norm <"$OUT/u.txt" >"$OUT/u.norm"
-    if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/o.norm" "$OUT/u.norm"; then
-        echo "DIVERGENCE at FUZZ_SEED=$round (rc ours=$rc_o upstream=$rc_u)" >&2
-        diff -u "$OUT/u.norm" "$OUT/o.norm" | head -40 >&2
-        exit 1
-    fi
+    for PAIR in mockdiff mockcdiff; do
+        rc_o=0; FUZZ_SEED=$round "$OUT/${PAIR}_ours" >"$OUT/o.txt" 2>&1 || rc_o=$?
+        rc_u=0; FUZZ_SEED=$round "$OUT/${PAIR}_upstream" >"$OUT/u.txt" 2>&1 || rc_u=$?
+        norm <"$OUT/o.txt" >"$OUT/o.norm"
+        norm <"$OUT/u.txt" >"$OUT/u.norm"
+        if [ "$rc_o" -ne "$rc_u" ] || ! cmp -s "$OUT/o.norm" "$OUT/u.norm"; then
+            echo "DIVERGENCE ($PAIR) at FUZZ_SEED=$round (rc ours=$rc_o upstream=$rc_u)" >&2
+            diff -u "$OUT/u.norm" "$OUT/o.norm" | head -40 >&2
+            exit 1
+        fi
+    done
     round=$((round + 1))
 done
-echo "fuzz_mock_diff: $ROUNDS rounds identical to upstream"
+echo "fuzz_mock_diff + fuzz_mock_c_diff: $ROUNDS rounds identical to upstream"
 echo "fuzz gate green"

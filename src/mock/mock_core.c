@@ -836,22 +836,25 @@ static void fail_unexpected_call(cum_scope *s, const char *name)
     mock_fail(&b);
 }
 
-static void fail_expected_calls_didnt_happen(void)
+/* only_scope NULL = whole-tree history (the global mock); a child scope's
+ * checkExpectations lists only its own expectations, like upstream's
+ * failTestWithExpectedCallsNotFulfilled over expectations_ + children */
+static void fail_expected_calls_didnt_happen(cum_scope *only_scope)
 {
     msb b;
     msb_init(&b);
     msb_add(&b, "Mock Failure: Expected call WAS NOT fulfilled.\n");
-    msb_history(&b, NULL, pred_unfulfilled, pred_fulfilled, NULL);
+    msb_history(&b, only_scope, pred_unfulfilled, pred_fulfilled, NULL);
     mock_fail(&b);
 }
 
-static void fail_out_of_order_calls(void)
+static void fail_out_of_order_calls(cum_scope *only_scope)
 {
     msb b;
     msb_init(&b);
     msb_add(&b, "Mock Failure: Out of order calls");
     msb_add(&b, "\n");
-    msb_history(&b, NULL, pred_unfulfilled_out_of_order,
+    msb_history(&b, only_scope, pred_unfulfilled_out_of_order,
                 pred_fulfilled_out_of_order, NULL);
     mock_fail(&b);
 }
@@ -1655,9 +1658,30 @@ void cum_check_expectations_all(void)
 
     /* wasLastActualCallFulfilled(): don't double-report after a failed call */
     if (!last_call_failed && unfulfilled)
-        fail_expected_calls_didnt_happen();
+        fail_expected_calls_didnt_happen(NULL);
     if (out_of_order)
-        fail_out_of_order_calls();
+        fail_out_of_order_calls(NULL);
+}
+
+/* upstream MockSupport::checkExpectations / expectedCallsLeft on a CHILD
+ * scope examine that scope only (children live in the global mock's data
+ * store; named scopes have none) — the _all variants are the global mock */
+void cum_check_expectations_scope(cum_scope *s)
+{
+    int last_call_failed =
+        s->last_actual && s->last_actual->state == CUM_CALL_FAILED;
+    scope_finalize_last_actual(s);
+
+    if (!last_call_failed && scope_has_unfulfilled(s))
+        fail_expected_calls_didnt_happen(s);
+    if (scope_has_out_of_order(s))
+        fail_out_of_order_calls(s);
+}
+
+int cum_expected_calls_left_scope(cum_scope *s)
+{
+    scope_finalize_last_actual(s);
+    return scope_has_unfulfilled(s);
 }
 
 static void scope_clear(cum_scope *s)
