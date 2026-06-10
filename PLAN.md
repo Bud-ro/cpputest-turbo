@@ -151,19 +151,20 @@ Makefile               Builds lib, tests, conformance, bench
 (none)
 
 ## Publish blockers (from the 5-agent review, 2026-06-09)
-- [ ] P1 LICENSE file (BSD-3, dual copyright) + upstream attribution header in UtestMacros.h (copied macro bodies)
-- [ ] P1 Makefile: user CFLAGS must not drop -std=c11/-Iinclude (split REQ_CFLAGS)
+- [x] P1 LICENSE file (BSD-3, dual copyright) + upstream attribution header in UtestMacros.h (copied macro bodies)
+- [x] P1 Makefile: user CFLAGS must not drop -std=c11/-Iinclude (split REQ_CFLAGS)
 - [ ] P1 SimpleString operator==/!= as free functions (reversed-literal comparisons don't compile)
-- [ ] P1 mock onObject() (expected+actual, core + facade + failure messages)
-- [ ] P1 MockSupportPlugin: installComparator/Copier, !hasFailed gating on checkExpectations, removeAll after clear
-- [ ] P2 mock tracing()/getTraceOutput(); actual withCallOrder(); withName(); MockSupport reporter/repository hooks
-- [ ] P2 honor -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
-- [ ] P2 check.sh should gate sanitizers + bounded fuzz; add leaks+process suites to sanitizer sweep
-- [ ] P3 install target + pkg-config; CHANGELOG; README disclaimer + requirements; expectNoCall returns void
-- [ ] P3 crashOnFailure: report before crash; SimpleString utility surface (find/replace/split/VStringFromFormat/std::string)
+- [x] P1 mock onObject() (expected+actual, core + facade + failure messages)
+- [x] P1 MockSupportPlugin: installComparator/Copier, !hasFailed gating on checkExpectations, removeAll after clear
+- [x] P2 mock tracing()/getTraceOutput(); actual withCallOrder(); withName() (reporter/repository hooks deferred: need the MockFailure class hierarchy — documented divergence in README, post-publish)
+- [x] P2 honor -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
+- [x] P2 check.sh gates sanitizers + bounded fuzz (CHECK_FAST=1 skips); sweep covers leaks/process/c_interface/torture
+- [x] P3 install target + pkg-config; CHANGELOG; README disclaimer + requirements; expectNoCall returns void
+- [x] P3 crashOnFailure: report before crash; SimpleString utility surface (find/replace/split/VStringFromFormat/std::string); CI workflow added
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-10 #26 (publish blockers, "do it all"): LICENSE+attribution; Makefile REQ_* split + install/pkg-config; SimpleString free operators + full utility surface (differential suite); CPPUTEST_MEM_LEAK_DETECTION_DISABLED; expectNoCall void; onObject (core+facade+both failure messages, fuzz alphabet widened, identical first try); withName/withCallOrder; MockSupportPlugin comparator pipeline + hasFailed gate (differential plugin suite); tracing (upstream-exact format, differential); crashOnFailure report-then-trap; mock_fail 8KiB truncation fixed (parked heap slot); check.sh gates sanitizers+bounded fuzz; sweep covers leaks/fork/-j2/C-consumers; memleak fuzzer adds double-free; CHANGELOG; README requirements/disclaimer; CI workflow. Deferred (documented): MockFailureReporter injection surface.
 - 2026-06-09 #25 (5x Opus review + widened fuzzing): widened differential alphabet (comparators/copiers/OfType/membuffer/typed-return-asks/scope-clear) caught 4 more parity bugs (OfType output rendering in dumps+MISSING list; child-scope clear must not wipe globally; known-name wrong-type output params not rescued by ignoreOtherParameters; integer return getters need upstream's widening coercion in BOTH C++ facade and C API). Review-driven safety fixes: heap corruption freeing tracked ptrs after tracking toggled off (lookup-based release), size-arithmetic overflow guard in block_alloc, mkdtemp per-run worker dirs. Review verdict logged in next section: NOT yet publish-ready — blockers: LICENSE/attribution, Makefile CFLAGS, SimpleString free operator==, mock onObject/tracing/MockSupportPlugin, CPPUTEST_MEM_LEAK_DETECTION_DISABLED.
 - 2026-06-09 #24: fuzzer found a REAL output bug — emit() truncated failure messages >1KiB (fixed-size stack buffer; long mock histories hit it). Fixed with heap spill + fixture regression test. 400-round soak (20k random mock sequences) now byte-identical to upstream; torture suite identical; sanitizers green.
 - 2026-06-09 #23 (fuzzing + mock torture): built seeded ASan/UBSan fuzzers (args parser, failure formatters, leak tracker) and a DIFFERENTIAL mock fuzzer (same public-API driver vs upstream, outputs diffed). Found and fixed 8 real divergences: duplicate-param-name first-by-name rendering/lookup quirks; actual output param type label void*; ignoreOtherCalls/disable/enable propagate global->children; lazily-created scopes clone global state; global clear DELETES children (zombie+revive model) and discards pending actual call UNCHECKED; mock(name) on existing scope counts a check (upstream internal STRCMP assert); output-param copy counts a check per param; C-API typed return getters count+fail on type mismatch like upstream getters. Also: tests/leaks/run.sh golden check had been vacuous (mangled bang) — fixed, goldens verified genuine. Our mock suite now runs byte-identical ON UPSTREAM. mock torture suite added (15 adversarial scenarios, differential).

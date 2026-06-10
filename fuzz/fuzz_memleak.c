@@ -88,9 +88,16 @@ static void t_body(cu_test *t, void *f)
                 live[idx] = live[--live_count];
                 live_size[idx] = live_size[live_count];
             }
-        } else if (op < 85) { /* free something foreign: must fail the test */
+        } else if (op < 82) { /* free something foreign: must fail the test */
             char local[8];
             cpputest_free(local); /* longjmps out of the body */
+        } else if (op < 84 && live_count > 0) { /* genuine double free */
+            int idx = (int)(r() % (unsigned)live_count);
+            void *p = live[idx];
+            live[idx] = live[--live_count];
+            live_size[idx] = live_size[live_count];
+            cpputest_free(p);
+            cpputest_free(p); /* "Deallocating non-allocated" -> longjmp */
         } else if (op < 92 && live_count > 0) { /* wrong-type free */
             int idx = (int)(r() % (unsigned)live_count);
             void *p = live[idx];

@@ -1,4 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
+#ifdef __APPLE__
+/* Darwin hides mkdtemp behind _DARWIN_C_SOURCE under strict POSIX */
+#define _DARWIN_C_SOURCE
+#endif
 
 #include "internal.h"
 

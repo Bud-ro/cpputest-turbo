@@ -113,6 +113,11 @@ dramatically faster since they never touch the C++ standard library.
   `conformance/SKIPPED.md`.
 - `-jN` is an extension; upstream rejects the flag.
 - Out-of-scope: GTest convertor, MemoryReport plugins, IEEE754 plugin.
+- Not yet implemented: the `MockFailureReporter` injection surface
+  (`setMockFailureStandardReporter`/`setActiveReporter`) and the standalone
+  comparator-repository API; mock failures always report through the normal
+  test-failure path (which `MockSupportPlugin` relies on, and which behaves
+  identically in practice).
 - Shuffle order for a given seed matches upstream only on the same libc
   (both use `srand`/`rand`).
 - Failing assertions longjmp out of the test (upstream's no-exceptions mode);
