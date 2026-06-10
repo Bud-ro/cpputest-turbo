@@ -104,6 +104,17 @@ $CXX $CXXFLAGS tests/fixture/fixture_tests.cpp build/libCppUTest.a -o "$BUILD/fi
 rc=0; "$BUILD/fixture_tests" >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: fixture_tests exit $rc" >&2; fail=1; else echo "ok: TestTestingFixture"; fi
 
+# ---- OrderedTest ---------------------------------------------------------------
+$CXX $CXXFLAGS tests/ordered/ordered_tests.cpp build/libCppUTest.a -o "$BUILD/ordered_tests"
+rc=0; out=$("$BUILD/ordered_tests" -v 2>&1) || rc=$?
+order=$(printf '%s\n' "$out" | grep -oE 'TEST\(Ordered, [a-z]+\)' | tr '\n' ' ')
+if [ "$rc" -eq 0 ] && [ "$order" = "TEST(Ordered, first) TEST(Ordered, second) TEST(Ordered, third) TEST(Ordered, fourth) TEST(Ordered, fifth) " ]; then
+    echo "ok: TEST_ORDERED level ordering"
+else
+    echo "FAILED: ordered_tests rc=$rc order=$order" >&2
+    fail=1
+fi
+
 # ---- C-only library build (last: it wipes build/) ---------------------------
 if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null; then
     mkdir -p "$BUILD"

@@ -9,9 +9,11 @@
 
 #if defined(__cplusplus) && __cplusplus >= 201103L
 #define CPPUTEST_OVERRIDE override
+#define CPPUTEST_DESTRUCTOR_OVERRIDE override
 #define NULLPTR nullptr
 #else
 #define CPPUTEST_OVERRIDE
+#define CPPUTEST_DESTRUCTOR_OVERRIDE
 #define NULLPTR NULL
 #endif
 

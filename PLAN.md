@@ -112,7 +112,7 @@ Makefile               Builds lib, tests, conformance, bench
       `cpputest_malloc/free` — pure C consumer path, tested with `gcc -std=c11`.
 - [x] 5.2 `TestTestingFixture.h` shim (upstream's tests use it heavily to test
       the framework itself — needed for conformance).
-- [ ] 5.3 `OrderedTest` (CppUTestExt) support.
+- [x] 5.3 `OrderedTest` (CppUTestExt) support.
 
 ### Phase 6 — CppUMock
 - [ ] 6.1 C mock core: expectation store, call matching, parameter records
@@ -157,6 +157,7 @@ Makefile               Builds lib, tests, conformance, bench
 
 ## Iteration log
 (append one line per loop iteration: date, items done, anything learned)
+- 2026-06-09 #9: 5.3 done, Phase 5 complete — OrderedTest ported verbatim (ordered chain threaded through registry; needed UtestShell::addTest/getNext + TestRegistry::getFirstTest/getTestWithNext shims). Phase 6 (CppUMock) next: read INTERFACE.md lines 842+ for mock failure formats first.
 - 2026-06-09 #8: 5.1+5.2 done — TestHarness_c.h full macro surface w/ harness_c.c in the C core (upstream dispatch parity: BOOL/CHAR/UBYTE/SBYTE via CheckEqualFailure, INT via LongsEqual...); pure-C consumers WORK: c_core_tests.c registers cu_test directly and links the CPPUTEST_C_ONLY lib with plain gcc (verified in check.sh). Output now routes through a swappable sink (cu_set_output_sink) enabling TestTestingFixture (isolated registry swap, output capture, nested-run state save/restore, plugin hooks suppressed in nested runs like upstream's fresh-registry behavior). 5.3 OrderedTest next.
 - 2026-06-09 #7: 4.1-4.3 done — memleak.c (guard bytes BAS, 0xCD poison, 4096-byte report buffer w/ footer reservation, hash-table nodes, checking periods), newdelete.cpp = the ONE C++ TU in the lib (replacement operators can't be inline; make CPPUTEST_C_ONLY=1 skips it), New/Malloc macro headers (malloc macros opt-in like upstream), MemoryLeakWarningPlugin shim, runner installs leak plugin + prints FinalReport on green. Dealloc failures use test NAME as failure file (upstream quirk, golden-pinned). 4.4 deferred to conformance.
 - 2026-06-09 #6: 3.5 done — Phase 3 complete. TestPlugin chain lives in the C++ shim (verbatim upstream semantics incl. NullTestPlugin terminator, reverse post-action order, disable); C core exposes pre/post/parse hooks; TestRegistry/TestResult/TestFailure shims added; SetPointerPlugin + UT_PTR_SET with the 32-entry table; CommandLineTestRunner installs SetPointerPlugin like upstream. -pXXX args now reach plugin parseArguments.

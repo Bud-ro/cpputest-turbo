@@ -30,6 +30,21 @@ public:
     void addTest(UtestShell *test) { cu_registry_add(&test->node_); }
     void unDoLastAddTest() { cu_registry_undo_last_add(); }
 
+    UtestShell *getFirstTest()
+    {
+        cu_test *t = cu_registry_tests();
+        return t ? static_cast<UtestShell *>(t->user) : NULLPTR;
+    }
+
+    /* the test whose next pointer is `test` (NULL if none) */
+    UtestShell *getTestWithNext(UtestShell *test)
+    {
+        for (cu_test *t = cu_registry_tests(); t; t = t->next)
+            if (t->next == &test->node_)
+                return static_cast<UtestShell *>(t->user);
+        return NULLPTR;
+    }
+
     void installPlugin(TestPlugin *plugin)
     {
         firstPlugin_ = plugin->addPlugin(firstPlugin_);

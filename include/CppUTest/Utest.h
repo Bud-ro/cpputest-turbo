@@ -89,6 +89,18 @@ public:
     void setFileName(const char *fileName) { node_.file = fileName; }
     void setLineNumber(size_t lineNumber) { node_.line = lineNumber; }
 
+    /* linked-list plumbing used by TestRegistry/OrderedTest */
+    virtual UtestShell *addTest(UtestShell *test)
+    {
+        node_.next = test ? &test->node_ : NULLPTR;
+        return this;
+    }
+
+    UtestShell *getNext() const
+    {
+        return node_.next ? static_cast<UtestShell *>(node_.next->user) : NULLPTR;
+    }
+
     static UtestShell *getCurrent()
     {
         cu_test *t = cu_current_test();
