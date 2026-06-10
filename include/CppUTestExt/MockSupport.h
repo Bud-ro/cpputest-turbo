@@ -417,9 +417,9 @@ public:
         return expectNCalls(1, functionName);
     }
 
-    virtual MockExpectedCall &expectNoCall(const SimpleString &functionName)
+    virtual void expectNoCall(const SimpleString &functionName)
     {
-        return expectNCalls(0, functionName);
+        expectNCalls(0, functionName);
     }
 
     virtual MockExpectedCall &expectNCalls(unsigned int amount,

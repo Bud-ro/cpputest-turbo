@@ -5,7 +5,11 @@
 #include "CppUTest/CppUTestConfig.h"
 
 #ifndef CPPUTEST_USE_MEM_LEAK_DETECTION
+#ifdef CPPUTEST_MEM_LEAK_DETECTION_DISABLED
+#define CPPUTEST_USE_MEM_LEAK_DETECTION 0
+#else
 #define CPPUTEST_USE_MEM_LEAK_DETECTION 1
+#endif
 #endif
 
 #if CPPUTEST_USE_MEM_LEAK_DETECTION && defined(__cplusplus)

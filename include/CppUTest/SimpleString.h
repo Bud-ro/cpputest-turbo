@@ -32,8 +32,10 @@ public:
     SimpleString &operator+=(const SimpleString &other);
     SimpleString &operator+=(const char *other);
     SimpleString operator+(const SimpleString &other) const;
-    bool operator==(const SimpleString &other) const;
-    bool operator!=(const SimpleString &other) const;
+    /* free functions like upstream, so a const char* converts on EITHER
+     * side ("literal" == str compiles) */
+    friend bool operator==(const SimpleString &left, const SimpleString &right);
+    friend bool operator!=(const SimpleString &left, const SimpleString &right);
 
     SimpleString printable() const;
 

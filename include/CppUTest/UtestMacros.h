@@ -1,13 +1,18 @@
 #ifndef D_UTestMacros_h
 #define D_UTestMacros_h
 
-/* cpputest-revibed: test declaration and assertion macros. Generated names
+/* SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Portions copyright (c) 2007 Michael Feathers, James Grenning and Bas
+ * Vodde: several macro bodies in this file are reproduced from CppUTest's
+ * UtestMacros.h to guarantee source compatibility and byte-identical
+ * behavior. Remainder copyright (c) 2026 cpputest-revibed contributors.
+ * See LICENSE at the repository root.
+ *
+ * cpputest-revibed: test declaration and assertion macros. Generated names
  * are identical to upstream UtestMacros.h (including its quirks — see
  * docs/INTERFACE.md section 1) so that IMPORT_TEST_GROUP and friends stay
- * source compatible. Assertions lower to C core calls.
- *
- * Phase 1 subset: declaration macros + CHECK/CHECK_TEXT/CHECK_TRUE/
- * CHECK_FALSE/FAIL/FAIL_TEST/TEST_EXIT. The full set lands in Phase 2. */
+ * source compatible. Assertions lower to C core calls. */
 
 #include "CppUTest/Utest.h"
 

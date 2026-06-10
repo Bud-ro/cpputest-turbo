@@ -33,8 +33,14 @@
 #define CPPUTEST_USE_STD_CPP_LIB 1
 #endif
 
+/* upstream: -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED turns the new/malloc
+ * macros off wholesale (needed for ASan builds and embedded targets) */
 #ifndef CPPUTEST_USE_MEM_LEAK_DETECTION
+#ifdef CPPUTEST_MEM_LEAK_DETECTION_DISABLED
+#define CPPUTEST_USE_MEM_LEAK_DETECTION 0
+#else
 #define CPPUTEST_USE_MEM_LEAK_DETECTION 1
+#endif
 #endif
 
 #ifndef CPPUTEST_HAVE_EXCEPTIONS

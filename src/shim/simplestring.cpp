@@ -110,14 +110,14 @@ SimpleString SimpleString::operator+(const SimpleString &other) const
     return result;
 }
 
-bool SimpleString::operator==(const SimpleString &other) const
+bool operator==(const SimpleString &left, const SimpleString &right)
 {
-    return 0 == strcmp(buffer_, other.buffer_);
+    return 0 == strcmp(left.buffer_, right.buffer_);
 }
 
-bool SimpleString::operator!=(const SimpleString &other) const
+bool operator!=(const SimpleString &left, const SimpleString &right)
 {
-    return !(*this == other);
+    return !(left == right);
 }
 
 SimpleString SimpleString::printable() const
