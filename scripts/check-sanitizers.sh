@@ -18,6 +18,8 @@ rm -f "$OUT"/*.o
 for f in src/core/*.c src/mock/*.c; do
     $CC $CFLAGS -c "$f" -o "$OUT/$(basename "$f").o"
 done
+$CXX $CXXFLAGS -fno-exceptions -fno-rtti -c src/shim/simplestring.cpp \
+    -o "$OUT/simplestring.o"
 rm -f "$OUT/libCppUTestAsan.a"
 ar rcs "$OUT/libCppUTestAsan.a" "$OUT"/*.o
 
