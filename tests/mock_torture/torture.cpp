@@ -257,34 +257,6 @@ TEST(Torture, onObjectWithParameters)
     mock().checkExpectations();
 }
 
-/* ---- tracing: calls recorded, not matched --------------------------------- */
-TEST(Torture, tracingRecordsCalls)
-{
-    mock().tracing(true);
-    mock().actualCall("traced").withParameter("a", 7)
-        .withParameter("s", "txt").onObject((void *)0x4000);
-    mock("dev").actualCall("scoped").withParameter("d", 1.5);
-    STRCMP_CONTAINS("Function name:traced", mock().getTraceOutput());
-    STRCMP_CONTAINS("a:7 (0x7)", mock().getTraceOutput());
-    STRCMP_CONTAINS("s:txt", mock().getTraceOutput());
-    STRCMP_CONTAINS("onObject:0x4000", mock().getTraceOutput());
-    STRCMP_CONTAINS("Function name:dev::scoped", mock().getTraceOutput());
-    mock().clear();
-    STRCMP_EQUAL("", mock().getTraceOutput());
-    /* tracing off after clear: normal matching resumes */
-    mock().expectOneCall("normal");
-    mock().actualCall("normal");
-    mock().checkExpectations();
-}
-
-TEST(Torture, tracingIgnoresExpectations)
-{
-    mock().expectOneCall("nope"); /* recorded BEFORE tracing turned on */
-    mock().tracing(true);
-    mock().actualCall("nope");    /* traced, does NOT fulfill */
-    mock().clear();               /* discard the unfulfilled expectation */
-}
-
 /* ---- return value type punning between int widths ------------------------- */
 TEST(Torture, crossWidthReturnDefaults)
 {

@@ -1,13 +1,13 @@
 
-tests/mock/mock_tests.cpp:451: error: Failure in TEST(MockComparators, noWayToCopy)
+tests/mock/mock_tests.cpp:418: error: Failure in TEST(MockComparators, noWayToCopy)
 	MockFailure: No way to copy type <Point>. Please install a MockNamedValueCopier.
 
 ...
-tests/mock/mock_tests.cpp:421: error: Failure in TEST(MockComparators, noWayToCompare)
+tests/mock/mock_tests.cpp:388: error: Failure in TEST(MockComparators, noWayToCompare)
 	MockFailure: No way to compare type <Point>. Please install a MockNamedValueComparator.
 
 .
-tests/mock/mock_tests.cpp:412: error: Failure in TEST(MockComparators, customValueInFailureMessage)
+tests/mock/mock_tests.cpp:379: error: Failure in TEST(MockComparators, customValueInFailureMessage)
 	Mock Failure: Unexpected parameter value to parameter "p" to function "draw": <(3, 4)>
 	EXPECTED calls that WERE NOT fulfilled related to function: draw
 		draw -> Point p: <(1, 2)> (expected 1 call, called 0 times)
@@ -17,7 +17,7 @@ tests/mock/mock_tests.cpp:412: error: Failure in TEST(MockComparators, customVal
 		Point p: <(3, 4)>
 
 ....
-tests/mock/mock_tests.cpp:328: error: Failure in TEST(MockOutput, unexpectedOutputParameterName)
+tests/mock/mock_tests.cpp:295: error: Failure in TEST(MockOutput, unexpectedOutputParameterName)
 	Mock Failure: Unexpected output parameter name to function "f": wrong
 	EXPECTED calls that WERE NOT fulfilled related to function: f
 		f -> const void* a: <output> (expected 1 call, called 0 times)
@@ -26,7 +26,7 @@ tests/mock/mock_tests.cpp:328: error: Failure in TEST(MockOutput, unexpectedOutp
 	ACTUAL unexpected output parameter passed to function: f
 		void* wrong
 
-...........
+..........
 tests/mock/mock_tests.cpp:137: error: Failure in TEST(MockParamFail, unexpectedParameterName)
 	Mock Failure: Unexpected parameter name to function "f": b
 	EXPECTED calls that WERE NOT fulfilled related to function: f
@@ -99,5 +99,5 @@ tests/mock/mock_tests.cpp:16: error: Failure in TEST(MockFail, outOfOrder)
 		second -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)
 
 .
-Errors (12 failures, 34 tests, 34 ran, 103 checks, 0 ignored, 0 filtered out, 0 ms)
+Errors (12 failures, 33 tests, 33 ran, 89 checks, 0 ignored, 0 filtered out, 0 ms)
 

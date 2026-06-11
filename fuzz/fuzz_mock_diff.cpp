@@ -13,8 +13,7 @@
  * variants, all 12 andReturnValue overloads, every return*Value /
  * return*ValueOrDefault getter (with and without a queued return value,
  * so both the value path and the default/type-mismatch path run), the
- * MockSupport-level *ReturnValue getters, the data store (setData all
- * overloads, setDataObject/setDataConstObject, getData, hasData),
+ * MockSupport-level *ReturnValue getters,
  * comparators/copiers, output parameters, onObject, withCallOrder,
  * strictOrder, scopes, enable/disable, ignoreOtherCalls/Parameters,
  * expectNoCall, clear, checkExpectations, expectedCallsLeft.
@@ -55,7 +54,6 @@ static const char *const kNames[] = {"alpha", "beta", "gamma"};
 static const char *const kParams[] = {"a", "b", "c"};
 static const char *const kStrings[] = {"x", "yy", ""};
 static const char *const kScopes[] = {"", "s1"};
-static const char *const kDataNames[] = {"d1", "d2"};
 
 static unsigned char out_src[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 static unsigned char out_dst[8];
@@ -371,106 +369,6 @@ static void do_support_return_getter(MockSupport &m)
         MockNamedValue v = m.returnValue();
         printf("V sraw=%s/%s\n", v.getName().asCharString(),
                v.getType().asCharString());
-        break;
-    }
-    }
-}
-
-/* data store: all setData overloads, object variants, hasData/getData with
- * typed extraction (wrong-type extraction = compared failure path) */
-static void do_data_op(MockSupport &m)
-{
-    const char *dn = kDataNames[fz_r() % 2];
-    switch (fz_r() % 14) {
-    case 0:
-        TR(" d-setBool(%s)", dn);
-        m.setData(dn, fz_r() % 2 == 0);
-        break;
-    case 1:
-        TR(" d-setInt(%s)", dn);
-        m.setData(dn, (int)(fz_r() % 50) - 25);
-        break;
-    case 2:
-        TR(" d-setUInt(%s)", dn);
-        m.setData(dn, (unsigned int)(fz_r() % 50));
-        break;
-    case 3:
-        TR(" d-setLong(%s)", dn);
-        m.setData(dn, (long)(fz_r() % 50) - 25);
-        break;
-    case 4:
-        TR(" d-setULong(%s)", dn);
-        m.setData(dn, (unsigned long)(fz_r() % 50));
-        break;
-    case 5:
-        TR(" d-setStr(%s)", dn);
-        m.setData(dn, kStrings[fz_r() % 3]);
-        break;
-    case 6:
-        TR(" d-setDbl(%s)", dn);
-        m.setData(dn, (double)(fz_r() % 4) * 0.25);
-        break;
-    case 7:
-        TR(" d-setPtr(%s)", dn);
-        m.setData(dn, fz_ptr());
-        break;
-    case 8:
-        TR(" d-setCPtr(%s)", dn);
-        m.setData(dn, fz_cptr());
-        break;
-    case 9:
-        TR(" d-setFp(%s)", dn);
-        m.setData(dn, fz_fp());
-        break;
-    case 10:
-        TR(" d-setObj(%s)", dn);
-        m.setDataObject(dn, "FZT", &fz_objs[fz_r() % 3]);
-        break;
-    case 11:
-        TR(" d-setCObj(%s)", dn);
-        m.setDataConstObject(dn, "FZT", &fz_objs[fz_r() % 3]);
-        break;
-    case 12:
-        TR(" d-has(%s)", dn);
-        (void)m.hasData(dn);
-        break;
-    default: {
-        TR(" d-get(%s)", dn);
-        MockNamedValue v = m.getData(dn);
-        switch (fz_r() % 8) {
-        case 0:
-            printf("V dtype=%s\n", v.getType().asCharString());
-            break;
-        case 1:
-            printf("V dname=%s\n", v.getName().asCharString());
-            break;
-        case 2:
-            /* unknown names are int 0 upstream, so this never type-fails */
-            if (v.getType() == "int")
-                printf("V dint=%d\n", v.getIntValue());
-            break;
-        case 3:
-            if (v.getType() == "const char*")
-                printf("V dstr=%s\n", v.getStringValue());
-            break;
-        case 4:
-            if (v.getType() == "double")
-                printf("V ddbl=%g\n", v.getDoubleValue());
-            break;
-        case 5:
-            if (v.getType() == "bool")
-                printf("V dbool=%d\n", (int)v.getBoolValue());
-            break;
-        case 6:
-            if (v.getType() == "void*")
-                printf("V dptr=%p\n", v.getPointerValue());
-            break;
-        default:
-            /* widening coercion path: int data read as long (and the empty
-             * int-0 value when the name is unknown) */
-            printf("V dlong=%ld\n", v.getLongIntValue());
-            break;
-        }
         break;
     }
     }
@@ -844,22 +742,21 @@ static void fz_sequence(unsigned long long seed)
                 m8.disable();
                 break;
             }
-            case 1: { /* tracing mode: actual calls append to the shared
-                         trace recorder instead of matching */
+            case 1: {
                 MockSupport &m8 = pick_mock();
-                TR("[%s].tracing(on)\n", last_scope);
-                m8.tracing(true);
+                TR("[%s].enable\n", last_scope);
+                m8.enable();
                 break;
             }
             case 2: {
                 MockSupport &m8 = pick_mock();
-                TR("[%s].tracing(off)\n", last_scope);
-                m8.tracing(false);
+                TR("[%s].disable\n", last_scope);
+                m8.disable();
                 break;
             }
             case 3: {
-                TR("[].getTraceOutput\n");
-                printf("V trace=[%s]\n", mock().getTraceOutput());
+                TR("[].activeCalls\n");
+                printf("V left=%d\n", (int)mock().expectedCallsLeft());
                 break;
             }
             default: {
@@ -877,10 +774,10 @@ static void fz_sequence(unsigned long long seed)
             TR("\n");
             break;
         }
-        case 10: { /* data store */
+        case 10: { /* mid-test expectation check, heavily used downstream */
             MockSupport &m10 = pick_mock();
-            TR("[%s].data", last_scope);
-            do_data_op(m10);
+            TR("[%s].checkExpectations", last_scope);
+            m10.checkExpectations();
             TR("\n");
             break;
         }

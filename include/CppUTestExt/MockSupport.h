@@ -244,7 +244,7 @@ inline void CppUMockCopierCopy(void *ctx, void *dst, const void *src)
 } /* extern "C" */
 
 /* MockNamedValue facade: a typed value with STRCMP-checked getters,
- * as returned by getData()/returnValue() */
+ * as returned by returnValue() */
 class MockNamedValue
 {
   public:
@@ -708,7 +708,7 @@ class MockActualCall
         return *this;
     }
 
-    /* no-op on a checked call; recorded when tracing */
+    /* no-op, like upstream's checked call */
     virtual MockActualCall &withCallOrder(unsigned int order)
     {
         cum_actual_with_call_order(handle_, order);
@@ -903,9 +903,7 @@ class MockActualCall
     }
     virtual bool returnBoolValueOrDefault(bool d)
     {
-        return traced()           ? returnBoolValue()
-               : hasReturnValue() ? returnBoolValue()
-                                  : d;
+        return hasReturnValue() ? returnBoolValue() : d;
     }
     virtual int returnIntValue()
     {
@@ -913,9 +911,7 @@ class MockActualCall
     }
     virtual int returnIntValueOrDefault(int d)
     {
-        return traced()           ? returnIntValue()
-               : hasReturnValue() ? returnIntValue()
-                                  : d;
+        return hasReturnValue() ? returnIntValue() : d;
     }
     virtual unsigned int returnUnsignedIntValue()
     {
@@ -923,9 +919,7 @@ class MockActualCall
     }
     virtual unsigned int returnUnsignedIntValueOrDefault(unsigned int d)
     {
-        return traced()           ? returnUnsignedIntValue()
-               : hasReturnValue() ? returnUnsignedIntValue()
-                                  : d;
+        return hasReturnValue() ? returnUnsignedIntValue() : d;
     }
     virtual long int returnLongIntValue()
     {
@@ -933,9 +927,7 @@ class MockActualCall
     }
     virtual long int returnLongIntValueOrDefault(long int d)
     {
-        return traced()           ? returnLongIntValue()
-               : hasReturnValue() ? returnLongIntValue()
-                                  : d;
+        return hasReturnValue() ? returnLongIntValue() : d;
     }
     virtual unsigned long int returnUnsignedLongIntValue()
     {
@@ -944,9 +936,7 @@ class MockActualCall
     virtual unsigned long int
     returnUnsignedLongIntValueOrDefault(unsigned long int d)
     {
-        return traced()           ? returnUnsignedLongIntValue()
-               : hasReturnValue() ? returnUnsignedLongIntValue()
-                                  : d;
+        return hasReturnValue() ? returnUnsignedLongIntValue() : d;
     }
     virtual cpputest_longlong returnLongLongIntValue()
     {
@@ -955,9 +945,7 @@ class MockActualCall
     virtual cpputest_longlong
     returnLongLongIntValueOrDefault(cpputest_longlong d)
     {
-        return traced()           ? returnLongLongIntValue()
-               : hasReturnValue() ? returnLongLongIntValue()
-                                  : d;
+        return hasReturnValue() ? returnLongLongIntValue() : d;
     }
     virtual cpputest_ulonglong returnUnsignedLongLongIntValue()
     {
@@ -966,9 +954,7 @@ class MockActualCall
     virtual cpputest_ulonglong
     returnUnsignedLongLongIntValueOrDefault(cpputest_ulonglong d)
     {
-        return traced()           ? returnUnsignedLongLongIntValue()
-               : hasReturnValue() ? returnUnsignedLongLongIntValue()
-                                  : d;
+        return hasReturnValue() ? returnUnsignedLongLongIntValue() : d;
     }
     virtual double returnDoubleValue()
     {
@@ -976,9 +962,7 @@ class MockActualCall
     }
     virtual double returnDoubleValueOrDefault(double d)
     {
-        return traced()           ? returnDoubleValue()
-               : hasReturnValue() ? returnDoubleValue()
-                                  : d;
+        return hasReturnValue() ? returnDoubleValue() : d;
     }
     virtual const char *returnStringValue()
     {
@@ -986,9 +970,7 @@ class MockActualCall
     }
     virtual const char *returnStringValueOrDefault(const char *d)
     {
-        return traced()           ? returnStringValue()
-               : hasReturnValue() ? returnStringValue()
-                                  : d;
+        return hasReturnValue() ? returnStringValue() : d;
     }
     virtual void *returnPointerValue()
     {
@@ -996,9 +978,7 @@ class MockActualCall
     }
     virtual void *returnPointerValueOrDefault(void *d)
     {
-        return traced()           ? returnPointerValue()
-               : hasReturnValue() ? returnPointerValue()
-                                  : d;
+        return hasReturnValue() ? returnPointerValue() : d;
     }
     virtual const void *returnConstPointerValue()
     {
@@ -1006,9 +986,7 @@ class MockActualCall
     }
     virtual const void *returnConstPointerValueOrDefault(const void *d)
     {
-        return traced()           ? returnConstPointerValue()
-               : hasReturnValue() ? returnConstPointerValue()
-                                  : d;
+        return hasReturnValue() ? returnConstPointerValue() : d;
     }
     virtual void (*returnFunctionPointerValue())()
     {
@@ -1016,9 +994,7 @@ class MockActualCall
     }
     virtual void (*returnFunctionPointerValueOrDefault(void (*d)()))()
     {
-        return traced()           ? returnFunctionPointerValue()
-               : hasReturnValue() ? returnFunctionPointerValue()
-                                  : d;
+        return hasReturnValue() ? returnFunctionPointerValue() : d;
     }
 
   private:
@@ -1027,15 +1003,8 @@ class MockActualCall
         cum_value v;
         return cum_actual_return_value(handle_, &v);
     }
-    /* ignored AND traced calls zero the plain typed getters */
-    bool ignored()
-    {
-        int st = retState();
-        return st == CUM_RET_IGNORED || st == CUM_RET_TRACED;
-    }
-    /* MockActualCallTrace also zeroes the OrDefault getters (the default
-     * is ignored); MockIgnoredActualCall returns the default */
-    bool traced() { return retState() == CUM_RET_TRACED; }
+    /* ignored calls zero the plain typed getters */
+    bool ignored() { return retState() == CUM_RET_IGNORED; }
 
     MockActualCall &addParam(const SimpleString &name, cum_value value)
     {
@@ -1199,77 +1168,6 @@ class MockSupport
         return hasReturnValue() ? functionPointerReturnValue() : d;
     }
 
-    /* data store */
-    virtual bool hasData(const SimpleString &name)
-    {
-        return cum_scope_has_data(scope_, name.asCharString()) != 0;
-    }
-
-    virtual void setData(const SimpleString &name, bool value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockBool(value));
-    }
-    virtual void setData(const SimpleString &name, int value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockInt(value));
-    }
-    virtual void setData(const SimpleString &name, unsigned int value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockUInt(value));
-    }
-    virtual void setData(const SimpleString &name, long int value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockLong(value));
-    }
-    virtual void setData(const SimpleString &name, unsigned long int value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockULong(value));
-    }
-    virtual void setData(const SimpleString &name, const char *value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockString(value));
-    }
-    virtual void setData(const SimpleString &name, double value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(),
-                           CppUMockDouble(value, 0.0));
-    }
-    virtual void setData(const SimpleString &name, void *value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(), CppUMockPointer(value));
-    }
-    virtual void setData(const SimpleString &name, const void *value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(),
-                           CppUMockConstPointer(value));
-    }
-    virtual void setData(const SimpleString &name, void (*value)())
-    {
-        cum_scope_set_data(scope_, name.asCharString(),
-                           CppUMockFunctionPointer(value));
-    }
-
-    virtual void setDataObject(const SimpleString &name,
-                               const SimpleString &type, void *value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(),
-                           CppUMockObject(type, value));
-    }
-
-    virtual void setDataConstObject(const SimpleString &name,
-                                    const SimpleString &type, const void *value)
-    {
-        cum_scope_set_data(scope_, name.asCharString(),
-                           CppUMockConstObject(type, value));
-    }
-
-    virtual MockNamedValue getData(const SimpleString &name)
-    {
-        cum_value v;
-        int has = cum_scope_get_data(scope_, name.asCharString(), &v);
-        return has ? MockNamedValue(name, v) : MockNamedValue("");
-    }
-
     virtual void installComparator(const SimpleString &typeName,
                                    MockNamedValueComparator &comparator)
     {
@@ -1344,11 +1242,6 @@ class MockSupport
         return cum_expected_calls_left_scope(scope_) != 0;
     }
     virtual void ignoreOtherCalls() { cum_ignore_other_calls(scope_); }
-    virtual void tracing(bool enabled)
-    {
-        cum_set_tracing(scope_, enabled ? 1 : 0);
-    }
-    virtual const char *getTraceOutput() { return cum_trace_output(); }
     virtual void disable() { cum_enable(scope_, 0); }
     virtual void enable() { cum_enable(scope_, 1); }
     virtual void crashOnFailure(bool shouldCrash = true)

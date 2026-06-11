@@ -282,39 +282,6 @@ TEST(MockReturn, hasReturnValueFalse)
     LONGS_EQUAL(5, mock().returnIntValueOrDefault(5));
 }
 
-TEST_GROUP(MockData)
-{
-    TEST_TEARDOWN()
-    {
-        mock().clear();
-    }
-};
-
-TEST(MockData, dataStore)
-{
-    CHECK_FALSE(mock().hasData("x"));
-    mock().setData("x", 5);
-    CHECK(mock().hasData("x"));
-    LONGS_EQUAL(5, mock().getData("x").getIntValue());
-
-    mock().setData("x", 9); /* overwrite */
-    LONGS_EQUAL(9, mock().getData("x").getIntValue());
-
-    mock().setData("s", "text");
-    STRCMP_EQUAL("text", mock().getData("s").getStringValue());
-
-    mock().setData("b", true);
-    CHECK(mock().getData("b").getBoolValue());
-
-    mock().setData("d", 1.25);
-    DOUBLES_EQUAL(1.25, mock().getData("d").getDoubleValue(), 0.0001);
-
-    int object = 1234;
-    mock().setDataObject("obj", "MyType", &object);
-    STRCMP_EQUAL("MyType", mock().getData("obj").getType().asCharString());
-    POINTERS_EQUAL(&object, mock().getData("obj").getObjectPointer());
-}
-
 /* --- output parameters (run first) ---------------------------------------- */
 
 TEST_GROUP(MockOutput)

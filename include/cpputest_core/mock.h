@@ -107,9 +107,6 @@ void cum_expectation_on_object(cum_expectation *e, void *object_ptr);
 void cum_expectation_set_name(cum_expectation *e, const char *name);
 void cum_actual_with_name(cum_actual *a, const char *name);
 void cum_actual_with_call_order(cum_actual *a, unsigned order);
-/* MockSupport::tracing — actual calls are recorded, not matched */
-void cum_set_tracing(cum_scope *s, int enabled);
-const char *cum_trace_output(void);
 /* onObject (actual side): prunes to object-compatible expectations */
 void cum_actual_on_object(cum_actual *a, const void *object_ptr);
 void cum_expectation_with_parameter(cum_expectation *e, const char *name,
@@ -126,8 +123,8 @@ typedef int (*cum_comparator_equal_fn)(void *ctx, const void *o1,
                                        const void *o2);
 typedef char *(*cum_comparator_string_fn)(void *ctx, const void *o);
 typedef void (*cum_copier_fn)(void *ctx, void *dst, const void *src);
-/* 1 for a real checked call; 0 for NULL (disabled/ignored) and the trace
- * sentinel — the facades gate checked-call-only failures on this */
+/* 1 for a real checked call; 0 for NULL (disabled/ignored) — the facades
+ * gate checked-call-only failures on this */
 int cum_actual_is_checked(const cum_actual *a);
 
 void cum_install_comparator(cum_scope *s, const char *type_name, void *ctx,
@@ -173,20 +170,9 @@ void cum_actual_with_output_parameter(cum_actual *a, const char *name,
 #define CUM_RET_NONE 1      /* call matched, no return value queued */
 #define CUM_RET_VALUE 2     /* *out filled with the queued value */
 #define CUM_RET_UNMATCHED 3 /* call matched no expectation */
-#define CUM_RET_TRACED                                                         \
-    4 /* tracing mode: like IGNORED, except the                                \
-       * OrDefault getters return 0/false/empty too                            \
-       * (MockActualCallTrace ignores the default;                             \
-       * MockIgnoredActualCall returns it) */
 void cum_expectation_and_return(cum_expectation *e, cum_value value);
 int cum_actual_return_value(cum_actual *a, cum_value *out);
 int cum_scope_return_value(cum_scope *s, cum_value *out); /* last actual call */
-
-/* per-scope data store (MockSupport::setData/getData/hasData). Object type
- * names are copied; everything else stores raw pointers like upstream. */
-void cum_scope_set_data(cum_scope *s, const char *name, cum_value value);
-int cum_scope_get_data(cum_scope *s, const char *name, cum_value *out);
-int cum_scope_has_data(cum_scope *s, const char *name);
 
 /* facade bookkeeping: shim objects attached to records, freed via callback */
 void cum_expectation_set_user(cum_expectation *e, void *user);

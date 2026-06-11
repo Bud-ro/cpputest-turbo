@@ -358,21 +358,10 @@ struct cum_actual {
     cum_scope *scope;
 };
 
-/* the shared trace recorder call (MockActualCallTrace::instance) */
-static cum_actual trace_actual;
-#define IS_TRACE(a) ((a) == &trace_actual)
-
 int cum_actual_is_checked(const cum_actual *a)
 {
-    return a != NULL && !IS_TRACE(a);
+    return a != NULL;
 }
-
-typedef struct cum_data {
-    char *name;
-    cum_value value;
-    char *owned_type_name; /* for object values */
-    struct cum_data *next;
-} cum_data;
 
 struct cum_scope {
     char *name;
@@ -381,11 +370,9 @@ struct cum_scope {
                    re-initialized (re-cloned) on next access */
     int strict_ordering;
     int ignore_other_calls;
-    int tracing;
     unsigned actual_call_order;
     unsigned expected_call_order;
     cum_expectation *expectations; /* append order preserved */
-    cum_data *data;
     cum_actual *last_actual;
     cum_comparator *comparators; /* per-scope repository, like upstream */
     cum_comparator *copiers;
@@ -483,40 +470,6 @@ static void clone_repositories(cum_scope *child, const cum_scope *global)
                      c->to_string, c->copy);
 }
 
-/* ------------------------------ tracing --------------------------------- */
-/* MockActualCallTrace: a single recorder shared by all scopes. The
- * sentinel cum_actual below is returned by cum_actual_call when tracing is
- * on; every actual-side entry point appends text instead of matching. */
-
-static char *trace_buf;
-static size_t trace_len;
-static size_t trace_cap;
-
-static void trace_add(const char *s)
-{
-    size_t n = strlen(s);
-    if (trace_len + n + 1 > trace_cap) {
-        trace_cap = trace_cap ? trace_cap : 256;
-        while (trace_len + n + 1 > trace_cap)
-            trace_cap *= 2;
-        trace_buf = cu_xrealloc(trace_buf, trace_cap);
-    }
-    memcpy(trace_buf + trace_len, s, n + 1);
-    trace_len += n;
-}
-
-static void trace_clear(void)
-{
-    if (trace_buf)
-        trace_buf[0] = '\0';
-    trace_len = 0;
-}
-
-const char *cum_trace_output(void)
-{
-    return trace_buf ? trace_buf : "";
-}
-
 /* ------------------------------- scopes --------------------------------- */
 
 cum_scope *cum_scope_get(const char *name)
@@ -556,7 +509,6 @@ cum_scope *cum_scope_get(const char *name)
         s->enabled = global->enabled;
         s->ignore_other_calls = global->ignore_other_calls;
         s->strict_ordering = global->strict_ordering;
-        s->tracing = global->tracing;
         clone_repositories(s, global);
     }
     /* append: failure dumps walk the global mock first, then child scopes
@@ -1139,51 +1091,9 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
     complete_call_when_match_found(a);
 }
 
-/* MockActualCallTrace::addParameterName + per-type value rendering */
-static void trace_named_value(const char *name, const cum_value *v)
-{
-    trace_add(" ");
-    if (v->type == CUM_T_OBJECT || v->type == CUM_T_CONST_OBJECT) {
-        /* trace renders the raw pointer, not the comparator's string */
-        trace_add(cum_value_type_name(v));
-        trace_add(" ");
-        trace_add(name);
-        trace_add(":");
-        char *hex =
-            cu_str_printf("0x%llx", (unsigned long long)(size_t)v->v.obj.ptr);
-        trace_add(hex);
-        cu_str_free(hex);
-        return;
-    }
-    trace_add(name);
-    trace_add(":");
-    char *s = value_to_string(v, NULL); /* objects already handled above */
-    trace_add(s);
-    cu_str_free(s);
-}
-
-static void trace_pointer_param(const char *type_name, const char *name,
-                                const void *ptr)
-{
-    trace_add(" ");
-    if (type_name) {
-        trace_add(type_name);
-        trace_add(" ");
-    }
-    trace_add(name);
-    trace_add(":");
-    char *hex = cu_str_printf("0x%llx", (unsigned long long)(size_t)ptr);
-    trace_add(hex);
-    cu_str_free(hex);
-}
-
 void cum_actual_with_output_parameter(cum_actual *a, const char *name,
                                       void *dst)
 {
-    if (IS_TRACE(a)) {
-        trace_pointer_param(NULL, name, dst);
-        return;
-    }
     actual_with_output_parameter(a, NULL, name, dst);
 }
 
@@ -1191,10 +1101,6 @@ void cum_actual_with_output_parameter_of_type(cum_actual *a,
                                               const char *type_name,
                                               const char *name, void *dst)
 {
-    if (IS_TRACE(a)) {
-        trace_pointer_param(type_name, name, dst);
-        return;
-    }
     actual_with_output_parameter(a, type_name, name, dst);
 }
 
@@ -1233,8 +1139,6 @@ int cum_actual_return_value(cum_actual *a, cum_value *out)
 {
     if (!a)
         return CUM_RET_IGNORED;
-    if (IS_TRACE(a))
-        return CUM_RET_TRACED;
     actual_finalize(a);
     if (a->matching && a->matching->has_return) {
         *out = a->matching->return_value;
@@ -1247,44 +1151,6 @@ int cum_scope_return_value(cum_scope *s, cum_value *out)
 {
     return s->last_actual ? cum_actual_return_value(s->last_actual, out)
                           : CUM_RET_IGNORED;
-}
-
-void cum_scope_set_data(cum_scope *s, const char *name, cum_value value)
-{
-    cum_data *d;
-    for (d = s->data; d; d = d->next)
-        if (0 == strcmp(d->name, name))
-            break;
-    if (!d) {
-        d = cu_xcalloc(1, sizeof *d);
-        d->name = cu_xstrdup(name);
-        d->next = s->data;
-        s->data = d;
-    }
-    free(d->owned_type_name);
-    d->owned_type_name = NULL;
-    if (value.type == CUM_T_OBJECT || value.type == CUM_T_CONST_OBJECT) {
-        d->owned_type_name =
-            cu_xstrdup(value.v.obj.type_name ? value.v.obj.type_name : "");
-        value.v.obj.type_name = d->owned_type_name;
-    }
-    d->value = value;
-}
-
-int cum_scope_get_data(cum_scope *s, const char *name, cum_value *out)
-{
-    for (cum_data *d = s->data; d; d = d->next)
-        if (0 == strcmp(d->name, name)) {
-            *out = d->value;
-            return 1;
-        }
-    return 0;
-}
-
-int cum_scope_has_data(cum_scope *s, const char *name)
-{
-    cum_value dummy;
-    return cum_scope_get_data(s, name, &dummy);
 }
 
 void cum_expectation_with_parameter(cum_expectation *e, const char *name,
@@ -1468,26 +1334,19 @@ void cum_expectation_set_name(cum_expectation *e, const char *name)
     e->name = cu_xstrdup(name);
 }
 
-/* MockCheckedActualCall::withName — rename and re-filter candidates */
-/* MockActualCallTrace::withCallOrder traces; the checked call ignores it */
+/* MockCheckedActualCall::withCallOrder is a no-op (upstream ignores it on
+ * checked calls; it only mattered in tracing mode) */
 void cum_actual_with_call_order(cum_actual *a, unsigned order)
 {
-    if (!a || !IS_TRACE(a))
-        return;
-    char *s = cu_str_printf(" withCallOrder:%u", order);
-    trace_add(s);
-    cu_str_free(s);
+    (void)a;
+    (void)order;
 }
 
+/* MockCheckedActualCall::withName — rename and re-filter candidates */
 void cum_actual_with_name(cum_actual *a, const char *name)
 {
     if (!a)
         return;
-    if (IS_TRACE(a)) {
-        trace_add("\nFunction name:");
-        trace_add(name);
-        return;
-    }
     cum_scope *s = a->scope;
     free(a->name);
     a->name = cu_xstrdup(name);
@@ -1516,14 +1375,6 @@ void cum_actual_on_object(cum_actual *a, const void *object_ptr)
 {
     if (!a || a->state == CUM_CALL_FAILED)
         return;
-    if (IS_TRACE(a)) {
-        trace_add(" onObject:");
-        char *hex =
-            cu_str_printf("0x%llx", (unsigned long long)(size_t)object_ptr);
-        trace_add(hex);
-        cu_str_free(hex);
-        return;
-    }
     cum_scope *s = a->scope;
 
     /* keep candidates relating to this object; expectations without a
@@ -1555,7 +1406,7 @@ void cum_actual_on_object(cum_actual *a, const void *object_ptr)
 /* MockCheckedActualCall::checkExpectations — finalize the in-progress call */
 static void actual_finalize(cum_actual *a)
 {
-    if (!a || IS_TRACE(a) || a->expectations_checked)
+    if (!a || a->expectations_checked)
         return;
     a->expectations_checked = 1;
     cum_scope *s = a->scope;
@@ -1632,14 +1483,6 @@ cum_actual *cum_actual_call(cum_scope *s, const char *name)
     if (!s->enabled)
         return NULL;
 
-    if (s->tracing) {
-        char *traced = scoped_name(s, name);
-        trace_add("\nFunction name:");
-        trace_add(traced);
-        free(traced);
-        return &trace_actual;
-    }
-
     char *full_name = scoped_name(s, name);
 
     /* callIsIgnored: ignoreOtherCalls and no expectation related to name */
@@ -1691,10 +1534,6 @@ void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value)
 {
     if (!a || a->state == CUM_CALL_FAILED)
         return;
-    if (IS_TRACE(a)) {
-        trace_named_value(name, &value);
-        return;
-    }
     cum_scope *s = a->scope;
 
     /* re-open: discardCurrentlyMatchingExpectations — the previously claimed
@@ -1851,22 +1690,11 @@ static void scope_clear(cum_scope *s)
         e = next;
     }
     s->expectations = NULL;
-    cum_data *d = s->data;
-    while (d) {
-        cum_data *dnext = d->next;
-        free(d->name);
-        free(d->owned_type_name);
-        free(d);
-        d = dnext;
-    }
-    s->data = NULL;
     s->ignore_other_calls = 0;
     s->enabled = 1;
     s->strict_ordering = 0;
-    s->tracing = 0;
     s->actual_call_order = 0;
     s->expected_call_order = 0;
-    trace_clear(); /* upstream clear() resets the shared trace recorder */
 }
 
 void cum_clear_all(void)
@@ -1920,14 +1748,6 @@ void cum_enable(cum_scope *s, int enabled)
     if (scope_is_global(s))
         for (cum_scope *c = scopes; c; c = c->next)
             c->enabled = enabled;
-}
-
-void cum_set_tracing(cum_scope *s, int enabled)
-{
-    s->tracing = enabled;
-    if (scope_is_global(s))
-        for (cum_scope *c = scopes; c; c = c->next)
-            c->tracing = enabled;
 }
 
 int cum_is_enabled(const cum_scope *s)
