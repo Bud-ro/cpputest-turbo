@@ -51,7 +51,11 @@ compare "teamcity output" "$SCRATCH/tc.out" teamcity.txt
 compare "teamcity failure output" "$SCRATCH/tc_ri.out" teamcity_ri.txt
 
 # --- very verbose --------------------------------------------------------------
-"$BIN_DIR/pass_tests" -vv 2>&1 | sed 's/, [0-9]* ms)/, 0 ms)/' >"$SCRATCH/vv.out"
+# the trailing per-test " - N ms" is wall clock too (flaked on a slow CI
+# runner at 1 ms), so normalize both timing forms
+"$BIN_DIR/pass_tests" -vv 2>&1 |
+    sed -e 's/, [0-9]* ms)/, 0 ms)/' -e 's/ - [0-9]* ms$/ - 0 ms/' \
+        >"$SCRATCH/vv.out"
 compare "-vv traces" "$SCRATCH/vv.out" veryverbose.txt
 
 exit "$fail"
