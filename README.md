@@ -41,7 +41,29 @@ heavy stages).
 ## Drop-in migration
 
 Point your include path at `include/` and link `build/libCppUTest.a`
-(plus `libCppUTestExt.a` for mocks). Test sources are unchanged:
+(plus `libCppUTestExt.a` for mocks). When linking with `-l`, list
+`-lCppUTestExt` **before** `-lCppUTest` (the mock library depends on the
+core); linking the `.a` files by path in that order avoids the trap.
+Vendored as a submodule, the whole consumer recipe is:
+
+```make
+third_party/cpputest-turbo/build/libCppUTest.a:
+	$(MAKE) -C third_party/cpputest-turbo
+CPPFLAGS  += -Ithird_party/cpputest-turbo/include
+TEST_LIBS  = third_party/cpputest-turbo/build/libCppUTestExt.a \
+             third_party/cpputest-turbo/build/libCppUTest.a
+```
+
+CMake consumers: `make install` produces a `cpputest.pc`, so
+`find_package(PkgConfig)` + `pkg_check_modules(CPPUTEST REQUIRED cpputest)`
+works; the pkg-config module name is `cpputest` (matching upstream), so
+existing lookups pick up the replacement transparently.
+
+Two caveats: `make CPPUTEST_C_ONLY=1` builds without the C++ shim, so C++
+test sources will not link against it (it serves pure-C consumers of
+`TestHarness_c.h`); and as with upstream, install `MockSupportPlugin` in
+your runner for mock expectations to be verified at test end. Test sources
+are unchanged:
 
 ```cpp
 #include "CppUTest/TestHarness.h"
@@ -145,6 +167,10 @@ library.
   comparator-repository API; mock failures always report through the normal
   test-failure path (which `MockSupportPlugin` relies on, and which behaves
   identically in practice).
+- Not yet implemented: the `TestMemoryAllocator` injection surface
+  (`setCurrentNewAllocator` and custom allocator subclasses). The leak
+  detector always uses the built-in tracker; projects that swap allocators
+  to simulate OOM will not compile.
 - Shuffle order for a given seed matches upstream only on the same libc
   (both use `srand`/`rand`).
 - Failing assertions longjmp out of the test (upstream's no-exceptions mode);
