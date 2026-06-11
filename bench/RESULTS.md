@@ -2,15 +2,18 @@
 
 Machine: Linux x86_64 (WSL2), gcc 13.3. Reproduce with `sh bench/run_bench.sh`
 (builds the vendored upstream library for comparison on first run). Updated
-2026-06-09 after the fast-path/allocator optimization rounds.
+2026-06-11, re-measured AFTER the behavioral-parity campaign (4-state
+return model, bind-at-creation comparator bindings, per-scope
+repositories, finalize-without-free) to confirm the parity work did not
+cost the speed advantage.
 
 ## Runtime (5M assertions + 500k tracked new/delete, 8 groups, -O2)
 
 | run | time | vs upstream |
 |---|---|---|
-| upstream CppUTest, sequential | 29 ms | 1× |
-| **cpputest-turbo, sequential** | **5–6 ms** | **~5×** |
-| **cpputest-turbo, `-j8`** | **2 ms** | **~14×** |
+| upstream CppUTest, sequential | 31–35 ms | 1× |
+| **cpputest-turbo, sequential** | **6–10 ms** | **~4–5×** |
+| **cpputest-turbo, `-j8`** | **3–4 ms** | **~9–10×** |
 | cpputest-turbo, `-p` (fork per test) | 6 ms | ~5× |
 
 Decomposed microbenchmarks (per-operation cost):
@@ -19,6 +22,21 @@ Decomposed microbenchmarks (per-operation cost):
 |---|---|---|---|---|
 | passing assertion | 2.7 ns | **~0.3 ns** | 3.8 ns | ~0.2 ns |
 | tracked new/delete pair | 14 ns | **6.4 ns** | 17.6 ns | ~2 ns |
+
+## Mock path (bench/bench_mock.cpp, -O2)
+
+200k expectOneCall/actualCall pairs (int + string params, returnIntValue)
+plus 50k custom-type (comparator) pairs, with periodic
+checkExpectations+clear — the hot loop of a mock-heavy embedded suite:
+
+| run | time | vs upstream |
+|---|---|---|
+| upstream CppUMock | 334–339 ms | 1× |
+| **cpputest-turbo** | **135 ms** | **~2.5×** |
+
+This is measured on the post-parity-campaign mock core (per-scope
+comparator repositories, creation-time bindings, the 4-state return
+model), so byte-identical behavior and the speedup coexist.
 
 ## What made it fast
 
