@@ -1,7 +1,15 @@
 # Changelog
 
 All notable changes to cpputest-turbo. Format follows
-[Keep a Changelog](https://keepachangelog.com); versions are git tags.
+[Keep a Changelog](https://keepachangelog.com).
+
+Versioning: the repository carries a single moving tag,
+`latest-passing-build+1.0.0` — it tracks the most recent commit where the
+full gate (build, unit, conformance, vendor smoke, sanitizers, and the
+differential fuzzers against the vendored upstream) is green, and the
+`+1.0.0` marks the project as functionally complete. The historical
+`v0.1.0`–`v1.0.0` tags referenced by the entries below were retired in
+favor of this scheme; the entries are kept for history.
 
 ## [Unreleased]
 
