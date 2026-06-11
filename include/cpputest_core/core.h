@@ -318,6 +318,9 @@ char *cpputest_strndup_location(const char *s, size_t n, const char *file,
 void cpputest_malloc_set_out_of_memory(void);
 void cpputest_malloc_set_not_out_of_memory(void);
 void cpputest_malloc_set_out_of_memory_countdown(int countdown);
+/* deliberate abort when the Nth tracked allocation happens (debugger aid;
+ * also declared for consumers in MemoryLeakDetectorMallocMacros.h) */
+void crash_on_allocation_number(unsigned alloc_number);
 void cpputest_malloc_count_reset(void);
 int cpputest_malloc_get_count(void);
 

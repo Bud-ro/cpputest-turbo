@@ -711,8 +711,12 @@ void cu_fail_memcmp(const void *expected, const void *actual, size_t length,
     sb_user_text(&b, text);
     sb_but_was(&b, ehex, ahex);
     if (e && a) {
+        /* bounded: the macro path guarantees a difference inside `length`,
+         * but this is a public C API — a direct caller with equal buffers
+         * must not walk past the end (upstream scans via the bounds-safe
+         * SimpleString::at) */
         size_t fail_start = 0;
-        while (a[fail_start] == e[fail_start])
+        while (fail_start < length && a[fail_start] == e[fail_start])
             fail_start++;
         sb_difference_at_pos(&b, ahex, fail_start * 3 + 1, fail_start);
     }

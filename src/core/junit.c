@@ -2,10 +2,12 @@
 
 #include "internal.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 /* Port of upstream JUnitTestOutput.cpp: one XML file per test group, written
  * when the group ends. All formats and quirks preserved, including:
@@ -189,9 +191,18 @@ void cu_junit_group_ended(cu_output *out, const cu_result *res)
     const char *package = out->package_name ? out->package_name : "";
     size_t group_ms = res->current_group_ms;
 
+    /* O_NOFOLLOW: don't write through a symlink pre-planted in the CWD
+     * under our predictable cpputest_*.xml name (O_TRUNC, not O_EXCL —
+     * re-running in the same directory legitimately overwrites) */
     char *fname = file_name_for_group(out, j->group);
-    FILE *f = fopen(fname, "w");
+    FILE *f = NULL;
+    int fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0666);
     free(fname);
+    if (fd >= 0) {
+        f = fdopen(fd, "w");
+        if (!f)
+            close(fd);
+    }
     if (!f) {
         reset_group(j);
         return;

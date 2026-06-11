@@ -15,11 +15,12 @@ jobs:
           - { cc: gcc, cxx: g++ }
           - { cc: clang, cxx: clang++ }
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     env:
       CC: ${{ matrix.compiler.cc }}
       CXX: ${{ matrix.compiler.cxx }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: build
         run: make
       - name: C-only build
@@ -29,8 +30,9 @@ jobs:
 
   format:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: install clang-format
         run: sudo apt-get update && sudo apt-get install -y clang-format
       - name: format + hygiene check
@@ -42,8 +44,9 @@ jobs:
       matrix:
         opt: ["-O0", "-O1", "-O2", "-O3"]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: build
         run: make
       - name: differential fuzz soak at ${{ matrix.opt }}

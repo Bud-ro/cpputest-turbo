@@ -6,4 +6,6 @@ Name: cpputest-turbo
 Description: CppUTest-compatible C/C++ unit test framework with a C11 core
 Version: 1.0.0
 Libs: -L${libdir} -lCppUTestExt -lCppUTest
+Libs.private: -lstdc++
+URL: https://github.com/Bud-ro/cpputest-turbo
 Cflags: -I${includedir}

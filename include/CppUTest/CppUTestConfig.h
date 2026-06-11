@@ -19,10 +19,17 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define CPPUTEST_NORETURN __attribute__((noreturn))
-#define PUNUSED(x) PUNUSED_##x __attribute__((unused))
 #else
 #define CPPUTEST_NORETURN
+#endif
+
+/* upstream guards PUNUSED against a user pre-definition */
+#ifndef PUNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define PUNUSED(x) PUNUSED_##x __attribute__((unused))
+#else
 #define PUNUSED(x) x
+#endif
 #endif
 
 #ifndef CPPUTEST_USE_LONG_LONG

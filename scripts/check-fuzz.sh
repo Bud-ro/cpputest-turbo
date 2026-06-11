@@ -6,7 +6,9 @@
 #   against upstream CppUTest and against us, run with identical seeds; any
 #   output divergence (after ms normalization) fails the run. The "ours"
 #   side also runs under ASan/UBSan.
-# FUZZ_ROUNDS / FUZZ_ITERS scale the effort (defaults are CI-sized).
+# FUZZ_ROUNDS scales the DIFFERENTIAL legs (mock/mock_c/compose rounds and
+# CLI combo count); FUZZ_ITERS scales only the three standalone sanitizer
+# fuzzers. Defaults are CI-sized.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -31,21 +33,24 @@ $CXX $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
 rm -f "$OUT/libasan.a"
 ar rcs "$OUT/libasan.a" "$OUT"/*.o
 
-# upstream library for the differential fuzzer; fork enabled so the -p
+# Upstream library for the differential fuzzer; fork enabled so the -p
 # leg of the CLI fuzzer has a real oracle (autoconf'd upstream installs
-# define these on POSIX)
+# define these on POSIX). Built with the SAME $CXX as the matrix leg —
+# the clang CI leg must diff against a clang-built oracle — and the cache
+# stamp records the compiler so switching CXX rebuilds it.
+STAMP="fork-enabled-$(basename "$CXX")"
 if [ ! -f .upstream-cache/libCppUTestUpstream.a ] ||
-   [ ! -f .upstream-cache/fork-enabled ]; then
+   [ ! -f ".upstream-cache/$STAMP" ]; then
     rm -rf .upstream-cache
     mkdir -p .upstream-cache
     ( cd .upstream-cache && \
-      g++ -std=c++11 -w -O2 -DCPPUTEST_HAVE_FORK=1 -DCPPUTEST_HAVE_WAITPID=1 \
-          -DCPPUTEST_HAVE_KILL=1 \
+      "$CXX" -std=c++11 -w -O2 -DCPPUTEST_HAVE_FORK=1 \
+          -DCPPUTEST_HAVE_WAITPID=1 -DCPPUTEST_HAVE_KILL=1 \
           -c ../third_party/cpputest/src/CppUTest/*.cpp \
           ../third_party/cpputest/src/CppUTestExt/*.cpp \
           ../third_party/cpputest/src/Platforms/Gcc/UtestPlatform.cpp \
           -I../third_party/cpputest/include && \
-      ar rcs libCppUTestUpstream.a *.o && touch fork-enabled )
+      ar rcs libCppUTestUpstream.a *.o && touch "$STAMP" )
 fi
 
 $CC $CFLAGS fuzz/fuzz_args.c "$OUT/libasan.a" -o "$OUT/fuzz_args"
@@ -114,8 +119,11 @@ norm() {
         -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's/Alloc num ([0-9]*)/Alloc num (N)/' \
         -e 's/Memory: <0x[0-9a-fA-F]*>/Memory: <0xADDR>/' \
-        -e 's/0x[0-9a-fA-F]\{5,\}/0xBIGADDR/g'
+        -e 's/\([ :<(]\)0x[0-9a-fA-F]\{5,\}/\10xBIGADDR/g'
 }
+# the 5+-hex-digit scrub is ANCHORED to value positions (after space/colon/
+# </paren) so it cannot eat a fuzzer-chosen fake constant; keep all fake
+# pointers below 0x10000 regardless
 
 echo "== differential torture suites (vs upstream) =="
 for SUITE in tests/mock_torture/torture.cpp tests/mock_torture/plugin_torture.cpp \
@@ -161,17 +169,27 @@ cli_norm() {
                -e "s/duration='[0-9]*'/duration='0'/"
 }
 
+# hand-rolled LCG (not awk srand/rand: their sequences differ across awk
+# implementations, so the explored combos would depend on the host's awk)
 gen_flags() {
     awk -v seed="$1" 'BEGIN {
-        srand(seed + 7);
+        s = seed * 2654435761 % 4294967296;
         pool[0]="-v";    pool[1]="-c";        pool[2]="-r2";       pool[3]="-r3";
         pool[4]="-s5";   pool[5]="-s11";      pool[6]="-gGroupA";  pool[7]="-npass";
         pool[8]="-sgGroupB"; pool[9]="-snfails"; pool[10]="-xgGroupC";
         pool[11]="-xnignored"; pool[12]="-kpkg"; pool[13]="-lg";   pool[14]="-ln";
         pool[15]="-ri";  pool[16]="-ojunit";  pool[17]="-oteamcity";
-        pool[18]="-p";
-        n = int(rand() * 5);
-        for (i = 0; i < n; i++) printf "%s ", pool[int(rand() * 19)];
+        pool[18]="-p";   pool[19]="-vv";      pool[20]="-b";       pool[21]="-ll";
+        pool[22]="-tGroupA.pass"; pool[23]="-stGroupB.pass";
+        pool[24]="-xtGroupA.fails"; pool[25]="-xstGroupC.mockPass";
+        pool[26]="-xsgGroupA"; pool[27]="-xsnmockFails"; pool[28]="-e";
+        pool[29]="-ci"; pool[30]="-onormal";
+        s = (s * 1103515245 + 12345) % 2147483648;
+        n = int(s / 65536) % 6;
+        for (i = 0; i < n; i++) {
+            s = (s * 1103515245 + 12345) % 2147483648;
+            printf "%s ", pool[int(s / 65536) % 31];
+        }
         print ""
     }'
 }

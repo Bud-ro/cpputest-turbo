@@ -4,12 +4,14 @@
 /* cpputest-turbo: C interface to CppUMock, upstream-identical surface.
  * Implemented directly over the C mock core — usable from pure C. */
 
+/* includes stay OUTSIDE the extern "C" block: wrapping a whole header in C
+ * linkage silently breaks any C++ declaration it might gain later */
+#include "CppUTest/CppUTestConfig.h"
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "CppUTest/CppUTestConfig.h"
-#include <stddef.h>
 
 typedef enum {
     MOCKVALUETYPE_BOOL,

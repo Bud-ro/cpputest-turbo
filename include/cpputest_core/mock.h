@@ -126,6 +126,10 @@ typedef int (*cum_comparator_equal_fn)(void *ctx, const void *o1,
                                        const void *o2);
 typedef char *(*cum_comparator_string_fn)(void *ctx, const void *o);
 typedef void (*cum_copier_fn)(void *ctx, void *dst, const void *src);
+/* 1 for a real checked call; 0 for NULL (disabled/ignored) and the trace
+ * sentinel — the facades gate checked-call-only failures on this */
+int cum_actual_is_checked(const cum_actual *a);
+
 void cum_install_comparator(const char *type_name, void *ctx,
                             cum_comparator_equal_fn equal,
                             cum_comparator_string_fn to_string);

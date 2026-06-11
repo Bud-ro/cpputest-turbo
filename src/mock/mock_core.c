@@ -146,6 +146,19 @@ static cum_comparator *find_in(cum_comparator *list, const char *type_name)
     return NULL;
 }
 
+/* Comparator/copier binding captured at parameter CREATION: upstream's
+ * MockNamedValue::setObjectPointer resolves from the repository at that
+ * moment and the binding survives removeAllComparatorsAndCopiers (it
+ * references the user's comparator object, not our registry node — which
+ * is why the user fn/ctx pointers are copied out of the node). */
+typedef struct {
+    void *ctx;
+    cum_comparator_equal_fn equal;
+    cum_comparator_string_fn to_string;
+    cum_copier_fn copy;
+    int present;
+} cum_binding;
+
 void cum_install_comparator(const char *type_name, void *ctx,
                             cum_comparator_equal_fn equal,
                             cum_comparator_string_fn to_string)
@@ -201,7 +214,8 @@ int cum_has_copier(const char *type_name)
  * sign-aware mathematical equality, which is exactly what upstream's
  * pairwise rules implement. `e` is the expected side (its tolerance is
  * used for doubles). */
-static int value_equals(const cum_value *e, const cum_value *a)
+static int value_equals(const cum_value *e, const cum_value *a,
+                        const cum_binding *eb)
 {
     if (type_is_integer(e->type) && type_is_integer(a->type)) {
         int es = type_is_signed(e->type), as = type_is_signed(a->type);
@@ -237,16 +251,20 @@ static int value_equals(const cum_value *e, const cum_value *a)
     case CUM_T_CONST_OBJECT: {
         if (0 != strcmp(cum_value_type_name(e), cum_value_type_name(a)))
             return 0;
-        cum_comparator *c = find_in(comparators, cum_value_type_name(e));
-        return c && c->equal ? c->equal(c->ctx, e->v.obj.ptr, a->v.obj.ptr) : 0;
+        /* the EXPECTED param's creation-time binding decides equality
+         * (upstream MockNamedValue::equals uses this->comparator_) */
+        if (eb && eb->present && eb->equal)
+            return eb->equal(eb->ctx, e->v.obj.ptr, a->v.obj.ptr);
+        return 0;
     }
     default:
         return 0;
     }
 }
 
-/* MockNamedValue::toString — malloc'd */
-static char *value_to_string(const cum_value *v)
+/* MockNamedValue::toString — malloc'd. `b` is the creation-time binding
+ * for object values (NULL where objects cannot occur). */
+static char *value_to_string(const cum_value *v, const cum_binding *b)
 {
     switch (v->type) {
     case CUM_T_BOOL:
@@ -287,9 +305,8 @@ static char *value_to_string(const cum_value *v)
     }
     case CUM_T_OBJECT:
     case CUM_T_CONST_OBJECT: {
-        cum_comparator *c = find_in(comparators, cum_value_type_name(v));
-        if (c && c->to_string)
-            return c->to_string(c->ctx, v->v.obj.ptr);
+        if (b && b->present && b->to_string)
+            return b->to_string(b->ctx, v->v.obj.ptr);
         return cu_str_printf("No comparator found for type: \"%s\"",
                              cum_value_type_name(v));
     }
@@ -305,8 +322,9 @@ static char *value_to_string(const cum_value *v)
 typedef struct cum_param {
     char *name;
     cum_value value;
-    char *owned_type; /* copy of the custom type name for object values */
-    int matched;      /* matched by the in-progress actual call */
+    char *owned_type;  /* copy of the custom type name for object values */
+    cum_binding bound; /* comparator bound when the param was created */
+    int matched;       /* matched by the in-progress actual call */
     struct cum_param *next;
 } cum_param;
 
@@ -315,9 +333,25 @@ typedef struct cum_out_param {
     char *type_name;   /* NULL = plain "const void*" output parameter */
     const void *value; /* NULL = withUnmodifiedOutputParameter */
     size_t size;
+    cum_binding bound; /* copier bound when the param was created */
     int matched;
     struct cum_out_param *next;
 } cum_out_param;
+
+/* capture the current registry entry for a type, by value */
+static cum_binding bind_from(cum_comparator *list, const char *type_name)
+{
+    cum_binding b = {NULL, NULL, NULL, NULL, 0};
+    cum_comparator *c = type_name ? find_in(list, type_name) : NULL;
+    if (c) {
+        b.ctx = c->ctx;
+        b.equal = c->equal;
+        b.to_string = c->to_string;
+        b.copy = c->copy;
+        b.present = 1;
+    }
+    return b;
+}
 
 struct cum_expectation {
     char *name;
@@ -365,6 +399,11 @@ struct cum_actual {
 /* the shared trace recorder call (MockActualCallTrace::instance) */
 static cum_actual trace_actual;
 #define IS_TRACE(a) ((a) == &trace_actual)
+
+int cum_actual_is_checked(const cum_actual *a)
+{
+    return a != NULL && !IS_TRACE(a);
+}
 
 typedef struct cum_data {
     char *name;
@@ -532,7 +571,8 @@ static void msb_call_to_string(msb *b, const cum_expectation *e)
             const cum_param *named = e->params;
             while (named && 0 != strcmp(named->name, p->name))
                 named = named->next;
-            char *value = value_to_string(&(named ? named : p)->value);
+            const cum_param *shown = named ? named : p;
+            char *value = value_to_string(&shown->value, &shown->bound);
             msb_addf(b, "%s %s: <%s>", cum_value_type_name(&p->value), p->name,
                      value);
             cu_str_free(value);
@@ -682,7 +722,10 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
                 name_known = 1;
     }
 
-    char *value_str = value_to_string(value);
+    /* the failing param is being created right now, so a fresh registry
+     * lookup IS its creation-time binding */
+    cum_binding vb = bind_from(comparators, cum_value_type_name(value));
+    char *value_str = value_to_string(value, &vb);
     msb b;
     msb_init(&b);
     if (!name_known)
@@ -921,6 +964,8 @@ static void expectation_add_out_param(cum_expectation *e, const char *type_name,
     o->type_name = type_name ? cu_xstrdup(type_name) : NULL;
     o->value = value;
     o->size = size;
+    /* bind-at-creation, like input params */
+    o->bound = bind_from(copiers, o->type_name);
     cum_out_param **link = &e->out_params;
     while (*link)
         link = &(*link)->next;
@@ -1054,7 +1099,7 @@ static void trace_named_value(const char *name, const cum_value *v)
     }
     trace_add(name);
     trace_add(":");
-    char *s = value_to_string(v);
+    char *s = value_to_string(v, NULL); /* objects already handled above */
     trace_add(s);
     cu_str_free(s);
 }
@@ -1195,6 +1240,9 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
         p->owned_type =
             cu_xstrdup(value.v.obj.type_name ? value.v.obj.type_name : "");
         value.v.obj.type_name = p->owned_type;
+        /* bind-at-creation: a later (re)install does not retroactively
+         * change this param's comparator (upstream setObjectPointer) */
+        p->bound = bind_from(comparators, p->owned_type);
     }
     p->value = value;
     cum_param **link = &e->params;
@@ -1244,7 +1292,7 @@ static int expectation_accepts_param(const cum_expectation *e, const char *name,
 {
     for (cum_param *p = e->params; p; p = p->next)
         if (0 == strcmp(p->name, name))
-            return value_equals(&p->value, value);
+            return value_equals(&p->value, value, &p->bound);
     return e->ignore_other_parameters;
 }
 
@@ -1300,9 +1348,17 @@ static void copy_output_parameters(cum_actual *a, cum_expectation *e)
         if (!o || !out_types_match(o, d->type_name))
             continue;
         if (o->type_name) {
-            cum_comparator *c = find_in(copiers, o->type_name);
-            if (c && c->copy && o->value)
-                c->copy(c->ctx, d->dst, o->value);
+            /* creation-time copier binding (upstream reads the copier off
+             * the expected MockNamedValue); a typed param with NO bound
+             * copier fails HERE, at copy time, like upstream's
+             * MockNoWayToCopyCustomTypeFailure in copyOutputParameters */
+            if (!o->bound.present || !o->bound.copy) {
+                a->state = CUM_CALL_FAILED;
+                cum_fail_no_way_to_copy(o->type_name);
+                return;
+            }
+            if (o->value)
+                o->bound.copy(o->bound.ctx, d->dst, o->value);
         } else {
             /* upstream's plain copy path reads the source via
              * getConstPointerValue(), whose type assert counts one check —

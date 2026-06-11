@@ -40,6 +40,21 @@ void operator delete(void *p, const char *file, size_t line) noexcept;
 void operator delete[](void *p, const char *file, int line) noexcept;
 void operator delete[](void *p, const char *file, size_t line) noexcept;
 
+/* Upstream also declares the replaced GLOBAL forms. With the std lib they
+ * come from <new> (redeclaring without its exact exception-specs breaks
+ * C++11 builds), so declare them only for CPPUTEST_USE_STD_CPP_LIB=0
+ * builds, which never include <new>. */
+#if !CPPUTEST_USE_STD_CPP_LIB
+void *operator new(size_t size);
+void *operator new[](size_t size);
+void operator delete(void *p) noexcept;
+void operator delete[](void *p) noexcept;
+#if __cplusplus >= 201402L
+void operator delete(void *p, size_t size) noexcept;
+void operator delete[](void *p, size_t size) noexcept;
+#endif
+#endif /* !CPPUTEST_USE_STD_CPP_LIB */
+
 #endif /* CPPUTEST_HAVE_ALREADY_DECLARED_NEW_DELETE_OVERLOADS */
 
 #if CPPUTEST_USE_NEW_MACROS

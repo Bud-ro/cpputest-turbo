@@ -143,6 +143,83 @@ class MockNamedValueCopier
     virtual void copy(void *out, const void *in) = 0;
 };
 
+/* upstream's bulk comparator/copier container (MockNamedValue.h): collect
+ * entries once, install them into a MockSupport in one call */
+class MockNamedValueComparatorsAndCopiersRepository
+{
+    struct Node {
+        SimpleString name;
+        MockNamedValueComparator *comparator;
+        MockNamedValueCopier *copier;
+        Node *next;
+    };
+    Node *head_;
+
+    void add(const SimpleString &name, MockNamedValueComparator *comparator,
+             MockNamedValueCopier *copier)
+    {
+        Node *n = new Node;
+        n->name = name;
+        n->comparator = comparator;
+        n->copier = copier;
+        n->next = head_;
+        head_ = n;
+    }
+
+    friend class MockSupport;
+
+  public:
+    MockNamedValueComparatorsAndCopiersRepository() : head_(NULLPTR) {}
+    virtual ~MockNamedValueComparatorsAndCopiersRepository() { clear(); }
+
+    virtual void installComparator(const SimpleString &name,
+                                   MockNamedValueComparator &comparator)
+    {
+        add(name, &comparator, NULLPTR);
+    }
+    virtual void installCopier(const SimpleString &name,
+                               MockNamedValueCopier &copier)
+    {
+        add(name, NULLPTR, &copier);
+    }
+    virtual void installComparatorsAndCopiers(
+        const MockNamedValueComparatorsAndCopiersRepository &repository)
+    {
+        for (Node *n = repository.head_; n; n = n->next)
+            add(n->name, n->comparator, n->copier);
+    }
+    virtual MockNamedValueComparator *
+    getComparatorForType(const SimpleString &name)
+    {
+        for (Node *n = head_; n; n = n->next)
+            if (n->comparator && n->name == name)
+                return n->comparator;
+        return NULLPTR;
+    }
+    virtual MockNamedValueCopier *getCopierForType(const SimpleString &name)
+    {
+        for (Node *n = head_; n; n = n->next)
+            if (n->copier && n->name == name)
+                return n->copier;
+        return NULLPTR;
+    }
+    void clear()
+    {
+        while (head_) {
+            Node *next = head_->next;
+            delete head_;
+            head_ = next;
+        }
+    }
+};
+
+/* Custom failure reporters are accepted for source compatibility but are
+ * INERT: mock failures always report through the standard test-failure
+ * path (upstream's default reporter does the same; only custom reporters
+ * — used chiefly by upstream's own self-tests — would behave differently,
+ * and that injection surface is a documented divergence). */
+class MockFailureReporter;
+
 /* C-core adapters for the virtuals above */
 extern "C" {
 
@@ -195,6 +272,20 @@ class MockNamedValue
     SimpleString getType() const
     {
         return SimpleString(cum_value_type_name(&value_));
+    }
+
+    /* upstream parks a default repository here for its plugin machinery;
+     * stored for source compatibility (the active comparator/copier
+     * registry lives in the C core) */
+    static void setDefaultComparatorsAndCopiersRepository(
+        MockNamedValueComparatorsAndCopiersRepository *repository)
+    {
+        defaultRepository() = repository;
+    }
+    static MockNamedValueComparatorsAndCopiersRepository *
+    getDefaultComparatorsAndCopiersRepository()
+    {
+        return defaultRepository();
     }
 
     bool getBoolValue() const
@@ -290,13 +381,26 @@ class MockNamedValue
         check("void (*)()");
         return (void (*)())value_.v.fptr;
     }
-    void *getObjectPointer() const { return (void *)value_.v.obj.ptr; }
+    /* const_cast, not a C-style cast: this header compiles inside consumer
+     * TUs under consumer flags, and -Wcast-qual rejects the C-style form */
+    void *getObjectPointer() const
+    {
+        return const_cast<void *>(value_.v.obj.ptr);
+    }
     const void *getConstObjectPointer() const { return value_.v.obj.ptr; }
 
   private:
     void check(const char *expectedType) const
     {
         STRCMP_EQUAL(expectedType, cum_value_type_name(&value_));
+    }
+
+    /* single process-wide slot (function-local static: one instance across
+     * all TUs including this inline-heavy header) */
+    static MockNamedValueComparatorsAndCopiersRepository *&defaultRepository()
+    {
+        static MockNamedValueComparatorsAndCopiersRepository *repo = NULLPTR;
+        return repo;
     }
 
     SimpleString name_;
@@ -741,7 +845,11 @@ class MockActualCall
                                                 const SimpleString &name,
                                                 const void *value)
     {
-        if (!cum_has_comparator(type.asCharString())) {
+        /* checked calls only: MockIgnoredActualCall/Trace accept OfType
+         * params without a comparator (upstream's check lives in
+         * MockCheckedActualCall::withParameterOfType) */
+        if (cum_actual_is_checked(handle_) &&
+            !cum_has_comparator(type.asCharString())) {
             cum_fail_no_way_to_compare(type.asCharString());
             return *this;
         }
@@ -759,10 +867,9 @@ class MockActualCall
                                                       const SimpleString &name,
                                                       void *output)
     {
-        if (!cum_has_copier(type.asCharString())) {
-            cum_fail_no_way_to_copy(type.asCharString());
-            return *this;
-        }
+        /* no copier fail-fast here: upstream raises MockNoWayToCopy at COPY
+         * time, inside copyOutputParameters, only when a match completes
+         * (MockActualCall.cpp:101) — the core handles it there */
         cum_actual_with_output_parameter_of_type(handle_, type.asCharString(),
                                                  name.asCharString(), output);
         return *this;
@@ -1178,10 +1285,38 @@ class MockSupport
                            CppUMockCopierCopy);
     }
 
+    virtual void installComparatorsAndCopiers(
+        const MockNamedValueComparatorsAndCopiersRepository &repository)
+    {
+        /* the core registry is global, so this covers child scopes like
+         * upstream's recursion over data_-stored children */
+        typedef MockNamedValueComparatorsAndCopiersRepository Repo;
+        for (Repo::Node *n = repository.head_; n; n = n->next) {
+            if (n->comparator)
+                installComparator(n->name, *n->comparator);
+            if (n->copier)
+                installCopier(n->name, *n->copier);
+        }
+    }
+
     virtual void removeAllComparatorsAndCopiers()
     {
         cum_remove_all_comparators_and_copiers();
     }
+
+    /* accepted for source compatibility; custom reporters are inert (see
+     * MockFailureReporter forward declaration above) */
+    virtual void setMockFailureStandardReporter(MockFailureReporter *reporter)
+    {
+        (void)reporter;
+    }
+    virtual void setActiveReporter(MockFailureReporter *reporter)
+    {
+        (void)reporter;
+    }
+
+    /* defined after mock() below */
+    virtual MockSupport *getMockSupportScope(const SimpleString &name);
 
     /* like clear: the global mock recurses over children, a named scope
      * checks/counts only itself (upstream children live in the global's
@@ -1239,8 +1374,9 @@ class MockSupport
     MockActualCall actualCall_;
 };
 
-inline MockSupport &mock(const SimpleString &mockName = "",
-                         void * /*failureReporterForThisCall*/ = NULLPTR)
+inline MockSupport &
+mock(const SimpleString &mockName = "",
+     MockFailureReporter * /*failureReporterForThisCall*/ = NULLPTR)
 {
     /* one facade per scope, kept for the process lifetime */
     struct ScopeNode {
@@ -1269,6 +1405,13 @@ inline MockSupport &mock(const SimpleString &mockName = "",
     head = n;
     cu_mem_restore_tracking();
     return *n->support;
+}
+
+/* upstream getMockSupportScope: fetch-or-create the named child scope's
+ * support (the scope registry is global, so `this` is immaterial) */
+inline MockSupport *MockSupport::getMockSupportScope(const SimpleString &name)
+{
+    return &mock(name);
 }
 
 #endif

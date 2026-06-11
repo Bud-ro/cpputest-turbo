@@ -292,7 +292,7 @@ TEST(Torture, crossWidthReturnDefaults)
     mock().expectOneCall("w").andReturnValue((unsigned long)7);
     mock().actualCall("w");
     UNSIGNED_LONGS_EQUAL(7, mock().unsignedLongIntReturnValue());
-    LONGS_EQUAL(-3, mock().returnIntValueOrDefault(-3) == -3 ? -3 : 0); /* wrong type asked via OrDefault */
+    LONGS_EQUAL(-3, mock().returnIntValueOrDefault(-3)); /* wrong type asked via OrDefault — outcome (value or type-assert failure) is upstream-compared */
 }
 
 int main(int argc, char **argv)

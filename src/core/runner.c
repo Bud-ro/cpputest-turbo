@@ -85,6 +85,16 @@ cu_output *cu_output_current(void)
 static int cu_protected_call(void (*fn)(cu_test *, void *), cu_test *t,
                              void *fixture)
 {
+    /* nested fixture runs (TestTestingFixture inside a test) share this
+     * stack; ~10 levels deep means runaway recursion — fail loudly instead
+     * of overflowing the jmp_buf array */
+    if (jmp_index >= CU_JMP_DEPTH) {
+        fprintf(stderr,
+                "cpputest-turbo: protected-section depth exceeded (%d) — "
+                "runaway nested test runs\n",
+                CU_JMP_DEPTH);
+        abort();
+    }
     if (0 == setjmp(jmp_stack[jmp_index])) {
         jmp_index++;
         fn(t, fixture);
@@ -158,15 +168,18 @@ static void cu_run_fixture(cu_test *t)
     vv("\n------ before runTest: ");
     vv("\n-------- before setup: ");
     int setup_ok = cu_protected_call(do_setup, t, fixture);
-    vv("\n-------- after  setup: ");
+    /* upstream prints each "after X" trace INSIDE the protected try
+     * (Utest.cpp:659-697): a failing phase longjmps past its own trace */
+    if (setup_ok)
+        vv("\n-------- after  setup: ");
     if (setup_ok) {
         vv("\n----------  before body: ");
-        cu_protected_call(do_body, t, fixture);
-        vv("\n----------  after body: ");
+        if (cu_protected_call(do_body, t, fixture))
+            vv("\n----------  after body: ");
     }
     vv("\n--------  before teardown: ");
-    cu_protected_call(do_teardown, t, fixture);
-    vv("\n--------  after teardown: ");
+    if (cu_protected_call(do_teardown, t, fixture))
+        vv("\n--------  after teardown: ");
     vv("\n------ after runTest: ");
 
     vv("\n---- before destroyTest: ");

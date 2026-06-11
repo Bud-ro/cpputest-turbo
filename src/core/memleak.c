@@ -3,6 +3,7 @@
 #include "internal.h"
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -197,8 +198,21 @@ static void freelists_drain(void)
     }
 }
 
+/* crash_on_allocation_number(N): deliberately crash when the Nth tracked
+ * allocation happens, so a debugger can catch a leaky allocation site
+ * (upstream CrashOnAllocationAllocator + UT_CRASH; crash == abort here,
+ * like PlatformSpecificAbort) */
+static unsigned crash_alloc_number;
+
+void crash_on_allocation_number(unsigned alloc_number)
+{
+    crash_alloc_number = alloc_number;
+}
+
 void *cu_mem_alloc_tracked(size_t size, const char *file, size_t line, int type)
 {
+    if (crash_alloc_number && alloc_counter + 1 == crash_alloc_number)
+        abort();
     char *block = block_alloc(size);
     if (!block)
         return NULL;
@@ -477,6 +491,11 @@ void *cpputest_malloc(size_t size)
 void *cpputest_calloc_location(size_t count, size_t size, const char *file,
                                size_t line)
 {
+    /* calloc(3) semantics: a wrapped count*size must fail, not return a
+     * short buffer (upstream multiplies unchecked; NULL here is strictly
+     * safer and matches the libc contract) */
+    if (size != 0 && count > SIZE_MAX / size)
+        return NULL;
     void *p = malloc_maybe_tracked(count * size, file, line);
     if (p)
         memset(p, 0, count * size);

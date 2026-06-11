@@ -350,7 +350,8 @@ act_with_membuf(const char *name, const unsigned char *value, size_t size)
 static MockActualCall_c *act_with_of_type(const char *type, const char *name,
                                           const void *value)
 {
-    if (!cum_has_comparator(type)) {
+    /* checked calls only (ignored/trace calls accept OfType params) */
+    if (cum_actual_is_checked(cur_actual) && !cum_has_comparator(type)) {
         cum_fail_no_way_to_compare(type);
         return &actual_table;
     }
@@ -370,10 +371,8 @@ static MockActualCall_c *act_with_out(const char *name, void *value)
 static MockActualCall_c *act_with_out_of_type(const char *type,
                                               const char *name, void *value)
 {
-    if (!cum_has_copier(type)) {
-        cum_fail_no_way_to_copy(type);
-        return &actual_table;
-    }
+    /* no copier fail-fast: upstream raises MockNoWayToCopy at copy time
+     * (see the C++ facade and copy_output_parameters) */
     cum_actual_with_output_parameter_of_type(cur_actual, type, name, value);
     return &actual_table;
 }

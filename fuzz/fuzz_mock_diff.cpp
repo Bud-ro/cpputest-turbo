@@ -102,7 +102,23 @@ class FzCopier : public MockNamedValueCopier
     }
 };
 
+/* a SECOND comparator for the same type name: re-installation semantics
+ * (which registration wins) are compared against upstream */
+class FzComparator2 : public MockNamedValueComparator
+{
+  public:
+    bool isEqual(const void *object1, const void *object2) CPPUTEST_OVERRIDE
+    {
+        return *(const int *)object1 == *(const int *)object2;
+    }
+    SimpleString valueToString(const void *object) CPPUTEST_OVERRIDE
+    {
+        return SimpleString("v2:") + StringFrom(*(const int *)object);
+    }
+};
+
 static FzComparator fz_comparator;
+static FzComparator2 fz_comparator2;
 static FzCopier fz_copier;
 
 static const char *last_scope;
@@ -869,7 +885,7 @@ static void fz_sequence(unsigned long long seed)
             break;
         }
         default:
-            switch (fz_r() % 7) {
+            switch (fz_r() % 10) {
             case 0:
                 TR("[].clear\n");
                 mock().clear();
@@ -889,6 +905,23 @@ static void fz_sequence(unsigned long long seed)
             case 4:
                 TR("[s1].checkExpectations\n");
                 mock("s1").checkExpectations();
+                break;
+            case 5:
+                /* re-install over an already-registered type name: which
+                 * registration wins is upstream-defined behavior */
+                TR("[].reinstallComparator\n");
+                mock().installComparator("FZT", fz_comparator2);
+                break;
+            case 6:
+                /* mid-sequence removal: subsequent OfType params take the
+                 * "no way to compare/copy" failure path */
+                TR("[].removeAllComparatorsAndCopiers\n");
+                mock().removeAllComparatorsAndCopiers();
+                break;
+            case 7:
+                /* default-off toggle exercised without ever crashing */
+                TR("[].crashOnFailure(false)\n");
+                mock().crashOnFailure(false);
                 break;
             default:
                 TR("[].checkExpectations\n");

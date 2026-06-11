@@ -16,14 +16,20 @@
     if (MemoryLeakWarningPlugin::getFirstPlugin())                             \
     MemoryLeakWarningPlugin::getFirstPlugin()->expectLeaksInTest(n)
 
+/* upstream's optional constructor argument; accepted for source
+ * compatibility but inert — the leak tracker is the built-in C core one */
+class MemoryLeakDetector;
+
 class MemoryLeakWarningPlugin : public TestPlugin
 {
   public:
-    MemoryLeakWarningPlugin(const SimpleString &name)
+    MemoryLeakWarningPlugin(const SimpleString &name,
+                            MemoryLeakDetector *localDetector = NULLPTR)
         : TestPlugin(name), ignoreAllWarnings_(false),
           destroyGlobalDetectorInDestructor_(false), expectedLeaks_(0),
           failureCount_(0)
     {
+        (void)localDetector;
         if (firstPluginSlot() == NULLPTR)
             firstPluginSlot() = this;
     }

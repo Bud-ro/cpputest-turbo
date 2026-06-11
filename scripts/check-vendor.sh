@@ -131,6 +131,9 @@ cat > "$HOST/all_headers.cpp" <<'EOF'
 #include "CppUTestExt/MockSupport.h"
 #include "CppUTestExt/MockSupport_c.h"
 #include "CppUTestExt/MockSupportPlugin.h"
+#include "CppUTestExt/MockNamedValue.h"
+#include "CppUTestExt/MockExpectedCall.h"
+#include "CppUTestExt/MockActualCall.h"
 #include "CppUTestExt/OrderedTest.h"
 
 int consumer_translation_unit_is_not_empty;
@@ -142,6 +145,7 @@ for STD in c++11 c++14 c++17 c++20; do
     if "${CXX:-g++}" -std=$STD -x c++ -c /dev/null -o /dev/null 2>/dev/null; then
         "${CXX:-g++}" -std=$STD -Wall -Wextra -Werror -Wpedantic -Wshadow \
             -Wconversion -Wsign-conversion -Wcast-align -Wundef \
+            -Wcast-qual \
             -I"$VEND/include" -c "$HOST/all_headers.cpp" \
             -o "$HOST/all_headers.o"
         "${CXX:-g++}" -std=$STD -Wall -Wextra -Werror -Wpedantic \

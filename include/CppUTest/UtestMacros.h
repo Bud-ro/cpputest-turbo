@@ -486,12 +486,16 @@
         }                                                                      \
     } while (0)
 
+/* upstream guards FAIL: platform headers (e.g. Windows wingdi.h) and user
+ * code commonly define it */
+#ifndef FAIL
 #define FAIL(text) FAIL_LOCATION(text, __FILE__, __LINE__)
 
 #define FAIL_LOCATION(text, file, line)                                        \
     do {                                                                       \
         UtestShell::getCurrent()->fail(text, file, line);                      \
     } while (0)
+#endif
 
 #define FAIL_TEST(text) FAIL_TEST_LOCATION(text, __FILE__, __LINE__)
 
