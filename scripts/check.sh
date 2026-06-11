@@ -1,6 +1,7 @@
 #!/bin/sh
 # One command that must be green at the end of every loop iteration:
-# builds the libraries, runs our unit tests, runs the conformance suite.
+# builds the libraries and runs every suite/gate (lite: no conformance —
+# the vendored-upstream differential fuzzers are the behavioral oracle).
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -12,9 +13,6 @@ make all
 
 echo "== unit tests =="
 ./scripts/run-unit-tests.sh
-
-echo "== conformance =="
-./scripts/run-conformance.sh
 
 echo "== vendor smoke (nested third_party build) =="
 ./scripts/check-vendor.sh

@@ -124,7 +124,6 @@ cat > "$HOST/all_headers.cpp" <<'EOF'
 #include "CppUTest/TestPlugin.h"
 #include "CppUTest/TestRegistry.h"
 #include "CppUTest/TestResult.h"
-#include "CppUTest/TestTestingFixture.h"
 #include "CppUTest/Utest.h"
 #include "CppUTest/UtestMacros.h"
 #include "CppUTest/CppUTestConfig.h"
@@ -134,7 +133,6 @@ cat > "$HOST/all_headers.cpp" <<'EOF'
 #include "CppUTestExt/MockNamedValue.h"
 #include "CppUTestExt/MockExpectedCall.h"
 #include "CppUTestExt/MockActualCall.h"
-#include "CppUTestExt/OrderedTest.h"
 
 int consumer_translation_unit_is_not_empty;
 EOF

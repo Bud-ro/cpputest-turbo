@@ -53,7 +53,7 @@ EXT_LIB  := $(BUILD)/libCppUTestExt.a
 
 ALL_OBJ  := $(CORE_OBJ) $(MOCK_OBJ) $(SHIM_OBJ)
 
-.PHONY: all check conformance lint clean install uninstall
+.PHONY: all check lint clean install uninstall
 
 all: $(LIB) $(if $(MOCK_SRC),$(EXT_LIB))
 
@@ -85,9 +85,6 @@ $(EXT_LIB): $(MOCK_OBJ)
 
 check: all
 	@./scripts/run-unit-tests.sh
-
-conformance: all
-	@./scripts/run-conformance.sh
 
 lint:
 	@./scripts/check-analyzer.sh

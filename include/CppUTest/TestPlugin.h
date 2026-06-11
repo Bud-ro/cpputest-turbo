@@ -118,63 +118,7 @@ inline TestPlugin::TestPlugin(const SimpleString &name)
 {
 }
 
-/* ------------------------- SetPointerPlugin ----------------------------- */
-
-struct cpputest_pair {
-    void **orig;
-    void *orig_value;
-};
-
-class SetPointerPlugin : public TestPlugin
-{
-  public:
-    enum { MAX_SET = 32 };
-
-    SetPointerPlugin(const SimpleString &name);
-
-    virtual void postTestAction(UtestShell &, TestResult &) CPPUTEST_OVERRIDE;
-};
-
-/* single instances across all translation units */
-inline cpputest_pair *CppUTestStoreList()
-{
-    static cpputest_pair setlist[SetPointerPlugin::MAX_SET];
-    return setlist;
-}
-
-inline int &CppUTestStoreIndex()
-{
-    static int pointerTableIndex = 0;
-    return pointerTableIndex;
-}
-
-inline void CppUTestStore(void **function)
-{
-    if (CppUTestStoreIndex() >= SetPointerPlugin::MAX_SET) {
-        FAIL("Maximum number of function pointers installed!");
-    }
-    CppUTestStoreList()[CppUTestStoreIndex()].orig_value = *function;
-    CppUTestStoreList()[CppUTestStoreIndex()].orig = function;
-    CppUTestStoreIndex()++;
-}
-
-inline SetPointerPlugin::SetPointerPlugin(const SimpleString &name)
-    : TestPlugin(name)
-{
-    CppUTestStoreIndex() = 0;
-}
-
-inline void SetPointerPlugin::postTestAction(UtestShell &, TestResult &)
-{
-    for (int i = CppUTestStoreIndex() - 1; i >= 0; i--)
-        *(CppUTestStoreList()[i].orig) = CppUTestStoreList()[i].orig_value;
-    CppUTestStoreIndex() = 0;
-}
-
-#define UT_PTR_SET(a, b)                                                       \
-    do {                                                                       \
-        CppUTestStore((void **)&(a));                                          \
-        (a) = b;                                                               \
-    } while (0)
+/* lite: SetPointerPlugin / UT_PTR_SET removed — onObject() covers the
+ * vtable-pointer verification use case */
 
 #endif

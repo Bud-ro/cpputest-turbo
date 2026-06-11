@@ -16,7 +16,7 @@ CF="${CLANG_FORMAT:-clang-format}"
 MODE="--dry-run"
 [ "${1:-}" = "--fix" ] && MODE="-i"
 
-FILES=$(find src include fuzz conformance -name '*.c' -o -name '*.h' -o -name '*.cpp' | sort)
+FILES=$(find src include fuzz -name '*.c' -o -name '*.h' -o -name '*.cpp' | sort)
 
 fail=0
 

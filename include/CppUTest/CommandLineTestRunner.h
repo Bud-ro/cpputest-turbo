@@ -13,7 +13,6 @@
 #include <stdio.h>
 
 #define DEF_PLUGIN_MEM_LEAK "MemoryLeakPlugin"
-#define DEF_PLUGIN_SET_POINTER "SetPointerPlugin"
 
 class CommandLineTestRunner
 {
@@ -28,11 +27,7 @@ class CommandLineTestRunner
                 true);
         TestRegistry::getCurrentRegistry()->installPlugin(&memLeakWarn);
 
-        SetPointerPlugin pPlugin(DEF_PLUGIN_SET_POINTER);
-        TestRegistry::getCurrentRegistry()->installPlugin(&pPlugin);
         int testResult = cu_run_all(ac, av);
-        TestRegistry::getCurrentRegistry()->removePluginByName(
-            DEF_PLUGIN_SET_POINTER);
 
         if (testResult == 0)
             fputs(memLeakWarn.FinalReport(0), stdout);

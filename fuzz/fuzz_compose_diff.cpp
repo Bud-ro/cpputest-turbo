@@ -47,11 +47,6 @@ enum FzEnum { FZ_A = 1, FZ_B = 2 };
 
 typedef void (*fz_fp_t)(void);
 
-/* UT_PTR_SET target */
-static int fz_target_a = 100;
-static int fz_target_b = 200;
-static int *fz_ptr_slot = &fz_target_a;
-
 /* small stash so allocations survive across ops within a test and get
  * freed (or deliberately leaked) later */
 static char *stash[4];
@@ -252,13 +247,6 @@ static void mock_interleave(void)
     }
 }
 
-static void ptr_set_op(void)
-{
-    TR(" utptr");
-    UT_PTR_SET(fz_ptr_slot, &fz_target_b);
-    printf("V ptr=%d\n", *fz_ptr_slot);
-}
-
 static void throws_op(void)
 {
     TR(" throws");
@@ -301,7 +289,7 @@ static void fz_sequence(unsigned long long seed)
             mock_interleave();
             break;
         case 12:
-            ptr_set_op();
+            passing_int_asserts();
             break;
         case 13:
             throws_op();

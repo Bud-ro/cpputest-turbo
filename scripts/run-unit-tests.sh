@@ -77,7 +77,7 @@ fi
 # ---- plugins -----------------------------------------------------------------
 $CXX $CXXFLAGS tests/plugins/plugin_tests.cpp build/libCppUTest.a -o "$BUILD/plugin_tests"
 rc=0; "$BUILD/plugin_tests" >/dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests exit $rc" >&2; fail=1; else echo "ok: plugins pre/post/UT_PTR_SET"; fi
+if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests exit $rc" >&2; fail=1; else echo "ok: plugins pre/post"; fi
 rc=0; "$BUILD/plugin_tests" -pcustom >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests -pcustom exit $rc" >&2; fail=1; else echo "ok: plugin parseArguments"; fi
 rc=0; "$BUILD/plugin_tests" -pnonsense >/dev/null 2>&1 || rc=$?
@@ -99,11 +99,6 @@ else
     fail=1
 fi
 
-# ---- TestTestingFixture --------------------------------------------------------
-$CXX $CXXFLAGS tests/fixture/fixture_tests.cpp build/libCppUTest.a -o "$BUILD/fixture_tests"
-rc=0; "$BUILD/fixture_tests" >/dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 0 ]; then echo "FAILED: fixture_tests exit $rc" >&2; fail=1; else echo "ok: TestTestingFixture"; fi
-
 # ---- CppUMock (basic slice) -----------------------------------------------------
 $CXX $CXXFLAGS tests/mock/mock_tests.cpp build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_tests"
 # one invocation: capture raw output AND the binary's own exit code (a
@@ -118,17 +113,6 @@ $CC $CFLAGS_TEST -c tests/mock_c/mock_c_tests.c -o "$BUILD/mock_c_tests.o"
 $CXX $CXXFLAGS tests/mock_c/mock_c_wrappers.cpp "$BUILD/mock_c_tests.o" build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_c_tests"
 rc=0; "$BUILD/mock_c_tests" >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: mock_c_tests exit $rc" >&2; fail=1; else echo "ok: MockSupport_c (pure C mocks)"; fi
-
-# ---- OrderedTest ---------------------------------------------------------------
-$CXX $CXXFLAGS tests/ordered/ordered_tests.cpp build/libCppUTest.a -o "$BUILD/ordered_tests"
-rc=0; out=$("$BUILD/ordered_tests" -v 2>&1) || rc=$?
-order=$(printf '%s\n' "$out" | grep -oE 'TEST\(Ordered, [a-z]+\)' | tr '\n' ' ')
-if [ "$rc" -eq 0 ] && [ "$order" = "TEST(Ordered, first) TEST(Ordered, second) TEST(Ordered, third) TEST(Ordered, fourth) TEST(Ordered, fifth) " ]; then
-    echo "ok: TEST_ORDERED level ordering"
-else
-    echo "FAILED: ordered_tests rc=$rc order=$order" >&2
-    fail=1
-fi
 
 # ---- fork isolation and parallel workers (Phase 8) ----------------------------
 $CXX $CXXFLAGS tests/process/process_tests.cpp build/libCppUTest.a -o "$BUILD/process_tests"

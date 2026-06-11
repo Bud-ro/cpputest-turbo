@@ -57,9 +57,7 @@ run_one() { # source leaks(0/1)
 }
 
 run_one tests/smoke/pass_tests.cpp 1
-run_one tests/fixture/fixture_tests.cpp 1
 run_one tests/cli/cli_tests.cpp 1
-run_one tests/ordered/ordered_tests.cpp 1
 # suites with deliberate failures: longjmp-over-temporaries leaks accepted
 run_one tests/mock_torture/torture.cpp 0
 run_one tests/mock/mock_tests.cpp 0

@@ -35,24 +35,17 @@ public:
     void preTestAction(UtestShell &, TestResult &) CPPUTEST_OVERRIDE { disabledCount++; }
 };
 
-static const char *pointee = "original";
+/* two trivial tests so the pre/post counters have something to count */
+TEST_GROUP(PluginRide){};
 
-TEST_GROUP(Ptr)
+TEST(PluginRide, first)
 {
-};
-
-/* runs SECOND (reverse declaration order): pointer must have been restored
- * by SetPointerPlugin's postTestAction after the previous test */
-TEST(Ptr, restoredAfterPreviousTest)
-{
-    STRCMP_EQUAL("original", pointee);
+    CHECK(true);
 }
 
-/* runs FIRST */
-TEST(Ptr, utPtrSet)
+TEST(PluginRide, second)
 {
-    UT_PTR_SET(pointee, "changed");
-    STRCMP_EQUAL("changed", pointee);
+    LONGS_EQUAL(4, 4);
 }
 
 int main(int ac, char **av)
