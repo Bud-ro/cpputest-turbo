@@ -13,6 +13,36 @@ favor of this scheme; the entries are kept for history.
 
 ## [Unreleased]
 
+### lite branch (this branch)
+
+A minimal build for downstream consumers whose code under test is C:
+compile-time and complexity are the priorities. Kept surface (byte-identical
+to upstream, differential-fuzz verified): all assertion macros, the full
+mock() matching engine incl. withParameterOfType/comparators/copiers,
+onObject, output parameters, scopes, strictOrder, mid-test
+checkExpectations, MockSupportPlugin, group/name filters, -v, -ri, -jN.
+
+### Removed (lite)
+- Memory leak detection (the `new` macro, malloc macros, allocator/OOM
+  surface) — `TestHarness.h` no longer includes any C++ standard header;
+  a mock-free test TU preprocesses to ~1,000 lines instead of ~31,000.
+- The C test API: `TestHarness_c.h`, `MockSupport_c.h`, `TEST_C`.
+- JUnit and TeamCity output (`-o*`, `-k`), color (`-c`), `-vv`.
+- `-p` fork-per-test (the `-p` prefix still reaches plugin
+  `parseArguments`), shuffle (`-s`), repeat (`-r`), reverse (`-b`),
+  listings (`-lg/-ln/-ll`), crash-on-fail (`-f`), `-e`/`-ci`.
+- Mock data store (`setData`/`getData`/`hasData`) and tracing mode
+  (`tracing()`/`getTraceOutput()`).
+- `OrderedTest`, `UT_PTR_SET`/`SetPointerPlugin`, `TestTestingFixture`,
+  the conformance harness, `CPPUTEST_C_ONLY`, `CPPUTEST_USE_STD_CPP_LIB`.
+
+### Changed (lite)
+- The C++ shim is built `-fno-exceptions -fno-rtti`; the archives carry no
+  libstdc++ dependency and link with plain `gcc`.
+- SimpleString lost the `std::string` interop and is the library's single
+  C++ TU.
+- Removed runner flags are usage errors, never silently accepted.
+
 ### Fixed
 - `-p` and `-jN` no longer duplicate previously-buffered output when stdout
   is piped/redirected: the console output now flushes after every print

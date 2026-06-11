@@ -1,27 +1,41 @@
-# Benchmark results
+# Benchmark results (lite branch)
 
 Machine: Linux x86_64 (WSL2), gcc 13.3. Reproduce with `sh bench/run_bench.sh`
 (builds the vendored upstream library for comparison on first run). Updated
-2026-06-11, re-measured AFTER the behavioral-parity campaign (4-state
-return model, bind-at-creation comparator bindings, per-scope
-repositories, finalize-without-free) to confirm the parity work did not
-cost the speed advantage.
+2026-06-11 on the `lite` branch — no leak detection, so `new`/`delete` in
+tests run at plain libc speed and `TestHarness.h` pre-includes no C++
+standard headers.
 
-## Runtime (5M assertions + 500k tracked new/delete, 8 groups, -O2)
+## Compile time (the lite branch's headline win)
+
+| TU shape | preprocessed lines | compile (g++ -O2, warm) |
+|---|---|---|
+| `TestHarness.h` only — upstream/master | 30,789 | ~120 ms |
+| `TestHarness.h` only — **lite** | **1,006** | **~20 ms** |
+| + `MockSupport.h` — upstream/master | 32,357 | ~590 ms |
+| + `MockSupport.h` — **lite** | **2,454** | **~450 ms** |
+
+Master and upstream pay for `<new>`/`<memory>`/`<string>`, which
+`TestHarness.h` must pre-include before defining the leak-detection `new`
+macro. Lite has no leak detection, so that entire tax is gone; what remains
+of the mock-TU cost is `MockSupport.h`'s own inline facade bodies.
+
+Suite-level (`bench/run_bench.sh`, 21 TUs / 400 TESTs, -O0):
+
+| | cpputest-turbo lite | upstream |
+|---|---|---|
+| total | **1,152 ms** | 2,804 ms |
+
+## Runtime (5M assertions + 500k new/delete, 8 groups, -O2)
 
 | run | time | vs upstream |
 |---|---|---|
-| upstream CppUTest, sequential | 31–35 ms | 1× |
-| **cpputest-turbo, sequential** | **6–10 ms** | **~4–5×** |
-| **cpputest-turbo, `-j8`** | **3–4 ms** | **~9–10×** |
-| cpputest-turbo, `-p` (fork per test) | 6 ms | ~5× |
+| upstream CppUTest, sequential | ~31 ms | 1× |
+| **lite, sequential** | **~4 ms** | **~8×** |
 
-Decomposed microbenchmarks (per-operation cost):
-
-| operation | before | after | upstream | raw-C floor |
-|---|---|---|---|---|
-| passing assertion | 2.7 ns | **~0.3 ns** | 3.8 ns | ~0.2 ns |
-| tracked new/delete pair | 14 ns | **6.4 ns** | 17.6 ns | ~2 ns |
+(master with leak tracking measured 6–10 ms on the same load; lite's
+untracked `new`/`delete` removes that overhead entirely. `-jN` still
+distributes groups over forked workers for larger suites.)
 
 ## Mock path (bench/bench_mock.cpp, -O2)
 
@@ -34,40 +48,20 @@ checkExpectations+clear — the hot loop of a mock-heavy embedded suite:
 | upstream CppUMock | 334–339 ms | 1× |
 | **cpputest-turbo** | **135 ms** | **~2.5×** |
 
-This is measured on the post-parity-campaign mock core (per-scope
-comparator repositories, creation-time bindings, the 4-state return
-model), so byte-identical behavior and the speedup coexist.
+The mock numbers carry over from master: the mock core is the same code
+minus the data store and tracing mode, neither of which is on the hot path.
 
 ## What made it fast
 
 1. **Inline assertion fast path.** The passing path of every hot macro
-   (CHECK/LONGS_EQUAL/STRCMP_EQUAL/MEMCMP_EQUAL/DOUBLES_EQUAL/...) is now a
+   (CHECK/LONGS_EQUAL/STRCMP_EQUAL/MEMCMP_EQUAL/DOUBLES_EQUAL/...) is a
    counter increment plus an inlined comparison in the user's translation
    unit; the library is only entered on mismatch, where the byte-identical
-   failure messages are built. (10× on the assertion microbenchmark.)
-   String/memory comparisons happen inside the same full expression that
-   evaluated the arguments, so temporaries stay alive — same lifetime rules
-   as upstream's call-form macros.
-2. **Single-allocation leak tracking.** The tracking node is embedded at the
-   head of the tracked block (`[node | user | guard]`) — one malloc/free per
-   allocation instead of two.
-3. **Size-class freelists.** Small tracked blocks recycle through capped
-   per-class freelists, so steady-state new/delete churn skips malloc
-   entirely. (14 ns → 6.4 ns per pair; remaining cost is the 0xCD poison,
-   guard verification and hash bookkeeping that parity requires.)
-4. **`-jN`** distributes groups over forked workers; on this load 8 workers
-   give another ~2.5–3× (the 2 ms wall includes ~1 ms of fork/replay
-   overhead, so larger suites scale better).
-
-## Compile time (21 TUs / 400 TESTs, g++ -O0)
-
-| | cpputest-turbo | upstream |
-|---|---|---|
-| total | 2411 ms | 2421 ms |
-
-Parity: both frameworks' `TestHarness.h` must pre-include `<new>`,
-`<memory>` and `<string>` before defining the `new` macro, and those std
-headers dominate (~31k preprocessed lines on both sides). Our headers keep
-method bodies out-of-line (`src/shim/`) to stay at parity. Pure-C test files
-(`TestHarness_c.h` only) skip the C++ standard library entirely and compile
-in a few tens of milliseconds — upstream has no equivalent.
+   failure messages are built. String/memory comparisons happen inside the
+   same full expression that evaluated the arguments, so temporaries stay
+   alive — same lifetime rules as upstream's call-form macros.
+2. **No allocation tracking.** Lite removes the leak detector outright, so
+   `new`/`delete` and `malloc`/`free` in tests are the plain libc calls.
+3. **`-jN`** distributes groups over forked workers; on this load 8 workers
+   give another ~2.5–3× (the wall time includes fork/replay overhead, so
+   larger suites scale better).
