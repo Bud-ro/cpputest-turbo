@@ -1,6 +1,6 @@
 BSD 3-Clause License
 
-Copyright (c) 2026, cpputest-revibed contributors (new implementation)
+Copyright (c) 2026, cpputest-turbo contributors (new implementation)
 Copyright (c) 2007, Michael Feathers, James Grenning and Bas Vodde
 (original CppUTest interface and the macro bodies reproduced for source
 compatibility — see third_party/cpputest/COPYING)

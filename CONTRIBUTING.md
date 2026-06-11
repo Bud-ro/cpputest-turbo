@@ -19,7 +19,9 @@
 
 runs everything a PR must pass: format/hygiene check, build (max-strict
 warnings under `-Werror`), our unit suites, the upstream conformance suite,
-the ASan/UBSan sweep, and a bounded differential fuzz pass. `CHECK_FAST=1`
+the vendor smoke (nested `third_party/` build, install + pkg-config
+consumer, public-header hygiene at every C++ standard), the ASan/UBSan
+sweep, and a bounded differential fuzz pass. `CHECK_FAST=1`
 skips the heavy stages during inner-loop development; run the full gate
 before pushing. `scripts/check-macos.sh` cross-compiles for both macOS
 architectures if you have `zig` available.
@@ -49,8 +51,13 @@ a test pass.
 
 ## Differential fuzzing
 
-`fuzz/fuzz_mock_diff.cpp` compiles against both upstream and us; identical
-seeds must produce identical output. To reproduce a CI divergence:
+Four differential pairs compile the same driver against both upstream and
+us; identical seeds must produce identical (normalized) output:
+`fuzz/fuzz_mock_diff.cpp` (C++ mock API), `fuzz_mock_c_seq.c` +
+`fuzz_mock_c_diff.cpp` (the MockSupport_c C API), `fuzz_compose_diff.cpp`
+(asserts + heap + leak reports + mocks interleaved), and
+`fuzz_cli_diff.cpp` (random runner-flag combinations, including JUnit
+file output and `-p` fork mode). To reproduce a CI divergence:
 
 ```sh
 FUZZ_SEED=<n> FUZZ_TRACE=1 ./build/fuzz/mockdiff_ours -sn seq<k> 2>trace.txt

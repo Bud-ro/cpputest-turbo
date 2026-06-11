@@ -1,4 +1,4 @@
-# cpputest-revibed code style. Matches the prevailing style of src/:
+# cpputest-turbo code style. Matches the prevailing style of src/:
 # Linux-ish bracing (functions on their own line), 4-space indent,
 # right-aligned pointers, 80 columns.
 BasedOnStyle: LLVM

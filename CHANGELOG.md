@@ -76,8 +76,9 @@ All notable changes to cpputest-turbo. Format follows
   and CI.
 - Differential fuzzing across optimization levels (`FUZZ_OPT`); CI deep-fuzz
   matrix runs -O0/-O1/-O2/-O3.
-- "Lean mode" documentation: 4× faster test compiles via
-  `-DCPPUTEST_MEM_LEAK_DETECTION_DISABLED -DCPPUTEST_USE_STD_CPP_LIB=0`.
+- "Lean mode" documentation: cuts preprocessed test-TU size by more than
+  an order of magnitude via `-DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
+  -DCPPUTEST_USE_STD_CPP_LIB=0` (see bench/RESULTS.md).
 - `onObject()` on expected and actual mock calls (object-instance matching,
   with upstream's `MockUnexpectedObjectFailure` /
   `MockExpectedObjectDidntHappenFailure` messages).
@@ -111,6 +112,13 @@ All notable changes to cpputest-turbo. Format follows
 - Size-arithmetic overflow in the leak tracker for huge allocations.
 - Parallel workers use a private `mkdtemp` directory instead of predictable
   shared `$TMPDIR` filenames.
+
+## [v0.3.0] — 2026-06-10
+
+Pre-release snapshot rolled into v1.0.0 the same day; its changes
+(licensing/packaging groundwork, `onObject()`/tracing/`MockSupportPlugin`
+parity, `crashOnFailure` ordering, the 8 KiB message-truncation fix, and
+the hardened gates) are documented under the v1.0.0 entry above.
 
 ## [v0.2.0] — 2026-06-09
 

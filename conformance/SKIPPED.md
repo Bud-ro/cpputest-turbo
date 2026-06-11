@@ -41,7 +41,7 @@ Categories:
 | TestResultTest.cpp | INTERNALS | TestResult class with mocked output |
 | TestUTestMacro.cpp | **PASSING** | |
 | TestUTestStringMacro.cpp | **PASSING** | |
-| UtestPlatformTest.cpp | INTERNALS/Phase 8 | fork-mode platform behavior; revisit with Phase 8 |
+| UtestPlatformTest.cpp | INTERNALS | fork-mode platform behavior; covered by tests/process goldens |
 | UtestTest.cpp | PLANNED | needs TestOutput.h + UtestShell surface additions |
 
 ## tests/CppUTestExt
