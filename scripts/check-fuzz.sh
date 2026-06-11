@@ -1,12 +1,12 @@
 #!/bin/sh
 # Fuzzing gate.
-# - fuzz_args / fuzz_strings / fuzz_memleak: seeded random-op drivers built
-#   with ASan/UBSan; any sanitizer report fails the run.
+# - fuzz_args / fuzz_strings: seeded random-op drivers built with ASan/UBSan;
+#   any sanitizer report fails the run.
 # - fuzz_mock_diff: DIFFERENTIAL — the same public-API driver compiled
 #   against upstream CppUTest and against us, run with identical seeds; any
 #   output divergence (after ms normalization) fails the run. The "ours"
 #   side also runs under ASan/UBSan.
-# FUZZ_ROUNDS scales the DIFFERENTIAL legs (mock/mock_c/compose rounds and
+# FUZZ_ROUNDS scales the DIFFERENTIAL legs (mock/compose rounds and
 # CLI combo count); FUZZ_ITERS scales only the three standalone sanitizer
 # fuzzers. Defaults are CI-sized.
 set -eu
@@ -33,9 +33,8 @@ $CXX $CXXFLAGS -fno-exceptions -fno-rtti -c src/shim/simplestring.cpp \
 rm -f "$OUT/libasan.a"
 ar rcs "$OUT/libasan.a" "$OUT"/*.o
 
-# Upstream library for the differential fuzzer; fork enabled so the -p
-# leg of the CLI fuzzer has a real oracle (autoconf'd upstream installs
-# define these on POSIX). Built with the SAME $CXX as the matrix leg —
+# Upstream library for the differential fuzzer. Built with the SAME $CXX as
+# the matrix leg —
 # the clang CI leg must diff against a clang-built oracle — and the cache
 # stamp records the compiler so switching CXX rebuilds it.
 STAMP="fork-enabled-$(basename "$CXX")"
@@ -77,8 +76,8 @@ $CXX $CXXFLAGS fuzz/fuzz_mock_diff.cpp "$OUT/libasan.a" \
 $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include fuzz/fuzz_mock_diff.cpp \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockdiff_upstream"
 
-# differential composition fuzzer: asserts + heap + leaks + mocks +
-# SimpleString + UT_PTR_SET interleaved in one test body
+# differential composition fuzzer: asserts + mocks + SimpleString
+# interleaved in one test body
 $CXX $CXXFLAGS fuzz/fuzz_compose_diff.cpp "$OUT/libasan.a" \
     -o "$OUT/composediff_ours"
 $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
@@ -86,7 +85,7 @@ $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/composediff_upstream"
 
 # differential CLI fuzzer: one fixed suite, seeded random runner-flag
-# combinations; stdout, exit code, and JUnit XML files all compared
+# combinations; stdout and exit code compared
 $CXX $CXXFLAGS fuzz/fuzz_cli_diff.cpp "$OUT/libasan.a" \
     -o "$OUT/clidiff_ours"
 $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
@@ -102,7 +101,6 @@ norm() {
     sed -e 's/, [0-9]* ms)/, 0 ms)/' -e 's/ - [0-9]* ms$/ - 0 ms/' \
         -e 's|[^ ]*/MockNamedValue\.cpp:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's|include/CppUTestExt/MockSupport\.h:[0-9]*: error:|LIB_INTERNAL: error:|' \
-        -e 's|[^ ]*/mock_support_c\.c:[0-9]*: error:|LIB_INTERNAL: error:|' \
         -e 's/Alloc num ([0-9]*)/Alloc num (N)/' \
         -e 's/Memory: <0x[0-9a-fA-F]*>/Memory: <0xADDR>/' \
         -e 's/\([ :<(]\)0x[0-9a-fA-F]\{5,\}/\10xBIGADDR/g'
@@ -148,33 +146,27 @@ done
 echo "fuzz_mock_diff + fuzz_compose_diff: $ROUNDS rounds identical to upstream"
 
 # ---- CLI flag-combination differential ----
-# JUnit XML carries wall-clock fields; everything else must be identical
 cli_norm() {
-    norm | sed -e 's/timestamp="[^"]*"/timestamp="T"/' \
-               -e 's/time="[^"]*"/time="t"/' \
-               -e "s/duration='[0-9]*'/duration='0'/"
+    norm
 }
 
 # hand-rolled LCG (not awk srand/rand: their sequences differ across awk
 # implementations, so the explored combos would depend on the host's awk)
+# Pool = the lite flag surface only; removed flags are usage errors here but
+# valid upstream, so they cannot be diffed.
 gen_flags() {
     awk -v seed="$1" 'BEGIN {
         s = seed * 2654435761 % 4294967296;
-        pool[0]="-v";    pool[1]="-c";        pool[2]="-r2";       pool[3]="-r3";
-        pool[4]="-s5";   pool[5]="-s11";      pool[6]="-gGroupA";  pool[7]="-npass";
-        pool[8]="-sgGroupB"; pool[9]="-snfails"; pool[10]="-xgGroupC";
-        pool[11]="-xnignored"; pool[12]="-kpkg"; pool[13]="-lg";   pool[14]="-ln";
-        pool[15]="-ri";  pool[16]="-ojunit";  pool[17]="-oteamcity";
-        pool[18]="-p";   pool[19]="-vv";      pool[20]="-b";       pool[21]="-ll";
-        pool[22]="-tGroupA.pass"; pool[23]="-stGroupB.pass";
-        pool[24]="-xtGroupA.fails"; pool[25]="-xstGroupC.mockPass";
-        pool[26]="-xsgGroupA"; pool[27]="-xsnmockFails"; pool[28]="-e";
-        pool[29]="-ci"; pool[30]="-onormal";
+        pool[0]="-v";    pool[1]="-ri";       pool[2]="-gGroupA";  pool[3]="-npass";
+        pool[4]="-sgGroupB"; pool[5]="-snfails"; pool[6]="-xgGroupC";
+        pool[7]="-xnignored"; pool[8]="-tGroupA.pass"; pool[9]="-stGroupB.pass";
+        pool[10]="-xtGroupA.fails"; pool[11]="-xstGroupC.mockPass";
+        pool[12]="-xsgGroupA"; pool[13]="-xsnmockFails";
         s = (s * 1103515245 + 12345) % 2147483648;
         n = int(s / 65536) % 6;
         for (i = 0; i < n; i++) {
             s = (s * 1103515245 + 12345) % 2147483648;
-            printf "%s ", pool[int(s / 65536) % 31];
+            printf "%s ", pool[int(s / 65536) % 14];
         }
         print ""
     }'

@@ -3,13 +3,11 @@
  * A small fixed suite (passing, failing, ignored tests across three groups,
  * plus a mock-using test) compiled against upstream CppUTest and against
  * cpputest-turbo. scripts/check-fuzz.sh generates seeded random command-line
- * flag combinations (-v -c -r -s -g/-n filters, strict/exclude variants,
- * -k, -lg/-ln, -ri, -b, -ojunit, -oteamcity) and runs both binaries with
- * identical argv in separate scratch dirs, diffing stdout, exit code, and
- * any JUnit XML files produced (timing/hostname normalized).
+ * flag combinations (-v, -ri, -g/-n filters, strict/exclude variants) and
+ * runs both binaries with identical argv in separate scratch dirs, diffing
+ * stdout and exit code.
  *
- * Everything here must be deterministic: failure messages use literals,
- * shuffle order comes from the seeded libc rand() both sides share. */
+ * Everything here must be deterministic: failure messages use literals. */
 
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/CommandLineTestRunner.h"

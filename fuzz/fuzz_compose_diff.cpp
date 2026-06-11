@@ -1,6 +1,6 @@
 /* Differential COMPOSITION fuzzer: assertion macros + memory allocation
  * (plain new/delete in lite — no tracking) + mock
- * expectations + SimpleString + UT_PTR_SET, randomly interleaved inside
+ * expectations + SimpleString, randomly interleaved inside
  * each test — the cross-API interactions a single-feature fuzzer misses
  * (e.g. the leak detector seeing user allocations around the mock core's
  * implicit internal allocations).

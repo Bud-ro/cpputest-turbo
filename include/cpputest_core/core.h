@@ -299,10 +299,6 @@ void cu_run_registered_tests(cu_run_stats *stats_out, int verbose);
 void cu_run_registered_tests_ex(cu_run_stats *stats_out, int verbose,
                                 int run_plugins);
 
-/* upstream's swappable platform hooks (UtestPlatform): shuffle uses these */
-extern void (*PlatformSpecificSrand)(unsigned int);
-extern int (*PlatformSpecificRand)(void);
-
 /* Full runner: parses args, runs registered tests, returns exit code. */
 int cu_run_all(int argc, const char *const *argv);
 

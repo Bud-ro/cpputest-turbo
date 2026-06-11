@@ -1,5 +1,5 @@
 #!/bin/sh
-# CLI behavior tests: flags, filters, listings, repeat, shuffle, exit codes.
+# CLI behavior tests (lite): flags, filters, exit codes.
 # Run from repo root; $1 = path to cli_tests binary.
 set -eu
 BIN="$1"
@@ -25,14 +25,6 @@ norm_ms() {
 summary_of() { # args... -> prints the OK/Errors line, ms normalized
     "$BIN" "$@" 2>&1 | grep -aE '(OK|Errors) \(' | norm_ms || true
 }
-
-# --- listings ---------------------------------------------------------------
-expect_eq "-lg" "$("$BIN" -lg)" "GroupB GroupA"
-expect_eq "-ln" "$("$BIN" -ln)" "GroupB.ig GroupB.b1 GroupA.a2 GroupA.a1"
-expect_eq "-ln filtered" "$("$BIN" -ln -g GroupA)" "GroupA.a2 GroupA.a1"
-expect_eq "-ll line count" "$("$BIN" -ll | wc -l | tr -d ' ')" "4"
-expect_eq "-ll first line" "$("$BIN" -ll | head -1)" "GroupB.ig.tests/cli/cli_tests.cpp.30"
-rc=0; "$BIN" -lg >/dev/null || rc=$?; expect_rc "-lg" "$rc" 0
 
 # --- filters ----------------------------------------------------------------
 expect_eq "-g GroupA" "$(summary_of -g GroupA)" \
@@ -64,32 +56,22 @@ expect_rc "bad flag" "$rc" 1
 expect_eq "bad flag prints usage" "$(printf '%s' "$out" | head -1)" "use -h for more extensive help"
 rc=0; out=$("$BIN" -h 2>&1) || rc=$?
 expect_rc "-h" "$rc" 1
-expect_eq "-h prints help" "$(printf '%s' "$out" | head -1)" "Thanks for using CppUTest."
-expect_eq "-h last line" "$(printf '%s' "$out" | tail -1)" \
-    "  -ci               - continuous integration mode (equivalent to -e)"
+expect_eq "-h prints help" "$(printf '%s' "$out" | head -1)" "Thanks for using CppUTest (turbo-lite)."
 rc=0; "$BIN" -t NoDotHere >/dev/null 2>&1 || rc=$?
 expect_rc "-t without dot" "$rc" 1
-rc=0; "$BIN" -obogus >/dev/null 2>&1 || rc=$?
-expect_rc "-obogus" "$rc" 1
-rc=0; "$BIN" -onormal >/dev/null 2>&1 || rc=$?
-expect_rc "-onormal" "$rc" 0
-rc=0; "$BIN" -s0 >/dev/null 2>&1 || rc=$?
-expect_rc "-s0 parse error" "$rc" 1
 rc=0; "$BIN" -pXXX >/dev/null 2>&1 || rc=$?
 expect_rc "-pXXX plugin arg" "$rc" 1
 
-# --- repeat / reverse / shuffle / run-ignored --------------------------------
-out=$("$BIN" -r2 2>&1)
-expect_eq "-r2 run headers" "$(printf '%s\n' "$out" | grep -c '^Test run ')" "2"
-expect_eq "-r2 header text" "$(printf '%s\n' "$out" | grep '^Test run ' | head -1)" "Test run 1 of 2"
+# removed flags must be rejected, not silently accepted
+for flag in -p -vv -c -b -lg -ln -ll -f -e -ci -r2 -s17 -onormal -ojunit -kpkg; do
+    rc=0; "$BIN" "$flag" >/dev/null 2>&1 || rc=$?
+    expect_rc "removed flag $flag rejected" "$rc" 1
+done
+
+# --- verbose / run-ignored ----------------------------------------------------
 out=$("$BIN" -v 2>&1)
 expect_eq "-v order" "$(printf '%s\n' "$out" | grep -oE '(IGNORE_)?TEST\([^)]*\)' | tr '\n' ' ')" \
     "IGNORE_TEST(GroupB, ig) TEST(GroupB, b1) TEST(GroupA, a2) TEST(GroupA, a1) "
-out=$("$BIN" -v -b 2>&1)
-expect_eq "-b reversed order" "$(printf '%s\n' "$out" | grep -oE '(IGNORE_)?TEST\([^)]*\)' | tr '\n' ' ')" \
-    "TEST(GroupA, a1) TEST(GroupA, a2) TEST(GroupB, b1) IGNORE_TEST(GroupB, ig) "
-out=$("$BIN" -s17 2>&1)
-expect_eq "-s17 notice" "$(printf '%s\n' "$out" | head -1)" "Test order shuffling enabled with seed: 17"
 rc=0; out=$("$BIN" -ri 2>&1) || rc=$?
 expect_rc "-ri ignored test now fails" "$rc" 1
 expect_eq "-ri summary" "$(printf '%s\n' "$out" | grep -aE '^Errors' | norm_ms)" \
@@ -97,19 +79,5 @@ expect_eq "-ri summary" "$(printf '%s\n' "$out" | grep -aE '^Errors' | norm_ms)"
 out=$("$BIN" -ri -v 2>&1) || true
 expect_eq "-ri verbose shows TEST not IGNORE_TEST" \
     "$(printf '%s\n' "$out" | grep -c 'IGNORE_TEST')" "0"
-
-# --- crash on fail ------------------------------------------------------------
-rc=0; "$BIN" -f -ri -sg GroupB -sn ig >/dev/null 2>&1 || rc=$?
-if [ "$rc" -lt 128 ]; then
-    echo "FAILED: -f should die by signal (rc >= 128), got $rc" >&2
-    fail=1
-else
-    echo "ok: -f crashes on failure"
-fi
-
-# --- color -------------------------------------------------------------------
-out=$("$BIN" -c -sg GroupA 2>&1 | grep -a 'OK (' | norm_ms)
-expect_eq "-c green summary" "$out" \
-    "$(printf '\033[32;1mOK (4 tests, 2 ran, 2 checks, 0 ignored, 2 filtered out, 0 ms)\033[m')"
 
 exit "$fail"

@@ -81,9 +81,9 @@ $CXX $CXXFLAGS tests/process/process_tests.cpp "$OUT/libCppUTestAsan.a" -o "$OUT
 # intercepts the controlled crash: UBSan null-store on Linux, ASan
 # DEADLYSIGNAL on Darwin) — exclude it here; tests/process/run.sh covers
 # crash containment unsanitized in the normal gate
-run_proc "$OUT/proc.bin" -p -xg Hazard
+run_proc "$OUT/proc.bin" -xg Hazard
 run_proc "$OUT/proc.bin" -j2 -xg Hazard
-# pure-C consumers (C ABI + mock_c)
+# pure-C consumer (C ABI)
 $CC $CFLAGS tests/c_core/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin" -lstdc++ 2>/dev/null || \
     $CC $CFLAGS tests/c_core/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin"
 run_proc "$OUT/ccore.bin"

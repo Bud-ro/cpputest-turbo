@@ -63,11 +63,6 @@ if ! sh tests/cli/run.sh "$BUILD/cli_tests"; then
     fail=1
 fi
 
-# ---- output formats (JUnit / TeamCity / -vv) --------------------------------
-if ! sh tests/outputs/run.sh "$BUILD"; then
-    fail=1
-fi
-
 # ---- plugins -----------------------------------------------------------------
 $CXX $CXXFLAGS tests/plugins/plugin_tests.cpp build/libCppUTest.a -o "$BUILD/plugin_tests"
 rc=0; "$BUILD/plugin_tests" >/dev/null 2>&1 || rc=$?
@@ -86,7 +81,7 @@ sed 's/, [0-9]* ms)/, 0 ms)/' "$BUILD/mock.raw" > "$BUILD/mock.out"
 if [ "$rc" -ne 12 ]; then echo "FAILED: mock_tests exit $rc, expected 12" >&2; fail=1; fi
 compare "mock failure messages" "$BUILD/mock.out" tests/mock/golden/all.txt
 
-# ---- fork isolation and parallel workers (Phase 8) ----------------------------
+# ---- parallel workers (-jN) ----------------------------------------------------
 $CXX $CXXFLAGS tests/process/process_tests.cpp build/libCppUTest.a -o "$BUILD/process_tests"
 if ! sh tests/process/run.sh "$BUILD/process_tests"; then
     fail=1

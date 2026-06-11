@@ -25,7 +25,6 @@ static void bind_result(cu_result *res)
     current_result = res;
     cu_check_count_ptr = res ? &res->check_count : NULL;
 }
-static int crash_on_fail;
 
 static cu_plugin_action_fn plugin_pre;
 static cu_plugin_action_fn plugin_post;
@@ -125,11 +124,6 @@ void cu_fail_with_message(const char *file, size_t line, const char *message)
         cu_out_failure(current_output, current_test, file, line, message);
         current_result->failure_count++;
     }
-    /* -f swaps the test terminator for a crashing one (UtestShell::
-     * setCrashOnFail): the failure is reported first, then we crash so a
-     * debugger can take over. PlatformSpecificAbort == abort. */
-    if (crash_on_fail)
-        abort();
     cu_longjmp_out();
 }
 
@@ -151,59 +145,33 @@ static void do_teardown(cu_test *t, void *fixture)
     t->ops->teardown(t, fixture);
 }
 
-static void vv(const char *s)
-{
-    cu_out_very_verbose(current_output, s);
-}
-
-/* Upstream Utest::run() in no-exceptions mode: protected setup; body only if
- * setup completed; teardown always (Utest.cpp). Trace strings (-vv) are
- * upstream-exact, including the double spaces. */
+/* Upstream Utest::run() in no-exceptions mode: protected setup; body only
+ * if setup completed; teardown always (Utest.cpp). */
 static void cu_run_fixture(cu_test *t)
 {
-    vv("\n---- before createTest: ");
     void *fixture = t->ops->create(t);
-    vv("\n---- after createTest: ");
 
-    vv("\n------ before runTest: ");
-    vv("\n-------- before setup: ");
     int setup_ok = cu_protected_call(do_setup, t, fixture);
-    /* upstream prints each "after X" trace INSIDE the protected try
-     * (Utest.cpp:659-697): a failing phase longjmps past its own trace */
     if (setup_ok)
-        vv("\n-------- after  setup: ");
-    if (setup_ok) {
-        vv("\n----------  before body: ");
-        if (cu_protected_call(do_body, t, fixture))
-            vv("\n----------  after body: ");
-    }
-    vv("\n--------  before teardown: ");
-    if (cu_protected_call(do_teardown, t, fixture))
-        vv("\n--------  after teardown: ");
-    vv("\n------ after runTest: ");
+        cu_protected_call(do_body, t, fixture);
+    cu_protected_call(do_teardown, t, fixture);
 
-    vv("\n---- before destroyTest: ");
     t->ops->destroy(t, fixture);
-    vv("\n---- after destroyTest: ");
 }
 
 /* the pre/fixture/post sequence (UtestShell::runOneTestInCurrentProcess);
- * also runs inside the forked child for -p */
+ * also runs inside forked -jN workers */
 void cu_run_test_actions(cu_test *t)
 {
-    vv("\n-- before runAllPreTestAction: ");
     if (plugin_pre)
         plugin_pre(t);
-    vv("\n-- after runAllPreTestAction: ");
     cu_run_fixture(t);
-    vv("\n-- before runAllPostTestAction: ");
     if (plugin_post)
         plugin_post(t);
-    vv("\n-- after runAllPostTestAction: ");
 }
 
 /* UtestShell::runOneTest / IgnoredUtestShell::runOneTest */
-static void cu_run_one_test(cu_test *t, cu_result *res, int separate_process)
+static void cu_run_one_test(cu_test *t, cu_result *res)
 {
     if (t->is_ignored && !t->run_ignored) {
         res->ignored_count++;
@@ -211,10 +179,6 @@ static void cu_run_one_test(cu_test *t, cu_result *res, int separate_process)
     }
     t->has_failed = 0;
     res->run_count++;
-    if (separate_process) {
-        cu_fork_run_one_test(t, res);
-        return;
-    }
     cu_run_test_actions(t);
 }
 
@@ -251,7 +215,7 @@ void cu_run_all_tests_internal(const cu_args *a, cu_result *res, cu_output *out)
             cu_out_test_started(out, t);
             res->current_test_time_started = cu_time_in_millis();
             current_test = t;
-            cu_run_one_test(t, res, a->run_separate_process);
+            cu_run_one_test(t, res);
             current_test = NULL;
             res->current_test_ms =
                 cu_time_in_millis() - res->current_test_time_started;
@@ -273,62 +237,6 @@ static int cu_is_failure(const cu_result *res)
 {
     return res->failure_count != 0 ||
            (res->run_count + res->ignored_count) == 0;
-}
-
-/* TestRegistry::listTestGroupNames / listTestGroupAndCaseNames: unique
- * entries in registry order, joined by single spaces, no trailing space or
- * newline. Dedup matches upstream's #token# substring trick in effect. */
-static void list_unique(cu_output *out, const cu_args *a, int with_names)
-{
-    size_t printed = 0;
-    for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next) {
-        if (with_names) {
-            cu_result dummy = {0};
-            if (!test_should_run(a, t, &dummy))
-                continue;
-        }
-        int seen = 0;
-        for (cu_test *p = cu_registry_tests(); p != t && !seen; p = p->next) {
-            if (with_names) {
-                cu_result dummy = {0};
-                if (!test_should_run(a, p, &dummy))
-                    continue;
-                seen = 0 == strcmp(p->group, t->group) &&
-                       0 == strcmp(p->name, t->name);
-            } else {
-                seen = 0 == strcmp(p->group, t->group);
-            }
-        }
-        if (seen)
-            continue;
-        /* the listing goes through the SELECTED output, like upstream's
-         * TestResult tr(*output_) — JUnit swallows plain prints */
-        if (printed++)
-            cu_out_print_str(out, " ");
-        if (with_names) {
-            cu_out_print_str(out, t->group);
-            cu_out_print_str(out, ".");
-            cu_out_print_str(out, t->name);
-        } else {
-            cu_out_print_str(out, t->group);
-        }
-    }
-}
-
-static void list_locations(cu_output *out)
-{
-    char buf[32];
-    for (cu_test *t = cu_registry_tests(); t != NULL; t = t->next) {
-        cu_out_print_str(out, t->group);
-        cu_out_print_str(out, ".");
-        cu_out_print_str(out, t->name);
-        cu_out_print_str(out, ".");
-        cu_out_print_str(out, t->file);
-        cu_out_print_str(out, ".");
-        snprintf(buf, sizeof buf, "%d", (int)t->line);
-        cu_out_print_str(out, buf);
-        cu_out_print_str(out, "\n");
-    }
 }
 
 /* TestTestingFixture-style run: no CLI, default console output, stats out.
@@ -358,8 +266,6 @@ void cu_run_registered_tests_ex(cu_run_stats *stats_out, int verbose,
     }
 
     memset(&args, 0, sizeof args);
-    args.repeat = 1;
-    args.rethrow_exceptions = 1;
     memset(&out, 0, sizeof out);
     out.level = verbose ? CU_OUTPUT_VERBOSE : CU_OUTPUT_NORMAL;
     out.progress_indicator = ".";
@@ -397,76 +303,22 @@ int cu_run_all(int argc, const char *const *argv)
     }
 
     memset(&out, 0, sizeof out);
-    out.level = args.very_verbose ? CU_OUTPUT_VERY_VERBOSE
-                : args.verbose    ? CU_OUTPUT_VERBOSE
-                                  : CU_OUTPUT_NORMAL;
-    out.color = args.color;
+    out.level = args.verbose ? CU_OUTPUT_VERBOSE : CU_OUTPUT_NORMAL;
     out.progress_indicator = ".";
-    out.type = args.output_type;
-    out.package_name = args.package_name;
-    /* upstream composes JUnit with a console output under -v/-vv */
-    out.also_console = args.output_type == CU_OUTPUT_TYPE_JUNIT &&
-                       (args.verbose || args.very_verbose);
-    if (out.type == CU_OUTPUT_TYPE_JUNIT)
-        out.junit = cu_junit_create();
-    crash_on_fail = args.crash_on_fail;
-    /* args.run_separate_process (-p): Phase 8. */
 
-    if (args.list_groups || args.list_names) {
-        /* upstream checks -lg before -ln when both are given */
-        list_unique(&out, &args, args.list_groups ? 0 : 1);
-        cu_junit_destroy(out.junit);
-        cu_args_free(&args);
-        return 0;
-    }
-    if (args.list_locations) {
-        list_locations(&out);
-        cu_junit_destroy(out.junit);
-        cu_args_free(&args);
-        return 0;
-    }
+    cu_result res;
+    memset(&res, 0, sizeof res);
+    bind_result(&res);
+    current_output = &out;
+    if (args.parallel_workers > 1)
+        cu_run_parallel(&args, &out, &res);
+    else
+        cu_run_all_tests_internal(&args, &res, &out);
+    bind_result(NULL);
+    current_output = NULL;
 
-    if (args.reversing)
-        cu_registry_reverse();
-
-    if (args.shuffling) {
-        cu_out_print_str(&out, "Test order shuffling enabled with seed: ");
-        cu_out_print_num(&out, (unsigned long)args.shuffle_seed);
-        cu_out_print_str(&out, "\n");
-    }
-
-    size_t failed_test_count = 0;
-    size_t failed_execution_count = 0;
-    for (size_t loop = 1; loop <= args.repeat; loop++) {
-        if (args.shuffling)
-            cu_registry_shuffle(args.shuffle_seed);
-
-        /* TestOutput::printTestRun */
-        if (args.repeat > 1) {
-            cu_out_print_str(&out, "Test run ");
-            cu_out_print_num(&out, (unsigned long)loop);
-            cu_out_print_str(&out, " of ");
-            cu_out_print_num(&out, (unsigned long)args.repeat);
-            cu_out_print_str(&out, "\n");
-        }
-
-        cu_result res;
-        memset(&res, 0, sizeof res);
-        bind_result(&res);
-        current_output = &out;
-        if (args.parallel_workers > 1)
-            cu_run_parallel(&args, &out, &res);
-        else
-            cu_run_all_tests_internal(&args, &res, &out);
-        bind_result(NULL);
-        current_output = NULL;
-
-        failed_test_count += res.failure_count;
-        if (cu_is_failure(&res))
-            failed_execution_count++;
-    }
-
-    cu_junit_destroy(out.junit);
+    size_t failed_test_count = res.failure_count;
+    size_t failed_execution_count = cu_is_failure(&res) ? 1u : 0u;
     cu_args_free(&args);
     return (int)(failed_test_count != 0 ? failed_test_count
                                         : failed_execution_count);

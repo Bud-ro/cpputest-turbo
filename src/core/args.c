@@ -68,55 +68,6 @@ static const char *parameter_field(int ac, const char *const *av, int *i,
     return "";
 }
 
-static void set_repeat_count(cu_args *a, int ac, const char *const *av, int *i)
-{
-    a->repeat = 0;
-    if (strlen(av[*i]) > 2)
-        a->repeat = (size_t)atol(av[*i] + 2);
-    else if (*i + 1 < ac) {
-        a->repeat = (size_t)atol(av[*i + 1]);
-        if (a->repeat != 0)
-            (*i)++;
-    }
-    if (0 == a->repeat)
-        a->repeat = 2;
-}
-
-/* upstream SimpleString::AtoU: skip spaces, then leading digits only — so
- * "-s -5" parses as 0 and the "-5" is NOT consumed as a seed (strtoul would
- * wrap it to a huge unsigned and silently shuffle with it) */
-static unsigned atou(const char *s)
-{
-    while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\v' || *s == '\f' ||
-           *s == '\r')
-        s++;
-    unsigned result = 0;
-    for (; *s >= '0' && *s <= '9'; s++)
-        result = result * 10 + (unsigned)(*s - '0');
-    return result;
-}
-
-static int set_shuffle(cu_args *a, int ac, const char *const *av, int *i)
-{
-    a->shuffling = 1;
-    a->shuffle_seed = (unsigned)cu_time_in_millis();
-    if (a->shuffle_seed == 0)
-        a->shuffle_seed++;
-
-    if (strlen(av[*i]) > 2) {
-        a->shuffling_preseeded = 1;
-        a->shuffle_seed = atou(av[*i] + 2);
-    } else if (*i + 1 < ac) {
-        unsigned parsed = atou(av[*i + 1]);
-        if (parsed != 0) {
-            a->shuffling_preseeded = 1;
-            a->shuffle_seed = parsed;
-            (*i)++;
-        }
-    }
-    return a->shuffle_seed != 0;
-}
-
 static void add_filter(cu_filter **list, const char *text, int strict,
                        int invert)
 {
@@ -175,33 +126,9 @@ static void add_test_from_verbose_output(cu_args *a, int ac,
     free(name);
 }
 
-static int set_output_type(cu_args *a, int ac, const char *const *av, int *i)
-{
-    const char *type = parameter_field(ac, av, i, "-o");
-    if (type[0] == '\0')
-        return 0;
-    if (0 == strcmp(type, "normal") || 0 == strcmp(type, "eclipse")) {
-        a->output_type = CU_OUTPUT_TYPE_CONSOLE;
-        return 1;
-    }
-    if (0 == strcmp(type, "junit")) {
-        a->output_type = CU_OUTPUT_TYPE_JUNIT;
-        return 1;
-    }
-    if (0 == strcmp(type, "teamcity")) {
-        a->output_type = CU_OUTPUT_TYPE_TEAMCITY;
-        return 1;
-    }
-    return 0;
-}
-
 int cu_args_parse(cu_args *a, int argc, const char *const *argv)
 {
     memset(a, 0, sizeof *a);
-    a->rethrow_exceptions = 1;
-    a->repeat = 1;
-    a->output_type = CU_OUTPUT_TYPE_CONSOLE;
-    a->package_name = cu_xstrdup("");
 
     int correct = 1;
     for (int i = 1; i < argc; i++) {
@@ -212,28 +139,8 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
             correct = 0;
         } else if (0 == strcmp(arg, "-v"))
             a->verbose = 1;
-        else if (0 == strcmp(arg, "-vv"))
-            a->very_verbose = 1;
-        else if (0 == strcmp(arg, "-c"))
-            a->color = 1;
-        else if (0 == strcmp(arg, "-p"))
-            a->run_separate_process = 1;
-        else if (0 == strcmp(arg, "-b"))
-            a->reversing = 1;
-        else if (0 == strcmp(arg, "-lg"))
-            a->list_groups = 1;
-        else if (0 == strcmp(arg, "-ln"))
-            a->list_names = 1;
-        else if (0 == strcmp(arg, "-ll"))
-            a->list_locations = 1;
         else if (0 == strcmp(arg, "-ri"))
             a->run_ignored = 1;
-        else if (0 == strcmp(arg, "-f"))
-            a->crash_on_fail = 1;
-        else if (0 == strcmp(arg, "-e") || 0 == strcmp(arg, "-ci"))
-            a->rethrow_exceptions = 0;
-        else if (starts_with(arg, "-r"))
-            set_repeat_count(a, argc, argv, &i);
         else if (starts_with(arg, "-g"))
             add_filter(&a->group_filters, parameter_field(argc, argv, &i, "-g"),
                        0, 0);
@@ -266,21 +173,13 @@ int cu_args_parse(cu_args *a, int argc, const char *const *argv)
         else if (starts_with(arg, "-xsn"))
             add_filter(&a->name_filters,
                        parameter_field(argc, argv, &i, "-xsn"), 1, 1);
-        else if (starts_with(arg, "-s"))
-            correct = set_shuffle(a, argc, argv, &i);
         else if (starts_with(arg, "TEST("))
             add_test_from_verbose_output(a, argc, argv, &i, "TEST(");
         else if (starts_with(arg, "IGNORE_TEST("))
             add_test_from_verbose_output(a, argc, argv, &i, "IGNORE_TEST(");
-        else if (starts_with(arg, "-o"))
-            correct = set_output_type(a, argc, argv, &i);
         else if (starts_with(arg, "-p"))
             correct =
                 cu_plugin_parse_hook ? cu_plugin_parse_hook(argc, argv, i) : 0;
-        else if (starts_with(arg, "-k")) {
-            free(a->package_name);
-            a->package_name = cu_xstrdup(parameter_field(argc, argv, &i, "-k"));
-        }
         /* cpputest-turbo extension: -jN parallel workers (group granularity)
          */
         else if (starts_with(arg, "-j"))
@@ -298,54 +197,29 @@ void cu_args_free(cu_args *a)
 {
     filters_free(a->group_filters);
     filters_free(a->name_filters);
-    free(a->package_name);
     a->group_filters = NULL;
     a->name_filters = NULL;
-    a->package_name = NULL;
 }
 
 const char *cu_usage_text(void)
 {
     return "use -h for more extensive help\n"
-           "usage [-h] [-v] [-vv] [-c] [-p] [-lg] [-ln] [-ll] [-ri] [-r[<#>]] "
-           "[-f] [-e] [-ci]\n"
+           "usage [-h] [-v] [-ri] [-j<#>]\n"
            "      [-g|sg|xg|xsg <groupName>]... [-n|sn|xn|xsn <testName>]... "
            "[-t|st|xt|xst <groupName>.<testName>]...\n"
-           "      [-b] [-s [<seed>]] [\"[IGNORE_]TEST(<groupName>, "
-           "<testName>)\"]...\n"
-           "      [-o{normal|eclipse|junit|teamcity}] [-k <packageName>]\n";
+           "      [\"[IGNORE_]TEST(<groupName>, <testName>)\"]...\n";
 }
 
 const char *cu_help_text(void)
 {
-    return "Thanks for using CppUTest.\n"
+    return "Thanks for using CppUTest (turbo-lite).\n"
            "\n"
-           "Options that do not run tests but query:\n"
            "  -h                - this wonderful help screen. Joy!\n"
-           "  -lg               - print a list of group names, separated by "
-           "spaces\n"
-           "  -ln               - print a list of test names in the form of "
-           "group.name, separated by spaces\n"
-           "  -ll               - print a list of test names in the form of "
-           "group.name.test_file_path.line\n"
-           "\n"
-           "Options that change the output format:\n"
-           "  -c                - colorize output, print green if OK, or red "
-           "if failed\n"
            "  -v                - verbose, print each test name as it runs\n"
-           "  -vv               - very verbose, print internal information "
-           "during test run\n"
-           "\n"
-           "Options that change the output location:\n"
-           "  -onormal          - no output to files\n"
-           "  -oeclipse         - equivalent to -onormal\n"
-           "  -oteamcity        - output to xml files (as the name suggests, "
-           "for TeamCity)\n"
-           "  -ojunit           - output to JUnit ant plugin style xml files "
-           "(for CI systems)\n"
-           "  -k <packageName>  - add a package name in JUnit output (for "
-           "classification in CI systems)\n"
-           "\n"
+           "  -ri               - run ignored tests as if they are not "
+           "ignored\n"
+           "  -j<#>             - run test groups across <#> parallel worker "
+           "processes\n"
            "\n"
            "Options that control which tests are run:\n"
            "  -g <group>        - only run tests whose group contains <group>\n"
@@ -372,22 +246,5 @@ const char *cu_help_text(void)
            "                    - only run tests whose group and name exactly "
            "match <group> and <name>\n"
            "                      (this can be used to copy-paste output from "
-           "the -v option on the command line)\n"
-           "\n"
-           "Options that control how the tests are run:\n"
-           "  -p                - run tests in a separate process\n"
-           "  -b                - run the tests backwards, reversing the "
-           "normal way\n"
-           "  -s [<seed>]       - shuffle tests randomly (randomization seed "
-           "is optional, must be greater than 0)\n"
-           "  -r[<#>]           - repeat the tests <#> times (or twice if <#> "
-           "is not specified)\n"
-           "  -ri               - run ignored tests as if they are not "
-           "ignored\n"
-           "  -f                - Cause the tests to crash on failure (to "
-           "allow the test to be debugged if necessary)\n"
-           "  -e                - do not rethrow unexpected exceptions on "
-           "failure\n"
-           "  -ci               - continuous integration mode (equivalent to "
-           "-e)\n";
+           "the -v option on the command line)\n";
 }

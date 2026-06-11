@@ -7,7 +7,6 @@
 #include "internal.h"
 
 #include <errno.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,87 +14,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* POSIX process isolation.
- *
- * -p (upstream-compatible): each test runs in a forked child; the parent
- * converts abnormal exits into failures with upstream's exact messages
- * (UtestPlatform.cpp GccPlatformSpecificRunTestInASeperateProcess).
- *
- * -jN (cpputest-turbo extension): test groups are distributed round-robin
+/* -jN (cpputest-turbo extension): test groups are distributed round-robin
  * over N forked workers; each worker writes its output to a temp file and
  * its counters to a stats file, and the parent replays outputs in worker
  * order and prints one merged summary, so the run is deterministic. */
-
-static void add_process_failure(cu_test *t, const char *message)
-{
-    /* TestFailure(shell, message): file/line = the test's own */
-    cu_add_failure(t->file, t->line, message);
-}
-
-/* upstream SetTestFailureByStatusCode */
-static void set_failure_by_status_code(cu_test *t, int status)
-{
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-        add_process_failure(t, "Failed in separate process");
-    } else if (WIFSIGNALED(status)) {
-        char message[64];
-        snprintf(message, sizeof message,
-                 "Failed in separate process - killed by signal %d",
-                 WTERMSIG(status));
-        add_process_failure(t, message);
-    } else if (WIFSTOPPED(status)) {
-        add_process_failure(t, "Stopped in separate process - continuing");
-    }
-}
-
-void cu_fork_run_one_test(cu_test *t, cu_result *res)
-{
-    /* the child shares the stdio buffer: anything pending would be written
-     * once by the child and again by the parent */
-    fflush(stdout);
-    pid_t cpid = fork();
-
-    if (cpid == -1) {
-        add_process_failure(t, "Call to fork() failed");
-        return;
-    }
-
-    if (cpid == 0) { /* child */
-        size_t initial_failure_count = res->failure_count;
-        cu_run_test_actions(t);
-        fflush(NULL);
-        _exit(initial_failure_count < res->failure_count);
-    }
-
-    /* parent */
-    int status = 0;
-    pid_t w;
-    size_t retries = 0;
-    do {
-        w = waitpid(cpid, &status, WUNTRACED);
-        if (w == -1) {
-            if (errno == EINTR) {
-                if (retries > 30) {
-                    add_process_failure(
-                        t,
-                        "Call to waitpid() failed with EINTR. Tried 30 times "
-                        "and giving up! Sometimes happens in debugger");
-                    return;
-                }
-                retries++;
-            } else {
-                add_process_failure(t, "Call to waitpid() failed");
-                return;
-            }
-        } else {
-            set_failure_by_status_code(t, status);
-            if (WIFSTOPPED(status))
-                kill(w, SIGCONT);
-        }
-    } while (w == -1 || (!WIFEXITED(status) && !WIFSIGNALED(status)));
-}
-
-/* ------------------------------ parallel -------------------------------- */
 
 typedef struct {
     cu_test *first; /* first test of the group */
@@ -155,7 +77,9 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
 
     total->time_started = cu_time_in_millis();
 
-    fflush(stdout); /* see cu_fork_run_one_test: avoid replaying the buffer */
+    /* the children share the stdio buffer: anything pending would be written
+     * once per child and again by the parent */
+    fflush(stdout);
     for (int w = 0; w < workers; w++) {
         pid_t pid = fork();
         if (pid == -1) {
@@ -191,8 +115,6 @@ int cu_run_parallel(const cu_args *a, cu_output *out, cu_result *total)
             memset(&res, 0, sizeof res);
             cu_output wout = *out;
             wout.suppress_summary = 1;
-            if (wout.type == CU_OUTPUT_TYPE_JUNIT)
-                wout.junit = cu_junit_create();
             cu_set_current_result_output(&res, &wout);
             cu_run_all_tests_internal(a, &res, &wout);
             fflush(NULL);
