@@ -28,8 +28,6 @@ rm -f "$OUT"/*.o
 for f in src/core/*.c src/mock/*.c; do
     $CC $CFLAGS -c "$f" -o "$OUT/$(basename "$f").o"
 done
-$CXX $CXXFLAGS -c src/shim/newdelete.cpp -o "$OUT/newdelete.o"
-$CXX $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
 rm -f "$OUT/libasan.a"
 ar rcs "$OUT/libasan.a" "$OUT"/*.o
 
@@ -55,7 +53,6 @@ fi
 
 $CC $CFLAGS fuzz/fuzz_args.c "$OUT/libasan.a" -o "$OUT/fuzz_args"
 $CC $CFLAGS fuzz/fuzz_strings.c "$OUT/libasan.a" -o "$OUT/fuzz_strings"
-$CC $CFLAGS fuzz/fuzz_memleak.c "$OUT/libasan.a" -o "$OUT/fuzz_memleak"
 
 # deliberate failure paths leak longjmp'd temporaries by design; memory
 # SAFETY is what these hunt. poison_array_cookie=0: the leak tracker
@@ -67,8 +64,6 @@ echo "== fuzz_args =="
 FUZZ_SEED=1 "$OUT/fuzz_args"
 echo "== fuzz_strings =="
 FUZZ_SEED=1 "$OUT/fuzz_strings"
-echo "== fuzz_memleak =="
-FUZZ_SEED=1 "$OUT/fuzz_memleak"
 
 echo "== fuzz_mock_diff (differential vs upstream, $ROUNDS rounds x 50 seqs) =="
 # NOTE: link ONLY libasan.a (it contains the mock objects too) — putting the
@@ -79,17 +74,6 @@ $CXX $CXXFLAGS fuzz/fuzz_mock_diff.cpp "$OUT/libasan.a" \
     -o "$OUT/mockdiff_ours"
 $CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include fuzz/fuzz_mock_diff.cpp \
     .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockdiff_upstream"
-
-# differential mock_c fuzzer: C11 driver TU + C++ runner TU (the C-code-
-# under-test / C++-test-binding split), same diff harness
-$CC $CFLAGS -c fuzz/fuzz_mock_c_seq.c -o "$OUT/mock_c_seq_ours.o"
-$CXX $CXXFLAGS fuzz/fuzz_mock_c_diff.cpp "$OUT/mock_c_seq_ours.o" \
-    "$OUT/libasan.a" -o "$OUT/mockcdiff_ours"
-$CC -std=c11 -w -O1 -g -Ithird_party/cpputest/include -c fuzz/fuzz_mock_c_seq.c \
-    -o "$OUT/mock_c_seq_up.o"
-$CXX -std=c++11 -w -O1 -g -Ithird_party/cpputest/include \
-    fuzz/fuzz_mock_c_diff.cpp "$OUT/mock_c_seq_up.o" \
-    .upstream-cache/libCppUTestUpstream.a -o "$OUT/mockcdiff_upstream"
 
 # differential composition fuzzer: asserts + heap + leaks + mocks +
 # SimpleString + UT_PTR_SET interleaved in one test body
@@ -146,7 +130,7 @@ done
 
 round=0
 while [ "$round" -lt "$ROUNDS" ]; do
-    for PAIR in mockdiff mockcdiff composediff; do
+    for PAIR in mockdiff composediff; do
         rc_o=0; FUZZ_SEED=$round "$OUT/${PAIR}_ours" >"$OUT/o.txt" 2>&1 || rc_o=$?
         rc_u=0; FUZZ_SEED=$round "$OUT/${PAIR}_upstream" >"$OUT/u.txt" 2>&1 || rc_u=$?
         norm <"$OUT/o.txt" >"$OUT/o.norm"
@@ -159,7 +143,7 @@ while [ "$round" -lt "$ROUNDS" ]; do
     done
     round=$((round + 1))
 done
-echo "fuzz_mock_diff + fuzz_mock_c_diff + fuzz_compose_diff: $ROUNDS rounds identical to upstream"
+echo "fuzz_mock_diff + fuzz_compose_diff: $ROUNDS rounds identical to upstream"
 
 # ---- CLI flag-combination differential ----
 # JUnit XML carries wall-clock fields; everything else must be identical

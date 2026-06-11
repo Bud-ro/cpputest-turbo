@@ -1395,15 +1395,11 @@ mock(const SimpleString &mockName = "",
         if (n->name == mockName)
             return *n->support;
 
-    /* process-lifetime singletons: keep them out of leak accounting, like
-     * upstream's saveAndDisableNewDeleteOverloads around mock internals */
-    cu_mem_save_and_disable_tracking();
-    ScopeNode *n = new ScopeNode;
+    ScopeNode *n = new ScopeNode; /* process-lifetime singleton */
     n->name = mockName;
     n->support = new MockSupport(scope);
     n->next = head;
     head = n;
-    cu_mem_restore_tracking();
     return *n->support;
 }
 

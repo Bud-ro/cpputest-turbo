@@ -4,7 +4,7 @@
 # include-style, or CWD assumptions. Simulates the real consumer flow:
 #   1. copy the tree (sans build artifacts / .git / vendored upstream oracle)
 #      into a fake host project
-#   2. `make -C` it from the host root, default and CPPUTEST_C_ONLY builds
+#   2. `make -C` it from the host root
 #   3. compile + run a host C++ test (TestHarness + MockSupport) and a host
 #      C test (TestHarness_c) against only -I<vendor>/include + the .a files
 set -eu
@@ -62,9 +62,8 @@ EOF
 ( cd "$HOST" && ./host_test ) >/dev/null
 echo "ok: nested C++ consumer builds and passes"
 
-# --- C-only nested build from a clean copy (host has no C++ toolchain) ---
-rm -rf "$VEND/build"
-make -C "$VEND" CPPUTEST_C_ONLY=1 all >/dev/null
+# --- pure-C consumer: the lite library is 100% C, so a host with no C++
+# toolchain can still drive the core registry directly ---
 cat > "$HOST/host_test_c.c" <<'EOF'
 #include "cpputest_core/core.h"
 
@@ -101,7 +100,7 @@ EOF
     "$VEND/build/libCppUTest.a" \
     -o "$HOST/host_test_c"
 "$HOST/host_test_c" >/dev/null
-echo "ok: nested C-only consumer builds and passes"
+echo "ok: pure-C consumer links the pure-C lib with gcc alone"
 
 # --- out-of-tree object dir: host directs build artifacts elsewhere ---
 make -C "$VEND" BUILD="$HOST/obj/cpputest" all >/dev/null
@@ -113,10 +112,7 @@ echo "ok: BUILD= override places artifacts outside the vendored tree"
 # the toolchain offers ---
 cat > "$HOST/all_headers.cpp" <<'EOF'
 #include "CppUTest/TestHarness.h"
-#include "CppUTest/TestHarness_c.h"
 #include "CppUTest/CommandLineTestRunner.h"
-#include "CppUTest/MemoryLeakWarningPlugin.h"
-#include "CppUTest/MemoryLeakDetectorNewMacros.h"
 #include "CppUTest/PlatformSpecificFunctions.h"
 #include "CppUTest/SimpleString.h"
 #include "CppUTest/TestFailure.h"
@@ -128,7 +124,6 @@ cat > "$HOST/all_headers.cpp" <<'EOF'
 #include "CppUTest/UtestMacros.h"
 #include "CppUTest/CppUTestConfig.h"
 #include "CppUTestExt/MockSupport.h"
-#include "CppUTestExt/MockSupport_c.h"
 #include "CppUTestExt/MockSupportPlugin.h"
 #include "CppUTestExt/MockNamedValue.h"
 #include "CppUTestExt/MockExpectedCall.h"

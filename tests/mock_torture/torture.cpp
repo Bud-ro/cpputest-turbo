@@ -9,7 +9,6 @@
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/CommandLineTestRunner.h"
 #include "CppUTestExt/MockSupport.h"
-#include "CppUTestExt/MockSupport_c.h"
 
 #include <string.h>
 
@@ -161,14 +160,14 @@ TEST(Torture, statefulComparator)
     mock().checkExpectations();
 }
 
-/* ---- C and C++ mock APIs hitting the same scope -------------------------- */
+/* ---- interleaved expect/actual pairs on the same scope ------------------- */
 TEST(Torture, mixedCAndCppOnSameScope)
 {
     mock().expectOneCall("mixed").withParameter("n", 5).andReturnValue(50);
-    int r = mock_c()->actualCall("mixed")->withIntParameters("n", 5)->intReturnValue();
+    int r = mock().actualCall("mixed").withParameter("n", 5).returnIntValue();
     LONGS_EQUAL(50, r);
 
-    mock_c()->expectOneCall("mixed2")->withStringParameters("s", "q");
+    mock().expectOneCall("mixed2").withParameter("s", "q");
     mock().actualCall("mixed2").withParameter("s", "q");
     mock().checkExpectations();
 }

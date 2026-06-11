@@ -68,12 +68,6 @@ if ! sh tests/outputs/run.sh "$BUILD"; then
     fail=1
 fi
 
-# ---- memory leak detection ---------------------------------------------------
-$CXX $CXXFLAGS tests/leaks/leak_tests.cpp build/libCppUTest.a -o "$BUILD/leak_tests"
-if ! sh tests/leaks/run.sh "$BUILD/leak_tests"; then
-    fail=1
-fi
-
 # ---- plugins -----------------------------------------------------------------
 $CXX $CXXFLAGS tests/plugins/plugin_tests.cpp build/libCppUTest.a -o "$BUILD/plugin_tests"
 rc=0; "$BUILD/plugin_tests" >/dev/null 2>&1 || rc=$?
@@ -82,22 +76,6 @@ rc=0; "$BUILD/plugin_tests" -pcustom >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "FAILED: plugin_tests -pcustom exit $rc" >&2; fail=1; else echo "ok: plugin parseArguments"; fi
 rc=0; "$BUILD/plugin_tests" -pnonsense >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 1 ]; then echo "FAILED: plugin_tests -pnonsense exit $rc, expected 1" >&2; fail=1; else echo "ok: unparsed plugin arg errors"; fi
-
-# ---- C interface (TestHarness_c) ---------------------------------------------
-CC="${CC:-gcc}"
-CFLAGS_TEST="-std=c11 -Wall -Wextra -Werror -O2 -g -Iinclude"
-$CC $CFLAGS_TEST -c tests/c_interface/c_tests.c -o "$BUILD/c_tests.o"
-$CXX $CXXFLAGS tests/c_interface/c_wrappers.cpp "$BUILD/c_tests.o" build/libCppUTest.a -o "$BUILD/c_interface_tests"
-rc=0; out=$("$BUILD/c_interface_tests" 2>&1) || rc=$?
-if [ "$rc" -ne 1 ]; then echo "FAILED: c_interface_tests exit $rc, expected 1" >&2; fail=1; fi
-if printf '%s' "$out" | grep -q "expected <1 (0x1)>" \
-   && printf '%s' "$out" | grep -qE "Errors \(1 failures, 3 tests, 2 ran, 18 checks, 1 ignored, 0 filtered out, [0-9]+ ms\)"; then
-    echo "ok: C interface (TestHarness_c)"
-else
-    echo "FAILED: c_interface output unexpected:" >&2
-    printf '%s\n' "$out" >&2
-    fail=1
-fi
 
 # ---- CppUMock (basic slice) -----------------------------------------------------
 $CXX $CXXFLAGS tests/mock/mock_tests.cpp build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_tests"
@@ -108,31 +86,20 @@ sed 's/, [0-9]* ms)/, 0 ms)/' "$BUILD/mock.raw" > "$BUILD/mock.out"
 if [ "$rc" -ne 12 ]; then echo "FAILED: mock_tests exit $rc, expected 12" >&2; fail=1; fi
 compare "mock failure messages" "$BUILD/mock.out" tests/mock/golden/all.txt
 
-# ---- C mock interface (MockSupport_c) -------------------------------------------
-$CC $CFLAGS_TEST -c tests/mock_c/mock_c_tests.c -o "$BUILD/mock_c_tests.o"
-$CXX $CXXFLAGS tests/mock_c/mock_c_wrappers.cpp "$BUILD/mock_c_tests.o" build/libCppUTestExt.a build/libCppUTest.a -o "$BUILD/mock_c_tests"
-rc=0; "$BUILD/mock_c_tests" >/dev/null 2>&1 || rc=$?
-if [ "$rc" -ne 0 ]; then echo "FAILED: mock_c_tests exit $rc" >&2; fail=1; else echo "ok: MockSupport_c (pure C mocks)"; fi
-
 # ---- fork isolation and parallel workers (Phase 8) ----------------------------
 $CXX $CXXFLAGS tests/process/process_tests.cpp build/libCppUTest.a -o "$BUILD/process_tests"
 if ! sh tests/process/run.sh "$BUILD/process_tests"; then
     fail=1
 fi
 
-# ---- C-only library build (last: it wipes build/) ---------------------------
-if make -s clean >/dev/null && make -s CPPUTEST_C_ONLY=1 >/dev/null; then
-    mkdir -p "$BUILD"
-    if $CC $CFLAGS_TEST tests/c_interface/c_core_tests.c build/libCppUTest.a -o "$BUILD/c_core_tests" \
-       && "$BUILD/c_core_tests" >/dev/null 2>&1; then
-        echo "ok: C-only library + pure-C consumer (gcc only, no C++)"
-    else
-        echo "FAILED: pure-C consumer against C-only lib" >&2
-        fail=1
-    fi
-    make -s clean >/dev/null && make -s >/dev/null
+# ---- pure-C consumer (the lib is pure C in lite) -----------------------------
+CC="${CC:-gcc}"
+CFLAGS_TEST="-std=c11 -Wall -Wextra -Werror -O2 -g -Iinclude"
+if $CC $CFLAGS_TEST tests/c_core/c_core_tests.c build/libCppUTest.a -o "$BUILD/c_core_tests" \
+   && "$BUILD/c_core_tests" >/dev/null 2>&1; then
+    echo "ok: pure-C consumer against the pure-C lib (gcc only, no C++)"
 else
-    echo "FAILED: C-only library build" >&2
+    echo "FAILED: pure-C consumer" >&2
     fail=1
 fi
 

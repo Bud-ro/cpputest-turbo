@@ -1,5 +1,5 @@
 /* Differential COMPOSITION fuzzer: assertion macros + memory allocation
- * (tracked new/delete, cpputest_malloc/realloc, deliberate leaks) + mock
+ * (plain new/delete in lite — no tracking) + mock
  * expectations + SimpleString + UT_PTR_SET, randomly interleaved inside
  * each test — the cross-API interactions a single-feature fuzzer misses
  * (e.g. the leak detector seeing user allocations around the mock core's
@@ -16,7 +16,6 @@
  * 50 seeds per process: test N runs sequence FUZZ_SEED*50+N. */
 
 #include "CppUTest/TestHarness.h"
-#include "CppUTest/TestHarness_c.h"
 #include "CppUTest/CommandLineTestRunner.h"
 #include "CppUTestExt/MockSupport.h"
 
@@ -158,38 +157,6 @@ static void heap_churn(void)
     }
 }
 
-static void c_alloc_churn(void)
-{
-    unsigned sz = 1 + fz_r() % 48;
-    TR(" calloc(%u)", sz);
-    char *p = (char *)cpputest_malloc(sz);
-    memset(p, 0x5A, sz);
-    if (fz_r() % 2) {
-        unsigned nsz = 1 + fz_r() % 96;
-        p = (char *)cpputest_realloc(p, nsz);
-        memset(p, 0x5B, nsz);
-    }
-    cpputest_free(p);
-}
-
-/* at most ONE deliberate leak per test: the report lists leaks in pointer-
- * hash-table order, which is address-dependent in upstream AND here — the
- * relative order of two leaks is legitimately unstable across binaries, so
- * only single-leak reports are byte-comparable */
-static int leaked_this_test;
-
-static void deliberate_leak(void)
-{
-    if (leaked_this_test)
-        return;
-    leaked_this_test = 1;
-    unsigned sz = 8 + fz_r() % 8;
-    TR(" LEAK(%u)", sz);
-    char *leak = new char[sz];
-    memset(leak, 0x42, sz); /* deterministic content dump in the report */
-    (void)leak;
-}
-
 static void sstring_ops(void)
 {
     switch (fz_r() % 4) {
@@ -257,7 +224,6 @@ static void fz_sequence(unsigned long long seed)
 {
     fz_rng = seed * 2654435761ull + 12345;
     unsigned ops = 4 + fz_r() % 12;
-    leaked_this_test = 0;
     TR("--- compose seed %llu (%u ops)\n", seed, ops);
 
     for (unsigned i = 0; i < ops; i++) {
@@ -279,7 +245,7 @@ static void fz_sequence(unsigned long long seed)
             heap_churn();
             break;
         case 8:
-            c_alloc_churn();
+            heap_churn();
             break;
         case 9:
             sstring_ops();
@@ -299,8 +265,7 @@ static void fz_sequence(unsigned long long seed)
                 failing_assert(); /* longjmps out; teardown cleans up */
             break;
         default:
-            if (fz_r() % 8 == 0)
-                deliberate_leak();
+            passing_string_asserts();
             break;
         }
         TR("\n");

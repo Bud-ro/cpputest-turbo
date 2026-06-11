@@ -1,39 +1,22 @@
 #ifndef D_CommandLineTestRunner_h
 #define D_CommandLineTestRunner_h
 
-/* cpputest-turbo: runner entry points. Run logic lives in the C core;
- * this shim installs the standard plugins around the run like upstream
- * (SetPointerPlugin now; MemoryLeakWarningPlugin arrives in Phase 4). */
+/* cpputest-turbo lite: runner entry points; run logic lives in the C
+ * core. Install plugins (e.g. MockSupportPlugin) on the registry before
+ * calling RunAllTests. */
 
 #include "CppUTest/CppUTestConfig.h"
 #include "CppUTest/TestRegistry.h"
-#include "CppUTest/MemoryLeakWarningPlugin.h"
 #include "cpputest_core/core.h"
 
 #include <stdio.h>
 
-#define DEF_PLUGIN_MEM_LEAK "MemoryLeakPlugin"
-
 class CommandLineTestRunner
 {
   public:
-    /* upstream flow: leak plugin around everything, SetPointerPlugin around
-     * the run, final leak report printed only on a fully green result */
     static int RunAllTests(int ac, const char *const *av)
     {
-        MemoryLeakWarningPlugin memLeakWarn(DEF_PLUGIN_MEM_LEAK);
-        memLeakWarn
-            .destroyGlobalDetectorAndTurnOffMemoryLeakDetectionInDestructor(
-                true);
-        TestRegistry::getCurrentRegistry()->installPlugin(&memLeakWarn);
-
-        int testResult = cu_run_all(ac, av);
-
-        if (testResult == 0)
-            fputs(memLeakWarn.FinalReport(0), stdout);
-        TestRegistry::getCurrentRegistry()->removePluginByName(
-            DEF_PLUGIN_MEM_LEAK);
-        return testResult;
+        return cu_run_all(ac, av);
     }
 
     static int RunAllTests(int ac, char **av)

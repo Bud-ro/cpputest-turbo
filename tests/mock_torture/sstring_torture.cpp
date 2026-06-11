@@ -91,10 +91,7 @@ TEST(SS, formatters)
     STRCMP_EQUAL("13th", StringFromOrdinalNumber(13).asCharString());
     STRCMP_EQUAL("21st", StringFromOrdinalNumber(21).asCharString());
     STRCMP_EQUAL("ab 7", StringFromFormat("%s %d", "ab", 7).asCharString());
-#if CPPUTEST_USE_STD_CPP_LIB
-    std::string stds("std");
-    STRCMP_EQUAL("std", StringFrom(stds).asCharString());
-#endif
+    /* lite: no std::string interop */
 }
 
 CPPUTEST_DEFAULT_MAIN

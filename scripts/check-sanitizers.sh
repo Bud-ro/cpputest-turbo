@@ -18,8 +18,6 @@ rm -f "$OUT"/*.o
 for f in src/core/*.c src/mock/*.c; do
     $CC $CFLAGS -c "$f" -o "$OUT/$(basename "$f").o"
 done
-$CXX $CXXFLAGS -c src/shim/newdelete.cpp -o "$OUT/newdelete.o"
-$CXX $CXXFLAGS -c src/shim/simplestring.cpp -o "$OUT/simplestring.o"
 rm -f "$OUT/libCppUTestAsan.a"
 ar rcs "$OUT/libCppUTestAsan.a" "$OUT"/*.o
 
@@ -64,7 +62,6 @@ run_one tests/mock/mock_tests.cpp 0
 run_one tests/smoke/smoke_tests.cpp 0
 run_one tests/asserts/assert_tests.cpp 0
 # the leak detector itself: deliberate leaks/corruptions inside, so LSan off
-run_one tests/leaks/leak_tests.cpp 0
 # fork/parallel runner (deliberate SIGSEGV child + workers)
 run_proc() { # binary args
     rc=0
@@ -85,8 +82,8 @@ $CXX $CXXFLAGS tests/process/process_tests.cpp "$OUT/libCppUTestAsan.a" -o "$OUT
 run_proc "$OUT/proc.bin" -p -xg Hazard
 run_proc "$OUT/proc.bin" -j2 -xg Hazard
 # pure-C consumers (C ABI + mock_c)
-$CC $CFLAGS tests/c_interface/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin" -lstdc++ 2>/dev/null || \
-    $CC $CFLAGS tests/c_interface/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin"
+$CC $CFLAGS tests/c_core/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin" -lstdc++ 2>/dev/null || \
+    $CC $CFLAGS tests/c_core/c_core_tests.c "$OUT/libCppUTestAsan.a" -o "$OUT/ccore.bin"
 run_proc "$OUT/ccore.bin"
 
 echo "sanitizer sweep green"
