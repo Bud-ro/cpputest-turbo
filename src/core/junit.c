@@ -1,4 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
+/* Darwin hides O_NOFOLLOW (and other POSIX.1-2008 bits) when only
+ * _POSIX_C_SOURCE is set */
+#define _DARWIN_C_SOURCE 1
 
 #include "internal.h"
 
@@ -8,6 +11,10 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0 /* platform without it: lose only the symlink guard */
+#endif
 
 /* Port of upstream JUnitTestOutput.cpp: one XML file per test group, written
  * when the group ends. All formats and quirks preserved, including:

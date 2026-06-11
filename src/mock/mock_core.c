@@ -135,9 +135,6 @@ typedef struct cum_comparator {
     struct cum_comparator *next;
 } cum_comparator;
 
-static cum_comparator *comparators;
-static cum_comparator *copiers;
-
 static cum_comparator *find_in(cum_comparator *list, const char *type_name)
 {
     for (cum_comparator *c = list; c; c = c->next)
@@ -159,29 +156,6 @@ typedef struct {
     int present;
 } cum_binding;
 
-void cum_install_comparator(const char *type_name, void *ctx,
-                            cum_comparator_equal_fn equal,
-                            cum_comparator_string_fn to_string)
-{
-    cum_comparator *c = cu_xcalloc(1, sizeof *c);
-    c->type_name = cu_xstrdup(type_name);
-    c->ctx = ctx;
-    c->equal = equal;
-    c->to_string = to_string;
-    c->next = comparators;
-    comparators = c;
-}
-
-void cum_install_copier(const char *type_name, void *ctx, cum_copier_fn copy)
-{
-    cum_comparator *c = cu_xcalloc(1, sizeof *c);
-    c->type_name = cu_xstrdup(type_name);
-    c->ctx = ctx;
-    c->copy = copy;
-    c->next = copiers;
-    copiers = c;
-}
-
 static void free_comparator_list(cum_comparator **list)
 {
     cum_comparator *c = *list;
@@ -194,21 +168,9 @@ static void free_comparator_list(cum_comparator **list)
     *list = NULL;
 }
 
-void cum_remove_all_comparators_and_copiers(void)
-{
-    free_comparator_list(&comparators);
-    free_comparator_list(&copiers);
-}
-
-int cum_has_comparator(const char *type_name)
-{
-    return find_in(comparators, type_name) != NULL;
-}
-
-int cum_has_copier(const char *type_name)
-{
-    return find_in(copiers, type_name) != NULL;
-}
+/* install/remove/has are defined after cum_scope below: repositories are
+ * PER SCOPE upstream (each MockSupport owns one), with mock(name) pointing
+ * the process-wide binding source at the touched scope's repository */
 
 /* MockNamedValue::equals — the integer cross-type matrix collapses to
  * sign-aware mathematical equality, which is exactly what upstream's
@@ -425,12 +387,101 @@ struct cum_scope {
     cum_expectation *expectations; /* append order preserved */
     cum_data *data;
     cum_actual *last_actual;
+    cum_comparator *comparators; /* per-scope repository, like upstream */
+    cum_comparator *copiers;
     struct cum_scope *next;
 };
 
 static cum_scope *scopes;
+/* upstream MockNamedValue::defaultRepository_: bindings and the has-checks
+ * read the repository of the scope LAST RETURNED by cum_scope_get (every
+ * mock()/mock_scope_c() access re-points it) */
+static cum_scope *bind_scope;
 static int crash_on_failure;
 static void (*facade_free)(void *);
+
+static int scope_name_is_global(const cum_scope *s)
+{
+    return s->name == NULL || s->name[0] == '\0';
+}
+
+static void install_node(cum_comparator **list, const char *type_name,
+                         void *ctx, cum_comparator_equal_fn equal,
+                         cum_comparator_string_fn to_string, cum_copier_fn copy)
+{
+    cum_comparator *c = cu_xcalloc(1, sizeof *c);
+    c->type_name = cu_xstrdup(type_name);
+    c->ctx = ctx;
+    c->equal = equal;
+    c->to_string = to_string;
+    c->copy = copy;
+    c->next = *list;
+    *list = c;
+}
+
+/* upstream MockSupport::installComparator: into own repository (PREPEND),
+ * then the same entry into every existing child's repository */
+void cum_install_comparator(cum_scope *s, const char *type_name, void *ctx,
+                            cum_comparator_equal_fn equal,
+                            cum_comparator_string_fn to_string)
+{
+    install_node(&s->comparators, type_name, ctx, equal, to_string, NULL);
+    if (scope_name_is_global(s))
+        for (cum_scope *c = scopes; c; c = c->next)
+            if (c != s && c->zombie == 0)
+                install_node(&c->comparators, type_name, ctx, equal, to_string,
+                             NULL);
+}
+
+void cum_install_copier(cum_scope *s, const char *type_name, void *ctx,
+                        cum_copier_fn copy)
+{
+    install_node(&s->copiers, type_name, ctx, NULL, NULL, copy);
+    if (scope_name_is_global(s))
+        for (cum_scope *c = scopes; c; c = c->next)
+            if (c != s && c->zombie == 0)
+                install_node(&c->copiers, type_name, ctx, NULL, NULL, copy);
+}
+
+/* upstream MockSupport::removeAllComparatorsAndCopiers: own repository,
+ * then every child's */
+void cum_remove_all_comparators_and_copiers(cum_scope *s)
+{
+    free_comparator_list(&s->comparators);
+    free_comparator_list(&s->copiers);
+    if (scope_name_is_global(s)) {
+        for (cum_scope *c = scopes; c; c = c->next) {
+            if (c == s)
+                continue;
+            free_comparator_list(&c->comparators);
+            free_comparator_list(&c->copiers);
+        }
+    }
+}
+
+/* the has-checks consult the binding source (defaultRepository_) */
+int cum_has_comparator(const char *type_name)
+{
+    return bind_scope && find_in(bind_scope->comparators, type_name) != NULL;
+}
+
+int cum_has_copier(const char *type_name)
+{
+    return bind_scope && find_in(bind_scope->copiers, type_name) != NULL;
+}
+
+/* upstream clone(): the child repository is filled by iterating the
+ * source head-to-tail while PREPENDING, which REVERSES the order — so the
+ * OLDEST install wins lookups inside cloned scopes (quirk preserved) */
+static void clone_repositories(cum_scope *child, const cum_scope *global)
+{
+    for (const cum_comparator *c = global->comparators; c; c = c->next)
+        install_node(&child->comparators, c->type_name, c->ctx, c->equal,
+                     c->to_string, c->copy);
+    for (const cum_comparator *c = global->copiers; c; c = c->next)
+        install_node(&child->copiers, c->type_name, c->ctx, c->equal,
+                     c->to_string, c->copy);
+}
 
 /* ------------------------------ tracing --------------------------------- */
 /* MockActualCallTrace: a single recorder shared by all scopes. The
@@ -482,6 +533,8 @@ cum_scope *cum_scope_get(const char *name)
                 s->enabled = global->enabled;
                 s->ignore_other_calls = global->ignore_other_calls;
                 s->strict_ordering = global->strict_ordering;
+                clone_repositories(s, global);
+                bind_scope = s;
                 return s;
             }
             /* upstream getMockSupportScope runs an internal STRCMP_EQUAL
@@ -489,6 +542,7 @@ cum_scope *cum_scope_get(const char *name)
              * one user-visible check per access (quirk preserved) */
             if (name[0] != '\0')
                 cu_count_check();
+            bind_scope = s;
             return s;
         }
     cum_scope *s = cu_xcalloc(1, sizeof *s);
@@ -496,12 +550,14 @@ cum_scope *cum_scope_get(const char *name)
     s->enabled = 1;
     if (name[0] != '\0') {
         /* upstream clone(): a lazily-created scope inherits the global
-         * mock's enabled/ignoreOtherCalls/strictOrdering state */
+         * mock's enabled/ignoreOtherCalls/strictOrdering state and a
+         * REVERSED copy of its comparator/copier repository */
         cum_scope *global = cum_scope_get("");
         s->enabled = global->enabled;
         s->ignore_other_calls = global->ignore_other_calls;
         s->strict_ordering = global->strict_ordering;
         s->tracing = global->tracing;
+        clone_repositories(s, global);
     }
     /* append: failure dumps walk the global mock first, then child scopes
      * in creation order, like upstream's data_ list */
@@ -510,6 +566,7 @@ cum_scope *cum_scope_get(const char *name)
     while (*link)
         link = &(*link)->next;
     *link = s;
+    bind_scope = s;
     return s;
 }
 
@@ -724,7 +781,8 @@ static void fail_unexpected_input_parameter(cum_scope *s, const char *fn,
 
     /* the failing param is being created right now, so a fresh registry
      * lookup IS its creation-time binding */
-    cum_binding vb = bind_from(comparators, cum_value_type_name(value));
+    cum_binding vb = bind_from(bind_scope ? bind_scope->comparators : NULL,
+                               cum_value_type_name(value));
     char *value_str = value_to_string(value, &vb);
     msb b;
     msb_init(&b);
@@ -965,7 +1023,7 @@ static void expectation_add_out_param(cum_expectation *e, const char *type_name,
     o->value = value;
     o->size = size;
     /* bind-at-creation, like input params */
-    o->bound = bind_from(copiers, o->type_name);
+    o->bound = bind_from(bind_scope ? bind_scope->copiers : NULL, o->type_name);
     cum_out_param **link = &e->out_params;
     while (*link)
         link = &(*link)->next;
@@ -1242,7 +1300,8 @@ void cum_expectation_with_parameter(cum_expectation *e, const char *name,
         value.v.obj.type_name = p->owned_type;
         /* bind-at-creation: a later (re)install does not retroactively
          * change this param's comparator (upstream setObjectPointer) */
-        p->bound = bind_from(comparators, p->owned_type);
+        p->bound = bind_from(bind_scope ? bind_scope->comparators : NULL,
+                             p->owned_type);
     }
     p->value = value;
     cum_param **link = &e->params;
@@ -1814,9 +1873,15 @@ void cum_clear_all(void)
 {
     for (cum_scope *s = scopes; s; s = s->next) {
         scope_clear(s);
-        /* the global clear deletes child scopes upstream */
-        if (s->name[0] != '\0')
+        /* the global clear deletes child scopes upstream — including their
+         * repositories (the GLOBAL repository survives clear) */
+        if (s->name[0] != '\0') {
             s->zombie = 1;
+            free_comparator_list(&s->comparators);
+            free_comparator_list(&s->copiers);
+            if (bind_scope == s)
+                bind_scope = NULL;
+        }
     }
     crash_on_failure = 0;
 }

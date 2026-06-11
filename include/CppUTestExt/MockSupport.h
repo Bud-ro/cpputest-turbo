@@ -1273,7 +1273,7 @@ class MockSupport
     virtual void installComparator(const SimpleString &typeName,
                                    MockNamedValueComparator &comparator)
     {
-        cum_install_comparator(typeName.asCharString(), &comparator,
+        cum_install_comparator(scope_, typeName.asCharString(), &comparator,
                                CppUMockComparatorEqual,
                                CppUMockComparatorToString);
     }
@@ -1281,7 +1281,7 @@ class MockSupport
     virtual void installCopier(const SimpleString &typeName,
                                MockNamedValueCopier &copier)
     {
-        cum_install_copier(typeName.asCharString(), &copier,
+        cum_install_copier(scope_, typeName.asCharString(), &copier,
                            CppUMockCopierCopy);
     }
 
@@ -1301,7 +1301,7 @@ class MockSupport
 
     virtual void removeAllComparatorsAndCopiers()
     {
-        cum_remove_all_comparators_and_copiers();
+        cum_remove_all_comparators_and_copiers(scope_);
     }
 
     /* accepted for source compatibility; custom reporters are inert (see

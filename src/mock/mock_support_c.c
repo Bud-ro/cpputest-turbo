@@ -767,7 +767,8 @@ sup_install_comparator(const char *typeName, MockTypeEqualFunction_c isEqual,
     c_adapter *a = &adapters[adapter_count++];
     a->equal = isEqual;
     a->to_string = valueToString;
-    cum_install_comparator(typeName, a, adapter_equal, adapter_to_string);
+    cum_install_comparator(scope(), typeName, a, adapter_equal,
+                           adapter_to_string);
 }
 
 static void sup_install_copier(const char *typeName,
@@ -777,12 +778,12 @@ static void sup_install_copier(const char *typeName,
         return;
     c_adapter *a = &adapters[adapter_count++];
     a->copy = copier;
-    cum_install_copier(typeName, a, adapter_copy);
+    cum_install_copier(scope(), typeName, a, adapter_copy);
 }
 
 static void sup_remove_all_comparators_and_copiers(void)
 {
-    cum_remove_all_comparators_and_copiers();
+    cum_remove_all_comparators_and_copiers(scope());
     adapter_count = 0;
 }
 

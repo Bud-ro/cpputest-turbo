@@ -130,11 +130,12 @@ typedef void (*cum_copier_fn)(void *ctx, void *dst, const void *src);
  * sentinel — the facades gate checked-call-only failures on this */
 int cum_actual_is_checked(const cum_actual *a);
 
-void cum_install_comparator(const char *type_name, void *ctx,
+void cum_install_comparator(cum_scope *s, const char *type_name, void *ctx,
                             cum_comparator_equal_fn equal,
                             cum_comparator_string_fn to_string);
-void cum_install_copier(const char *type_name, void *ctx, cum_copier_fn copy);
-void cum_remove_all_comparators_and_copiers(void);
+void cum_install_copier(cum_scope *s, const char *type_name, void *ctx,
+                        cum_copier_fn copy);
+void cum_remove_all_comparators_and_copiers(cum_scope *s);
 int cum_has_comparator(const char *type_name);
 int cum_has_copier(const char *type_name);
 /* MockNoWayToCompare/CopyCustomTypeFailure (fail + longjmp in a test) */
