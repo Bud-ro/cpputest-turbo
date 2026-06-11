@@ -1009,10 +1009,10 @@ static void actual_with_output_parameter(cum_actual *a, const char *type_name,
         }
         if (has)
             any = 1;
-        else {
-            e->candidate = 0;
-            reset_param_match_state(e);
-        }
+        else
+            e->candidate = 0; /* onlyKeep* discards do NOT reset the
+                                 per-param marks (MockExpectedCallsList) —
+                                 failure rendering shows them as matched */
     }
     if (!any) {
         a->state = CUM_CALL_FAILED;
@@ -1271,6 +1271,11 @@ static void expectation_call_was_made(cum_expectation *e, unsigned call_order)
     if (e->order_start != CUM_NO_CALL_ORDER &&
         (call_order < e->order_start || call_order > e->order_end))
         e->out_of_order = 1;
+    /* upstream callWasMade resets the match state (MockExpectedCall.cpp:325)
+     * so a partially-fulfilled expectNCalls can match the next call; this is
+     * the ONLY reset besides completion-on-candidates and reopen-discard —
+     * onlyKeep* discards and candidacy entry never reset */
+    reset_param_match_state(e);
 }
 
 static void clear_candidates(cum_scope *s)
@@ -1380,8 +1385,7 @@ void cum_actual_with_name(cum_actual *a, const char *name)
         if (0 == strcmp(e->name, name)) {
             any = 1;
         } else {
-            e->candidate = 0;
-            reset_param_match_state(e);
+            e->candidate = 0; /* no mark reset: see onlyKeep* note */
         }
     }
     if (!any) {
@@ -1416,8 +1420,7 @@ void cum_actual_on_object(cum_actual *a, const void *object_ptr)
         if (!e->object_specific || e->object_ptr == object_ptr) {
             any = 1;
         } else {
-            e->candidate = 0;
-            reset_param_match_state(e);
+            e->candidate = 0; /* no mark reset: see onlyKeep* note */
         }
     }
     if (a->state != CUM_CALL_SUCCEED && !any) {
@@ -1545,13 +1548,16 @@ cum_actual *cum_actual_call(cum_scope *s, const char *name)
     a->scope = s;
     s->last_actual = a;
 
-    /* potentially matching = unfulfilled expectations with this name */
+    /* Potentially matching = unfulfilled expectations with this name.
+     * NO mark reset on entry: upstream's addPotentiallyMatchingExpectations
+     * keeps whatever per-param marks an expectation carried from an earlier
+     * call it was discarded from (only completion resets, and only for the
+     * expectations still in candidacy then) — quirk preserved. */
     clear_candidates(s);
     int any = 0;
     for (cum_expectation *e = s->expectations; e; e = e->next) {
         if (0 == strcmp(e->name, full_name) && !is_fulfilled(e)) {
             e->candidate = 1;
-            reset_param_match_state(e);
             any = 1;
         }
     }
@@ -1598,8 +1604,7 @@ void cum_actual_with_parameter(cum_actual *a, const char *name, cum_value value)
         if (expectation_accepts_param(e, name, &value))
             any = 1;
         else {
-            e->candidate = 0;
-            reset_param_match_state(e);
+            e->candidate = 0; /* no mark reset: see onlyKeep* note */
         }
     }
     if (!any) {
